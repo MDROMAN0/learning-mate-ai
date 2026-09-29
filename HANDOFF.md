@@ -24,6 +24,11 @@
 - **Download বন্ধ (default `YT_DOWNLOAD=0`):** caption সরাসরি YouTube থেকে, segment embedded player-এ। Caption না থাকলে পরিষ্কার error।
 - Eval set: `eval_set.json` (26 positive + 8 negative, gold range Claude transcript পড়ে দিয়েছে — Roman ২-৩টা spot-check করুক)। ফল: `docs/EVALUATION.md` §5।
 - **বাকি (Roman-এর login লাগে):** GitHub repo বানিয়ে push, Render Blueprint + secrets, (ঐচ্ছিক) Neon DATABASE_URL — `docs/DEPLOY.md`। Extension আসল Chrome-এ Load unpacked করে test হয়নি। Docker build চালানো হয়নি।
+- **Notes (নতুন):** Notes tab — rich text + timestamp chip (Alt+N), video screenshot (Alt+S; YouTube-এ প্রথমবার "This tab" share permission, তারপর instant), Whiteboard (pen/highlighter/eraser/undo, note-এ বসানো), PDF export (print → Save as PDF), answer → "Note-এ যোগ করো"। Login থাকলে notes account-এ (`/api/notes/{vid}`), না থাকলে browser-এ।
+- **Retrieval ablation আসল ফল** `docs/EVALUATION.md` §5-এ (dense 1.00/0.92, bm25 0, hybrid+rerank 1.00/0.93)। End-to-end eval free embedding quota (1000/দিন) শেষ হওয়ায় বাকি — দুপুর ১টার পর `python eval.py eval_set.json --full`।
+- Embedding quota শেষ হলে এখন retrieval BM25-এ নামে (crash না), query embedding cache হয়।
+- UI-তে emoji নেই — `static/icons.js` (SVG icon set)।
+- Git: local repo-তে ২টা commit আছে; push বাকি (GitHub login লাগবে)।
 - Beginner guide: `docs/START_HERE.md`।
 
 ## 1. প্রজেক্ট এক নজরে
