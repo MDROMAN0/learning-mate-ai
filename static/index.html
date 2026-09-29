@@ -239,7 +239,20 @@
     /* home */
     .hero{padding:5vh 16px 8px} .hero h1{font-size:30px;letter-spacing:-.6px} .hero p{font-size:15px;margin-bottom:18px}
     .bigin .bi{display:none} .bigin .btn span{display:none}
-    .steps,.feat{grid-template-columns:1fr} .stats{gap:8px;margin-top:20px} .stats b{font-size:22px}
+    .stats{gap:8px;margin-top:20px} .stats b{font-size:22px} .stats div{padding:10px}
+    /* how-it-works: compact rows joined by a line */
+    .steps{grid-template-columns:1fr;gap:0;margin-top:26px;position:relative}
+    .steps::before{content:"";position:absolute;left:34px;top:30px;bottom:30px;width:2px;background:linear-gradient(var(--brand),var(--brand2));opacity:.35}
+    .steps .card{display:grid;grid-template-columns:40px 1fr;column-gap:12px;align-items:center;padding:10px 12px;background:transparent;border:0;box-shadow:none}
+    .steps .card .fi{grid-row:1/3;margin:0;background:var(--panel);border:1px solid var(--line2);position:relative;z-index:1}
+    .steps .card b{margin:0;font-size:15px} .steps .card .muted{grid-column:2;font-size:13px;line-height:1.45}
+    .steps .k{top:4px;left:4px;width:18px;height:18px;font-size:10px;z-index:2}
+    /* features: swipeable cards */
+    .feat{display:flex;grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:14px 0 0;padding:0 0 8px;scrollbar-width:none}
+    .feat::-webkit-scrollbar{display:none}
+    .feat .card{flex:0 0 74%;scroll-snap-align:start;padding:14px}
+    .feat .card .muted{font-size:13px;line-height:1.45}
+    #contBox h3{font-size:18px} #contBox .row{margin:24px 0 10px!important}
     .demo,.hero2{padding:0 14px} .dgrid{padding:10px} .dchat{min-height:230px}
     .rail .yt{min-width:200px;max-width:200px}
     /* browse */
