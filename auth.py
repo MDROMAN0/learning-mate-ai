@@ -72,7 +72,7 @@ class _PG:
 
 
 def _conn():
-    if os.getenv("DATABASE_URL"):
+    if os.getenv("DATABASE_URL", "").startswith("postgres"):   # anything else (empty, "none") = use SQLite
         c = _PG(os.environ["DATABASE_URL"])
         c.executescript(_SCHEMA)
         return c
