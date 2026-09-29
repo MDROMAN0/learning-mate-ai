@@ -1,0 +1,378 @@
+import os
+import tempfile
+import threading
+from pathlib import Path
+from typing import List, Optional
+
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+import auth
+import eval as rag_eval
+import features
+import rag
+
+app = FastAPI(title="YouTube Topic RAG")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.mount("/clips", StaticFiles(directory=str(rag.DATA / "clips")), name="clips")
+app.mount("/media", StaticFiles(directory=str(rag.DATA / "videos")), name="media")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+JOBS = {}
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
+
+
+@app.middleware("http")
+async def gate(request: Request, call_next):
+    """AUTH=1 -> every /api call needs a logged-in user (or the admin APP_PASSWORD, e.g. the Chrome extension).
+    AUTH off -> optional shared APP_PASSWORD only (old behaviour)."""
+    path = request.url.path
+    request.state.user = None
+    if path.startswith("/api") and request.method != "OPTIONS":
+        pw = os.getenv("APP_PASSWORD")
+        admin = bool(pw) and request.headers.get("x-app-key") == pw
+        if auth.enabled():
+            tok = request.cookies.get(auth.COOKIE) or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+            request.state.user = auth.user_from_token(tok) if tok else None
+            if not path.startswith("/api/auth/") and not request.state.user and not admin:
+                return JSONResponse({"detail": "login required", "login": True}, status_code=401)
+        elif pw and not admin and path != "/api/auth/me":
+            return JSONResponse({"detail": "wrong or missing app key"}, status_code=401)
+    return await call_next(request)
+
+
+def _charge(request: Request):
+    """Per-user daily quota for LLM-heavy calls (protects the free LLM key)."""
+    u = getattr(request.state, "user", None)
+    if u and not auth.charge(u["id"]):
+        raise HTTPException(429, f"আজকের limit ({auth.daily_limit()}) শেষ — কাল আবার চেষ্টা করো / daily limit reached")
+
+
+class IndexReq(BaseModel):
+    url: str
+    force_asr: bool = False
+
+
+class Seg(BaseModel):
+    start: float
+    end: float
+    text: str
+
+
+class TranscriptReq(BaseModel):  # used by the Chrome extension (captions fetched on the user's own IP)
+    video_id: str
+    title: str = ""
+    segments: List[Seg]
+
+
+class AskReq(BaseModel):
+    video_id: str
+    question: str
+    current_time: Optional[float] = None  # seconds; set => spoiler-free (progress-aware)
+    clip: bool = True
+    mode: str = "hybrid+rerank"  # dense | bm25 | hybrid | hybrid+rerank
+    level: str = "simple"  # simple | exam | expert
+    use_rewrite: bool = True
+    use_grade: bool = True
+    use_verify: bool = True
+    debug: bool = False  # RAG Lab: return every pipeline stage in trace["debug"]
+
+
+class CompareReq(BaseModel):
+    video_id: str
+    question: str
+    k: int = 5
+    current_time: Optional[float] = None
+    use_rewrite: bool = False
+
+
+class EvalReq(BaseModel):
+    items: List[dict]
+    full: bool = False
+    k: int = 5
+
+
+class AltReq(BaseModel):
+    question: str
+    video_id: Optional[str] = None
+    mode: str = "library"  # library | discover
+    n: int = 3
+    level: str = "simple"
+
+
+class PlanStartReq(BaseModel):
+    goal: str
+
+
+class QA(BaseModel):
+    q: str
+    a: str = ""
+
+
+class PlanFinishReq(BaseModel):
+    goal: str
+    qa: List[QA]
+    video_ids: List[str]
+
+
+class QuizReq(BaseModel):
+    video_id: str
+    n: int = 5
+    topic: Optional[str] = None
+    current_time: Optional[float] = None
+
+
+class ExplainReq(BaseModel):
+    video_id: str
+    current_time: float
+    style: str = "simple"  # simple | analogy | steps | other_video
+
+
+def _job(key, fn, *args):
+    def run():
+        try:
+            meta = fn(*args, lambda m: JOBS[key].update(msg=m))
+            JOBS[key] = {"status": "done", "msg": "ready", "meta": meta}
+        except Exception as e:
+            JOBS[key] = {"status": "error", "msg": str(e)}
+    JOBS[key] = {"status": "running", "msg": "starting..."}
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _safe(fn, *a, **k):
+    try:
+        return fn(*a, **k)
+    except (FileNotFoundError, ValueError) as e:
+        raise HTTPException(404 if isinstance(e, FileNotFoundError) else 400, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
+
+
+@app.get("/api/library")
+def library():
+    return {"videos": rag.list_library()}
+
+
+@app.post("/api/index")
+def index_video(req: IndexReq, request: Request):
+    try:
+        vid = rag.extract_video_id(req.url)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if rag.index_exists(vid):
+        return {"video_id": vid, "status": "done", "meta": _safe(rag.load_index, vid).meta}
+    if JOBS.get(vid, {}).get("status") != "running":
+        _charge(request)
+        _job(vid, lambda u, f, p: rag.build_index(u, f, p), req.url, req.force_asr)
+    return {"video_id": vid, **JOBS[vid]}
+
+
+@app.post("/api/index_transcript")
+def index_transcript(req: TranscriptReq):
+    vid = rag.extract_video_id(req.video_id)
+    if rag.index_exists(vid):
+        return {"video_id": vid, "status": "done", "meta": _safe(rag.load_index, vid).meta}
+    segs = [s.model_dump() for s in req.segments]
+    if JOBS.get(vid, {}).get("status") != "running":
+        _job(vid, lambda t, sg, p: rag.build_index_from_segments(vid, t or vid, sg, "extension", None, "youtube", p),
+             req.title, segs)
+    return {"video_id": vid, **JOBS[vid]}
+
+
+@app.post("/api/upload")
+def upload(file: UploadFile = File(...), title: str = Form(""), youtube_url: str = Form("")):
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in rag.SUB_EXT | rag.AUDIO_EXT | {".mp4", ".mkv", ".webm", ".mov", ".avi"}:
+        raise HTTPException(400, "unsupported file type")
+    fd, tmp = tempfile.mkstemp(suffix=ext, dir=str(rag.DATA))
+    size = 0
+    with os.fdopen(fd, "wb") as out:
+        while chunk := file.file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_UPLOAD_MB * 1024 * 1024:
+                out.close()
+                os.remove(tmp)
+                raise HTTPException(413, f"file > {MAX_UPLOAD_MB} MB")
+            out.write(chunk)
+    if youtube_url and ext in rag.SUB_EXT:
+        try:
+            key = rag.extract_video_id(youtube_url)
+        except ValueError as e:
+            os.remove(tmp)
+            raise HTTPException(400, str(e))
+    else:
+        key = "up_" + Path(tmp).stem[-8:]
+        youtube_url = None
+    _job(key, lambda p, t, y, pr: rag.build_index_from_upload(p, t, pr, y), tmp, title or file.filename, youtube_url)
+    return {"video_id": key, **JOBS[key]}
+
+
+@app.get("/api/job/{vid}")
+def job(vid: str):
+    j = JOBS.get(vid)
+    if j and j["status"] == "done":  # upload jobs: meta.video_id is the real id
+        return {"video_id": vid, **j}
+    if rag.index_exists(vid) and (not j or j["status"] != "running"):
+        return {"video_id": vid, "status": "done", "meta": _safe(rag.load_index, vid).meta}
+    return {"video_id": vid, **(j or {"status": "unknown", "msg": ""})}
+
+
+@app.post("/api/ask")
+def ask(req: AskReq, request: Request):
+    if not req.question.strip():
+        raise HTTPException(400, "empty question")
+    _charge(request)
+    out = _safe(rag.ask, req.video_id, req.question, req.current_time, req.clip, req.mode,
+                req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug)
+    u = request.state.user
+    if u:
+        try:
+            auth.add_history(u["id"], out.get("video_id"), out.get("title"), req.question, out)
+        except Exception:
+            pass
+    return out
+
+
+@app.post("/api/lab/compare")
+def lab_compare(req: CompareReq):
+    return _safe(rag.compare_modes, req.video_id, req.question, req.k, req.current_time, req.use_rewrite)
+
+
+@app.get("/api/lab/chunks/{vid}")
+def lab_chunks(vid: str):
+    return _safe(rag.chunk_report, vid)
+
+
+@app.post("/api/lab/eval")
+def lab_eval(req: EvalReq, request: Request):
+    _charge(request)
+    if not req.items or len(req.items) > 30 or (req.full and len(req.items) > 15):
+        raise HTTPException(400, "items: 1..30 (1..15 with full=true)")
+    def run():
+        out = {"retrieval": rag_eval.retrieval_ablation(req.items, req.k)}
+        if req.full:
+            out["end_to_end"] = rag_eval.full_eval(req.items)
+        return out
+    return _safe(run)
+
+
+@app.post("/api/alternatives")
+def alternatives(req: AltReq, request: Request):
+    _charge(request)
+    return _safe(features.alternatives, req.question, req.video_id, req.mode, req.n, req.level)
+
+
+@app.post("/api/plan/start")
+def plan_start(req: PlanStartReq, request: Request):
+    _charge(request)
+    return {"questions": _safe(features.plan_start, req.goal)}
+
+
+@app.post("/api/plan/finish")
+def plan_finish(req: PlanFinishReq, request: Request):
+    _charge(request)
+    return _safe(features.plan_finish, req.goal, [x.model_dump() for x in req.qa], req.video_ids)
+
+
+@app.post("/api/quiz")
+def quiz(req: QuizReq, request: Request):
+    _charge(request)
+    return {"questions": _safe(features.quiz, req.video_id, req.n, req.topic, req.current_time)}
+
+
+@app.post("/api/explain")
+def explain(req: ExplainReq, request: Request):
+    _charge(request)
+    return _safe(features.explain, req.video_id, req.current_time, req.style)
+
+
+class AuthReq(BaseModel):
+    email: str
+    password: str
+    name: str = ""
+
+
+def _session(resp: Response, user):
+    resp.set_cookie(auth.COOKIE, auth.make_token(user["id"]), max_age=auth.SESSION_DAYS * 86400,
+                    httponly=True, samesite="lax", secure=os.getenv("COOKIE_SECURE", "0") == "1")
+    return {"user": user}
+
+
+@app.post("/api/auth/signup")
+def signup(req: AuthReq, resp: Response):
+    if not auth.enabled():
+        raise HTTPException(400, "accounts are off (AUTH=0)")
+    try:
+        return _session(resp, auth.signup(req.email, req.password, req.name))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/auth/login")
+def login(req: AuthReq, resp: Response):
+    if not auth.enabled():
+        raise HTTPException(400, "accounts are off (AUTH=0)")
+    try:
+        return _session(resp, auth.login(req.email, req.password))
+    except PermissionError as e:
+        raise HTTPException(401, str(e))
+
+
+@app.post("/api/auth/logout")
+def logout(resp: Response):
+    resp.delete_cookie(auth.COOKIE)
+    return {"ok": True}
+
+
+@app.get("/api/auth/me")
+def me(request: Request):
+    u = request.state.user
+    return {"auth": auth.enabled(), "user": u, "limit": auth.daily_limit(),
+            "used": auth.used_today(u["id"]) if u else 0,
+            "app_password": bool(os.getenv("APP_PASSWORD")) and not auth.enabled()}
+
+
+@app.get("/api/history")
+def history(request: Request):
+    u = request.state.user
+    return {"items": auth.history(u["id"]) if u else []}
+
+
+@app.get("/api/search")
+def search(q: str, n: int = 16):
+    return {"results": _safe(features.browse_youtube, q, max(1, min(n, 30)))}
+
+
+class HeatReq(BaseModel):
+    video_id: str
+    question: str
+
+
+@app.post("/api/heat")
+def heat(req: HeatReq):
+    return _safe(rag.topic_heat, req.video_id, req.question)
+
+
+@app.get("/api/transcript/{vid}")
+def transcript(vid: str):
+    return _safe(rag.transcript, vid)
+
+
+NO_CACHE = {"Cache-Control": "no-cache"}
+
+
+@app.get("/")
+def home():
+    return FileResponse("static/index.html", headers=NO_CACHE)
+
+
+@app.get("/lab")
+def lab():
+    return FileResponse("static/lab.html", headers=NO_CACHE)

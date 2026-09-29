@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+python-dotenv
+openai
+httpx
+numpy
+rank_bm25
+yt-dlp[default]
+youtube-transcript-api

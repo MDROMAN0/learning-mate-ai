@@ -1,0 +1,250 @@
+[
+ {
+  "video": "6GQIgagnVn4",
+  "question": "normalization ki?",
+  "gold": [
+   0,
+   41
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "data redundancy kivabe hoy? example dao",
+  "gold": [
+   39,
+   121
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "redundancy dur korte table alada kori keno, foreign key er kaj ki?",
+  "gold": [
+   135,
+   216
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "1NF er rule ki?",
+  "gold": [
+   214,
+   282
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "What is a multivalued attribute?",
+  "gold": [
+   235,
+   282
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "একটা table কে 1NF এ নেওয়ার পদ্ধতিগুলো কী কী?",
+  "gold": [
+   296,
+   409
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "partial dependency ki?",
+  "gold": [
+   408,
+   521
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "composite key kake bole?",
+  "gold": [
+   499,
+   521
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "2NF e table kivabe convert korbo?",
+  "gold": [
+   591,
+   693
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "grade keno CID ar ID duitar upor dependent?",
+  "gold": [
+   640,
+   722
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "network kake bole?",
+  "gold": [
+   22,
+   70
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "What does a switch do in a network?",
+  "gold": [
+   138,
+   181
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "router keno lage?",
+  "gold": [
+   179,
+   222
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "PAN কী? উদাহরণ দাও",
+  "gold": [
+   219,
+   260
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "server ar user er parthokko ki?",
+  "gold": [
+   258,
+   314
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "LAN ki?",
+  "gold": [
+   284,
+   339
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "metropolitan area network ki?",
+  "gold": [
+   312,
+   357
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "WAN ki?",
+  "gold": [
+   355,
+   398
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "world wide web er uddhabok ke?",
+  "gold": [
+   445,
+   490
+  ]
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "binary tree er definition ki?",
+  "gold": [
+   65,
+   139
+  ]
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "full binary tree ki?",
+  "gold": [
+   178,
+   297
+  ]
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "complete binary tree er condition gula ki?",
+  "gold": [
+   294,
+   355
+  ]
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "What is a perfect binary tree?",
+  "gold": [
+   632,
+   716
+  ]
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "python diye ki ki kora jay?",
+  "gold": [
+   109,
+   164
+  ]
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "python keno eto popular?",
+  "gold": [
+   81,
+   110
+  ]
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "chatgpt ki python diye banano?",
+  "gold": [
+   220,
+   267
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "3NF er rule ki?",
+  "gold": null
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "SQL join kivabe kaj kore?",
+  "gold": null
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "OSI model er 7 ta layer ki ki?",
+  "gold": null
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "subnetting kivabe kori?",
+  "gold": null
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "binary search tree e insert kivabe kori?",
+  "gold": null
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "AVL tree rotation ki?",
+  "gold": null
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "python e for loop kivabe likhi?",
+  "gold": null
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "Java te class kivabe banay?",
+  "gold": null
+ }
+]

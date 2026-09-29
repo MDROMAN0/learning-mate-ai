@@ -1,0 +1,11 @@
+data
+__pycache__
+*.pyc
+.env
+.venv
+jobs
+test_mock.py
+extension
+*.log
+setup_log.txt
+test_log.txt

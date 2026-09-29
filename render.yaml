@@ -1,0 +1,23 @@
+# Render Blueprint (free plan). Secrets marked sync:false are typed by YOU in the Render dashboard.
+services:
+  - type: web
+    name: vidya-rag
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - {key: LLM_API_KEY, sync: false}            # Gemini key (aistudio.google.com/apikey)
+      - {key: LLM_BASE_URL, value: "https://generativelanguage.googleapis.com/v1beta/openai/"}
+      - {key: LLM_MODEL, value: gemini-3.5-flash}
+      - {key: LLM_FALLBACK_MODELS, value: "gemini-3.5-flash-lite,gemini-3-flash-preview,gemini-flash-lite-latest"}
+      - {key: EMB_PROVIDER, value: api}
+      - {key: RERANK_PROVIDER, value: llm}
+      - {key: CHUNK_SIGNAL, value: lexical}
+      - {key: YT_DOWNLOAD, value: "0"}             # never download videos; captions + embedded player
+      - {key: AUTH, value: "1"}                    # ChatGPT-style sign up / log in
+      - {key: DAILY_LIMIT, value: "40"}            # LLM-heavy requests per user per day
+      - {key: SECRET_KEY, generateValue: true}     # signs login sessions
+      - {key: COOKIE_SECURE, value: "1"}
+      - {key: DATABASE_URL, sync: false}           # optional: free Neon Postgres URL so accounts survive restarts
+      - {key: APP_PASSWORD, sync: false}           # admin key for the Chrome extension
+      - {key: MAX_UPLOAD_MB, value: "100"}

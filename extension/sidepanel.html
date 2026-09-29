@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#0b0d12;--panel:#141821;--panel2:#1a1f2b;--line:#262c3a;--text:#f2f4f8;--text2:#b9c0cf;--muted:#8a93a6;--brand:#7c5cff;--brand2:#22d3ee;--ok:#22c55e;--bad:#f43f5e;--warn:#f59e0b}
+*{box-sizing:border-box}
+body{font:14.5px/1.55 "Inter","Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif;margin:0;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,13,18,.9);backdrop-filter:blur(10px);z-index:2}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-weight:800;color:#fff}
+header b{font-size:15px} header small{color:var(--muted);font-size:11.5px} .sp{flex:1}
+.ic{background:none;border:1px solid var(--line);color:var(--text2);border-radius:8px;padding:4px 8px;cursor:pointer}
+main{padding:12px 14px}
+input,button{font:inherit}
+.in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:#10131a;color:var(--text);outline:none;margin:4px 0}
+.in:focus{border-color:var(--brand)}
+.btn{width:100%;padding:9px 12px;border-radius:10px;border:0;background:linear-gradient(135deg,var(--brand),#5b8cff);color:#fff;font-weight:650;cursor:pointer;margin:4px 0}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+.muted{color:var(--muted);font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:650;background:rgba(124,92,255,.15);color:#c4b6ff;margin:0 4px 4px 0}
+.badge.ok{background:rgba(34,197,94,.14);color:var(--ok)} .badge.bad{background:rgba(244,63,94,.14);color:var(--bad)}
+.chip{display:inline-block;padding:0 7px;border-radius:6px;background:rgba(124,92,255,.15);color:#c4b6ff;font:600 11.5px ui-monospace,Consolas,monospace;cursor:pointer;margin:0 2px}
+.chip:hover{outline:1px solid var(--brand)}
+h4{margin:10px 0 2px;color:var(--brand2);font-size:13px} ul{margin:0;padding-left:17px} li{margin:4px 0}
+.row{display:flex;gap:6px;align-items:center}
+.tog{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);margin:6px 0;cursor:pointer}
+.bub{background:linear-gradient(135deg,var(--brand),#5b8cff);padding:7px 12px;border-radius:12px 12px 3px 12px;margin:12px 0 0 auto;width:fit-content;max-width:90%}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--brand);animation:s .8s linear infinite;display:inline-block}
+@keyframes s{to{transform:rotate(360deg)}}
+#settings{display:none} #settings.on{display:block}
+</style></head><body>
+<header><div class="logo">V</div><div><b>Vidya</b><br><small>YouTube Topic RAG</small></div><div class="sp"></div><button class="ic" id="gear" title="Settings">⚙</button></header>
+<main>
+  <div id="settings" class="card">
+    <div class="muted">Backend URL</div><input class="in" id="backend" placeholder="http://localhost:8000">
+    <div class="muted">App key</div><input class="in" id="key" type="password" placeholder="APP_PASSWORD (optional)">
+  </div>
+  <div class="card">
+    <div class="row"><span class="badge" id="vbadge">এই tab-এর video</span></div>
+    <button class="btn ghost" id="idx">⚡ এই video index করো</button>
+    <div id="st" class="muted"></div>
+  </div>
+  <div id="out"></div>
+  <div class="card" style="position:sticky;bottom:8px">
+    <input class="in" id="q" placeholder="Topic / প্রশ্ন (Enter)">
+    <label class="tog"><input type="checkbox" id="sp"> spoiler-free — শুধু এখন পর্যন্ত দেখা অংশ</label>
+    <button class="btn" id="ask">জিজ্ঞেস করো</button>
+  </div>
+</main>
+<script src="sidepanel.js"></script>
+</body></html>

@@ -1,0 +1,9 @@
+.env
+data/
+__pycache__/
+*.pyc
+.venv/
+jobs/
+setup_log.txt
+test_log.txt
+*.log
