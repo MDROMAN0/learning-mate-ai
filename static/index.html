@@ -220,12 +220,14 @@
   .rail .yt{min-width:240px;max-width:240px;scroll-snap-align:start}
   @media (max-width:900px){.dgrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:1100px){.work{grid-template-columns:1fr;height:auto}.right{min-height:640px}}
-  .scrim{display:none}
+  .scrim{display:none} .navl .mlab{display:none}
   /* ---------- phones: drawer menu, sticky player, thumb-friendly controls ---------- */
   @media (max-width:780px){
     .top{gap:6px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top))}
-    .logo{font-size:16px;gap:8px} .logo small,#health{display:none} .logo i{width:28px;height:28px}
-    .nav{margin-left:0} .nav a{padding:5px 8px;font-size:13px} .nav a[href="/"]{display:none}
+    .top>*{flex:none} .top .sp{flex:1}
+    .logo{font-size:16px;gap:8px;white-space:nowrap} .logo small,#health,.nav{display:none} .logo i{width:28px;height:28px}
+    .top .btn{height:36px;padding:0 10px} .top .btn.icon{width:36px;padding:0}
+    .navl .mlab{display:flex}
     .app{display:block;height:auto}
     .side{position:fixed;left:0;top:0;bottom:0;width:min(86vw,320px);z-index:70;transform:translateX(-105%);transition:transform .22s ease;box-shadow:24px 0 60px rgba(0,0,0,.5);padding-top:env(safe-area-inset-top)}
     body.drawer .side{transform:none}
@@ -248,12 +250,12 @@
     /* watch page */
     .work{display:block;height:auto}
     .left{display:contents} /* lets the player stay pinned while you scroll down to the chat */
-    .player{position:sticky;top:47px;z-index:15;border-radius:0;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+    .player{position:sticky;top:52px;z-index:15;border-radius:0;box-shadow:0 8px 20px rgba(0,0,0,.35)}
     .left>*:not(.player){margin:10px 12px 0} .left>.card:last-child{margin-bottom:12px}
     .qact{margin-top:0} .qact kbd{display:none} .qact .btn{flex:1}
     .vtitle{font-size:16px}
     .tr{max-height:240px} #trq{width:100%!important} .card .row{flex-wrap:wrap}
-    .right{border-left:0;border-top:1px solid var(--line);height:calc(100dvh - 48px - 56.25vw);min-height:460px}
+    .right{border-left:0;border-top:1px solid var(--line);height:calc(100dvh - 53px - 56.25vw);min-height:460px}
     .tabs{padding:6px 8px 0;scrollbar-width:none} .tabs::-webkit-scrollbar{display:none} .tabs button{padding:9px 10px;font-size:13px}
     .pane{padding:12px}
     .comp{padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))} .comp .row{flex-wrap:wrap}
@@ -269,7 +271,7 @@
     .toast{bottom:calc(96px + env(safe-area-inset-bottom));max-width:92vw;width:max-content;text-align:center}
     .auth .box{padding:22px}
   }
-  @media (max-width:420px){.logo span{display:none}} @media (max-width:340px){.grid{grid-template-columns:1fr}}
+  @media (max-width:370px){.logo span{display:none}} @media (max-width:340px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -304,6 +306,7 @@
       <button data-v="home" class="on"><i data-i="home"></i> <span data-t="home"></span></button>
       <button data-v="browse"><i data-i="search"></i> <span data-t="browse"></span></button>
       <button data-v="hist" id="histNav" class="hide"><i data-i="history"></i> <span data-t="historyT"></span></button>
+      <button class="mlab" onclick="location.href='/lab'"><i data-i="code"></i> <span data-t="lab"></span></button>
     </div>
     <div class="blk hide" id="keyBlk">
       <div class="h"><i data-i="lock" data-s="13"></i> <span data-t="appKey"></span></div>

@@ -38,7 +38,7 @@
   .tabs2{display:flex;gap:6px;margin:18px 0 12px}
   @media (max-width:900px){.ctl{grid-template-columns:1fr}.modes{grid-template-columns:1fr 1fr}}
   @media (max-width:780px){
-    .top{gap:6px;padding:8px 10px} .logo{font-size:16px} .logo small,#health{display:none} .nav{margin-left:0} .nav a{padding:5px 8px;font-size:13px}
+    .top{gap:6px;padding:8px 10px} .top>*{flex:none} .top .sp{flex:1} .logo{font-size:16px;white-space:nowrap} .logo small,#health{display:none} .nav{margin-left:0} .nav a{padding:5px 8px;font-size:13px;white-space:nowrap} .top .btn{height:36px;padding:0 10px} .logo span{display:none} #appkey{width:110px!important}
     .wrap{padding:14px 12px 40px} .in,textarea.in,select.in{font-size:16px}
     .modes{grid-template-columns:1fr} .grid2{grid-template-columns:1fr}
     table.t{display:block;overflow-x:auto;max-width:100%} table.t td{min-width:44px}
@@ -51,7 +51,7 @@
   <div class="logo"><i>L</i><span data-t="brand"></span> <small>RAG Lab</small></div>
   <nav class="nav"><a href="/" data-t="study"></a><a href="/lab" class="on" data-t="lab"></a></nav>
   <div class="sp"></div>
-  <input class="in" id="appkey" type="password" autocomplete="off" data-tp="appKey" style="width:180px;padding:6px 10px;font-size:13px">
+  <input class="in hide" id="appkey" type="password" autocomplete="off" data-tp="appKey" style="width:180px;padding:6px 10px;font-size:13px">
   <button class="btn sm" onclick="toggleLang()"><i data-i="globe" data-s="14"></i><span data-t="langBtn"></span></button>
   <button class="btn icon ghost" id="themeBtn"><i data-i="theme"></i></button>
 </header>
@@ -106,7 +106,7 @@ const rng=r=>fmt(r.start)+"–"+fmt(r.end);
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 const setTheme=x=>{document.documentElement.dataset.theme=x;store.set("theme",x)};setTheme(store.get("theme")||"dark");
 $("themeBtn").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
-$("appkey").value=store.get("appkey")||"";$("appkey").onchange=()=>{store.set("appkey",$("appkey").value);loadLib()};
+$("appkey").value=store.get("appkey")||"";fetch("/api/auth/me",{credentials:"same-origin"}).then(r=>r.json()).then(d=>{if(!d.auth&&d.app_password)$("appkey").classList.remove("hide")}).catch(()=>{});$("appkey").onchange=()=>{store.set("appkey",$("appkey").value);loadLib()};
 const hdr=()=>({"Content-Type":"application/json","x-app-key":$("appkey").value,"x-lang":LANG});
 async function req(p,o){const r=await fetch(p,{headers:hdr(),credentials:"same-origin",...o});const d=await r.json().catch(()=>({detail:"bad response"}));if(r.status===401&&d.login)location.href="/";if(!r.ok)throw new Error(tMsg(d.detail||r.status));return d}
 const post=(p,b)=>req(p,{method:"POST",body:JSON.stringify(b)}),get=p=>req(p);
