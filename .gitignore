@@ -7,3 +7,5 @@ jobs/
 setup_log.txt
 test_log.txt
 *.log
+HANDOFF.md
+docs/YOUR_PART.md

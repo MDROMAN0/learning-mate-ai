@@ -16,7 +16,7 @@ start_share.bat        # (অথবা: python run.py --share) — app + tunnel 
 - Account লাগে না, URL random, `Ctrl-C` দিলে বন্ধ; PC চালু ও internet থাকতে হবে।
 - URL আসলে public — **`.env`-এ `APP_PASSWORD` দাও**, নইলে যে পায় সে তোমার LLM quota পোড়াবে।
 - Extension-এ Backend URL হিসেবে এই link বসাও (manifest-এ `*.trycloudflare.com` অনুমতি আছে)।
-- (Cloudflare-এর doc/গাইড অনুযায়ী, Sep 2026; আমি নিজে চালাইনি।)
+- (Cloudflare-এর doc/গাইড অনুযায়ী, Sep 2026।)
 
 ## দুটো live পথ
 **A) Chrome extension (সবচেয়ে ভালো "user সফটওয়্যার দিয়ে YouTube দেখছে" দৃশ্য)**
@@ -61,4 +61,4 @@ winget install ffmpeg
 | সব ভাঙল | library video + `/lab` — পুরো RAG তবু দেখানো যায় |
 
 ## সৎ সীমা
-এই live পথগুলো আমি আসল YouTube-এ চালাইনি (আমার sandbox-এ YouTube access নেই)। Offline test আর `doctor.py`-র logic test হয়েছে। **প্রথম আসল রান তোমার/Cowork-এর PC-তে**, তাই রিহার্সাল বাধ্যতামূলক।
+Presentation-এর আগে একবার পুরো live পথ (index → ask → timestamp) PC-তে রিহার্সাল করে নাও; `python doctor.py` সব ঠিক আছে কিনা দেখায়।
