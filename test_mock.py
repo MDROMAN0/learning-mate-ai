@@ -370,6 +370,17 @@ try:
     rag._llm_try(["m-main"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should be busy")
 except rag._AllBusy as e:
     assert e.wait == 1.0
+rag._COOL.clear()
+def _create2(**kw):
+    if kw["model"] == "day-gone": raise _Err(429, "quota GenerateRequestsPerDayPerProjectPerModel-FreeTier retryDelay': '50s'")
+    return _resp("<thought>hmm</thought>fine")
+rag._client = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_create2)))
+t0 = time.time(); assert rag._llm_try(["day-gone", "backup"], [{"role": "user", "content": "x"}], 0.1, 5, True) == "fine" and time.time() - t0 < 1
+assert rag._COOL["day-gone"] > time.time() + 3000                                  # daily-exhausted model skipped for an hour
+try: rag._llm_try(["day-gone"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should raise")
+except rag._AllBusy: raise SystemExit("must not wait for a daily quota")
+except _Err: pass
+rag._COOL.clear()
 for k in ("LLM_BASE_URL", "LLM_MODEL", "LLM_FALLBACK_MODELS"): os.environ.pop(k, None)
 ans = {"sections": [{"heading": "h", "points": ["bare string point", {"text": "p", "cites": ["2", 1, "x"]}]}, "loose section"]}
 rag.llm = lambda *a, **k: json.dumps(ans)

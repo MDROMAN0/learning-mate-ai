@@ -3,7 +3,7 @@
    (RAG, BM25, embedding, chunk, timestamp, PDF, YouTube...). Add every new key to BOTH languages. */
 window.I18N = {
   en: {
-    nbMove: "Move", a_q: "Question", a_rw: "Query rewrite", a_dense: "Dense search", a_bm25: "BM25 search", a_rrf: "RRF fusion", a_rr: "Rerank", a_gr: "Relevance check", a_gen: "Grounded answer", a_ver: "Claim check", a_seg: "Segments",
+    pinMenu: "Keep the menu open", nbMove: "Move", nbAskPh: "Ask AI about this video while you take notes…", nbExplain: "Explain this", nbPlace: "Place in notebook", nbClose: "Close", nbExplainHint: "Select some text in your notebook, or click a screenshot / timestamp first", nbAboutSel: "About your selection", nbAboutAt: "Explanation of the part at", nbPlaced: "Placed in your notebook — drag it anywhere", a_q: "Question", a_rw: "Query rewrite", a_dense: "Dense search", a_bm25: "BM25 search", a_rrf: "RRF fusion", a_rr: "Rerank", a_gr: "Relevance check", a_gen: "Grounded answer", a_ver: "Claim check", a_seg: "Segments",
     brand: "Learning Mate AI", brandSub: "YouTube study assistant",
     study: "Study", lab: "RAG Lab", online: "online", offline: "offline", langBtn: "বাংলা",
     home: "Home", browse: "Browse YouTube", library: "My library", historyT: "History",
@@ -95,7 +95,7 @@ window.I18N = {
     evCfg: "config", noKey: "Enter the app key above"
   },
   bn: {
-    nbMove: "সরাও", a_q: "প্রশ্ন", a_rw: "প্রশ্ন নতুন করে লেখা", a_dense: "অর্থ দিয়ে খোঁজা", a_bm25: "শব্দ দিয়ে খোঁজা", a_rrf: "দুই তালিকা মেলানো", a_rr: "আবার সাজানো", a_gr: "প্রাসঙ্গিকতা যাচাই", a_gen: "প্রমাণভিত্তিক উত্তর", a_ver: "তথ্য যাচাই", a_seg: "ভিডিওর অংশ",
+    pinMenu: "মেনু খোলা রাখো", nbMove: "সরাও", nbAskPh: "নোট নিতে নিতে এই ভিডিও নিয়ে AI-কে জিজ্ঞেস করো…", nbExplain: "এটা বুঝিয়ে দাও", nbPlace: "নোটবুকে বসাও", nbClose: "বন্ধ", nbExplainHint: "আগে নোটবুকের কোনো লেখা সিলেক্ট করো, অথবা কোনো স্ক্রিনশট / timestamp-এ ক্লিক করো", nbAboutSel: "তোমার সিলেক্ট করা অংশ নিয়ে", nbAboutAt: "এই সময়ের অংশের ব্যাখ্যা:", nbPlaced: "নোটবুকে বসানো হয়েছে — টেনে যেকোনো জায়গায় নাও", a_q: "প্রশ্ন", a_rw: "প্রশ্ন নতুন করে লেখা", a_dense: "অর্থ দিয়ে খোঁজা", a_bm25: "শব্দ দিয়ে খোঁজা", a_rrf: "দুই তালিকা মেলানো", a_rr: "আবার সাজানো", a_gr: "প্রাসঙ্গিকতা যাচাই", a_gen: "প্রমাণভিত্তিক উত্তর", a_ver: "তথ্য যাচাই", a_seg: "ভিডিওর অংশ",
     brand: "Learning Mate AI", brandSub: "YouTube পড়ার সহকারী",
     study: "পড়া", lab: "RAG Lab", online: "চালু", offline: "বন্ধ", langBtn: "English",
     home: "হোম", browse: "YouTube খুঁজুন", library: "আমার লাইব্রেরি", historyT: "ইতিহাস",

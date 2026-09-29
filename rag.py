@@ -164,7 +164,7 @@ def llm(system, user, temperature=0.1, max_tokens=1500):
             time.sleep(min(e.wait, 65))   # every model rate-limited: wait out the per-minute window
 
 
-DEFAULT_GEMINI_FALLBACKS = "gemini-3.5-flash-lite,gemini-3-flash-preview,gemini-flash-lite-latest"
+DEFAULT_GEMINI_FALLBACKS = "gemini-3.5-flash-lite,gemini-3-flash-preview,gemini-flash-lite-latest,gemma-4-26b-a4b-it"
 
 
 class _AllBusy(Exception):
@@ -209,6 +209,13 @@ def _llm_try(models, msgs, temperature, max_tokens, gem):
             code = getattr(e, "status_code", None)
             if code not in (404, 429, 500, 502, 503, 504):
                 raise
+            if "PerDay" in str(e):          # daily free quota gone: skip this model for an hour, never wait for it
+                _COOL[m] = time.time() + 3600
+                if i == len(models) - 1:
+                    if wait is None:
+                        raise
+                    raise _AllBusy(e, wait)
+                continue
             mw = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+)", str(e))
             d = float(mw.group(1)) + 1 if mw else 20.0
             wait = d if wait is None else min(wait, d)
@@ -218,6 +225,7 @@ def _llm_try(models, msgs, temperature, max_tokens, gem):
             if i == len(models) - 1:
                 raise _AllBusy(e, wait)
     out = r.choices[0].message.content or ""
+    out = re.sub(r"<thought>.*?</thought>", "", out, flags=re.S).strip()   # gemma-style visible reasoning
     _stat("llm_calls")
     _stat("llm_in_chars", sum(len(x["content"]) for x in msgs))
     _stat("llm_out_chars", len(out))

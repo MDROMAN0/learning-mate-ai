@@ -35,7 +35,7 @@
   function renderAll() { PAGE.querySelectorAll(".nb-it").forEach(e => e.remove()); items.forEach(build); layout(); }
 
   /* ---------- item interactions: select, drag, resize, edit, delete ---------- */
-  function select(el) { PAGE.querySelectorAll(".nb-it.sel").forEach(x => x.classList.remove("sel")); sel = el; if (el) el.classList.add("sel"); }
+  function select(el) { PAGE.querySelectorAll(".nb-it.sel").forEach(x => x.classList.remove("sel")); sel = el; if (el) el.classList.add("sel"); explainState(); }
   function wire(el, it) {
     const tx = el.querySelector(".nb-txt");
     if (tx) {
@@ -157,6 +157,76 @@
     toast(t("ssDone"));
   }
 
+
+  /* ---------- Ask AI inside the notebook: answer card → "place in notebook"; "explain this" for selection / screenshot ---------- */
+  const CARD = $("nbCard"); let cardData = null, selText = "";
+  function explainState() {
+    const it = sel && items.find(i => i.id === sel.dataset.id);
+    const ok = !!selText || (it && (it.type === "ts" || (it.type === "img" && /data-t="\d+"/.test(it.cap || ""))));
+    $("nbExplain").disabled = false; $("nbExplain").classList.toggle("ready", ok);
+  }
+  document.addEventListener("selectionchange", () => {
+    const g = getSelection(), n = g && g.anchorNode, inNb = n && (n.nodeType === 1 ? n : n.parentElement)?.closest?.(".nb-txt");
+    const txt = inNb ? String(g).trim() : "";
+    if (txt || !inNb) { selText = txt; explainState(); }
+  });
+  const chip = (s0, vid) => '<span class="chip" data-s="' + s0 + '">' + ic("play", 10) + " " + fmt(s0) + "</span>";
+  function showCard(html) {
+    CARD.innerHTML = html; CARD.classList.remove("hide");
+    CARD.querySelectorAll(".chip[data-s]").forEach(c => c.onclick = () => seek(+c.dataset.s));
+    const x = CARD.querySelector("[data-x]"); if (x) x.onclick = () => CARD.classList.add("hide");
+    const pl = CARD.querySelector("[data-place]"); if (pl) pl.onclick = place2nb;
+  }
+  const head = (badge) => '<div class="hd">' + badge + '<span class="sp"></span><button class="btn sm ghost" data-x>' + ic("x", 13) + " " + t("nbClose") + "</button></div>";
+  const loading = q => showCard(head('<span class="spin"></span><b>' + t("thinking") + "</b>") + '<div class="q">' + esc(q) + '</div><div class="shimmer"></div><div class="shimmer" style="width:70%"></div>');
+  async function askAI(q, label) {
+    if (!cur || !q.trim()) return; loading(label || q);
+    try {
+      const d = await api("/api/ask", { video_id: cur.video_id, question: q, clip: false, level: "simple" });
+      const tr = d.trace || {};
+      if (!d.found) { cardData = null; showCard(head('<span class="badge bad">' + ic("x", 12) + " " + t("notFound") + "</span>") + '<div class="q">' + esc(label || q) + "</div><b>" + esc(t("notFoundMsg")) + "</b>"); return; }
+      const a = d.answer, refAt = n => { const r = (d.refs || []).find(x => x.n === n); return r ? r.start : null; };
+      let body = '<div class="q">' + esc(label || q) + "</div>";
+      if (a) {
+        body += "<h3>" + esc(a.title) + '</h3><p class="sum">' + esc(a.summary) + "</p>";
+        a.sections.forEach(x => { body += (x.heading ? "<h4>" + esc(x.heading) + "</h4>" : "") + "<ul>" + x.points.map(p => "<li>" + esc(p.text) + " " + (p.cites || []).map(n => { const s0 = refAt(n); return s0 == null ? "" : chip(s0); }).join("") + "</li>").join("") + "</ul>"; });
+      } else body += "<p>" + esc(d.note || "") + "</p>";
+      body += '<div class="row" style="margin-top:6px">' + (d.segments || []).map(g => chip(g.start)).join("") + "</div>";
+      cardData = { q: label || q, a, refs: d.refs || [], segs: d.segments || [] };
+      showCard(head(tr.verify === "ok" ? '<span class="badge ok">' + ic("check", 12) + " " + tr.claims_supported + "/" + tr.claims_total + " " + t("verified") + "</span>" : '<span class="badge warn">' + ic("alert", 12) + " " + t("unverified") + "</span>") + body +
+        '<div class="acts"><button class="btn pri sm" data-place>' + ic("book", 13) + " " + t("nbPlace") + "</button></div>");
+    } catch (e) { showCard(head('<span class="badge bad">' + t("error") + "</span>") + esc(tMsg(e.message))); }
+  }
+  async function explainAt(sec, label) {
+    if (!cur) return; loading(label);
+    try {
+      const d = await api("/api/explain", { video_id: cur.video_id, current_time: Math.max(sec + 45, 30), style: "simple" });
+      cardData = { q: label, text: d.explanation, at: d.passage.start };
+      showCard(head('<span class="badge">' + ic("sparkles", 12) + " " + t("nbExplain") + "</span>") + '<div class="q">' + esc(label) + " " + chip(d.passage.start) + '</div><p style="white-space:pre-wrap;margin:0;font-size:14px">' + esc(d.explanation) + "</p>" +
+        '<div class="acts"><button class="btn pri sm" data-place>' + ic("book", 13) + " " + t("nbPlace") + "</button></div>");
+    } catch (e) { showCard(head('<span class="badge bad">' + t("error") + "</span>") + esc(tMsg(e.message))); }
+  }
+  function place2nb() {
+    if (!cardData) return; const tsn = s0 => '<a class="tsn" data-t="' + Math.floor(s0) + '">' + ic("play", 10) + " " + fmt(s0) + "</a>";
+    let h = '<p class="nb-q"><i>' + esc(cardData.q) + "</i></p>";
+    if (cardData.a) {
+      const a = cardData.a, at = n => { const r = cardData.refs.find(x => x.n === n); return r ? r.start : null; };
+      h += "<h3>" + esc(a.title) + "</h3><p>" + esc(a.summary) + "</p>";
+      a.sections.forEach(x => { h += (x.heading ? "<p><b>" + esc(x.heading) + "</b></p>" : "") + "<ul>" + x.points.map(p => "<li>" + esc(p.text) + " " + (p.cites || []).map(n => { const s0 = at(n); return s0 == null ? "" : tsn(s0); }).join(" ") + "</li>").join("") + "</ul>"; });
+    } else if (cardData.text) h += "<p>" + tsn(cardData.at) + " " + esc(cardData.text).replace(/\n/g, "<br>") + "</p>";
+    const p0 = spot(); add({ type: "text", x: p0.x, y: p0.y, w: 880, html: h });
+    CARD.classList.add("hide"); toast(t("nbPlaced"));
+  }
+  $("nbAskBtn").onclick = () => { const q = $("nbQ").value.trim(); if (!q) return; $("nbQ").value = ""; askAI(q); };
+  $("nbQ").onkeydown = e => { if (e.key === "Enter") $("nbAskBtn").click(); };
+  $("nbExplain").onmousedown = e => e.preventDefault();          // keep the text selection alive
+  $("nbExplain").onclick = () => {
+    if (selText) { const q = selText.slice(0, 400); return askAI((LANG === "en" ? "Explain this, using the video: " : "ভিডিও থেকে এটা বুঝিয়ে দাও: ") + '"' + q + '"', "“" + q.slice(0, 120) + (q.length > 120 ? "…" : "") + "”"); }
+    const it = sel && items.find(i => i.id === sel.dataset.id);
+    if (it && it.type === "ts") return explainAt(it.t, t("nbAboutAt") + " " + fmt(it.t));
+    if (it && it.type === "img") { const m = /data-t="(\d+)"/.exec(it.cap || ""); if (m) return explainAt(+m[1], t("nbAboutAt") + " " + fmt(+m[1])); }
+    toast(t("nbExplainHint"));
+  };
   /* ---------- save / load (account when logged in, else this browser) ---------- */
   function saveSoon() { $("nSave").textContent = t("saving"); clearTimeout(saveT); saveT = setTimeout(save, 900); }
   async function save() {
@@ -181,7 +251,7 @@
       }
       if (c.board) items.push({ id: uid(), type: "img", x: 40, y: 40 + 420 * items.length, w: 700, src: c.board });
     }
-    renderAll(); paintInk(inkImg); setTool("type");
+    renderAll(); paintInk(inkImg); setTool("type"); CARD.classList.add("hide"); selText = ""; explainState();
   };
   /* screenshots that ended up inside a text box (old notes) become their own draggable image items */
   function liftFigures(list) {

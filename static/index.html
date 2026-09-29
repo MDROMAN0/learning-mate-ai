@@ -140,6 +140,37 @@
   .printing .nb-txt{color:#111!important;border-color:transparent!important;background:transparent!important} .printing .tsn{color:#4b2fd0;background:#efeaff}
   .flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:90;animation:fsh .35s}
   @keyframes fsh{20%{opacity:.35}100%{opacity:0}}
+  .nbpane{position:relative}
+  .nb-ask{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line);background:var(--panel);flex:none}
+  .nb-ask .in{padding:9px 12px}
+  #nbExplain{flex:none} #nbExplain:disabled{opacity:.45}
+  #nbExplain.ready{border-color:var(--brand);box-shadow:0 0 0 3px var(--brandSoft)}
+  .nb-card{position:absolute;right:14px;bottom:70px;width:min(460px,calc(100% - 28px));max-height:58%;overflow:auto;z-index:20;background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:14px 16px;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:fd .25s ease}
+  .nb-card h3{margin:0 0 4px;font-size:15.5px} .nb-card .sum{color:var(--text2);margin:0 0 8px;font-size:14px}
+  .nb-card h4{margin:8px 0 2px;font-size:13.5px;color:var(--brand2)} .nb-card ul{margin:0;padding-left:18px;font-size:14px} .nb-card li{margin:4px 0}
+  .nb-card .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px} .nb-card .hd .sp{flex:1}
+  .nb-card .q{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .nb-card .acts{display:flex;gap:6px;margin-top:10px}
+  /* collapsible sidebar: slim rail, opens on hover, menu button pins it open */
+  @media (min-width:781px){
+    body:not(.pinned) .app{grid-template-columns:68px 1fr}
+    .side{position:relative;z-index:40;transition:width .18s ease,box-shadow .18s}
+    body:not(.pinned) .side{width:68px;overflow:hidden}
+    .app{position:relative} .main{grid-column:2;grid-row:1} .side{grid-column:1;grid-row:1}
+    body:not(.pinned) .side:hover{position:absolute;left:0;top:0;bottom:0;width:292px;box-shadow:24px 0 60px rgba(0,0,0,.45)}
+    body:not(.pinned) .side:not(:hover) .blk,
+    body:not(.pinned) .side:not(:hover) .navl span,
+    body:not(.pinned) .side:not(:hover) .vc > div,
+    body:not(.pinned) .side:not(:hover) .me > div:not(.av),
+    body:not(.pinned) .side:not(:hover) .me button{display:none}
+    body:not(.pinned) .side:not(:hover) .navl button{justify-content:center;padding:10px 0}
+    body:not(.pinned) .side:not(:hover) .vc{padding:6px;justify-content:center}
+    body:not(.pinned) .side:not(:hover) .vc img{width:44px;height:30px}
+    body:not(.pinned) .side:not(:hover) .lib{padding:4px 6px}
+    body:not(.pinned) .side:not(:hover) .me{justify-content:center;padding:10px 0}
+    .side > *{min-width:0}
+  }
+  body.pinned #pinBtn{background:var(--brandSoft);border-color:var(--brand)}
   /* home — dynamic */
   .home{position:relative;overflow:hidden;padding-bottom:60px}
   .aurora{position:absolute;inset:-20% -10% auto -10%;height:720px;pointer-events:none;filter:blur(70px);opacity:.55;z-index:0}
@@ -207,6 +238,7 @@
 </div>
 
 <header class="top">
+  <button class="btn icon ghost" id="pinBtn" data-tt="pinMenu"><i data-i="menu" data-s="18"></i></button>
   <div class="logo"><i>L</i><span data-t="brand"></span> <small data-t="brandSub"></small></div>
   <nav class="nav"><a href="/" class="on" data-t="study"></a><a href="/lab" data-t="lab"></a></nav>
   <div class="sp"></div>
@@ -390,6 +422,12 @@
             <div class="row nb-hint" style="flex-wrap:nowrap;gap:10px"><span class="muted" data-t="nbHint" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span class="muted" id="nSave" style="flex:none;font-size:11.5px"></span></div>
           </div>
           <div class="nb-scroll" id="nbScroll"><div class="nb-page" id="nbPage"><canvas id="nbInk"></canvas></div></div>
+          <div class="nb-card hide" id="nbCard"></div>
+          <div class="nb-ask">
+            <button class="btn sm" id="nbExplain" disabled><i data-i="sparkles" data-s="14"></i> <span data-t="nbExplain"></span></button>
+            <input class="in" id="nbQ" data-tp="nbAskPh">
+            <button class="btn pri" id="nbAskBtn"><i data-i="send" data-s="15"></i></button>
+          </div>
         </div>
         <div class="pane hide" id="p_exp">
           <div class="card soft"><div class="h" data-t="expTitle"></div>
@@ -412,6 +450,11 @@ let player=null,ytReady=false,cur=null,lib=[],trChunks=[],heat=null,lastSegs=[],
 window.onYouTubeIframeAPIReady=()=>{ytReady=true};
 function toast(m){const d=document.createElement("div");d.className="toast fade";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
 applyLang();applyIcons();
+
+/* sidebar pin (menu button) */
+const setPin=v=>{document.body.classList.toggle("pinned",v);store.set("pinSide",v?"1":"0");setTimeout(()=>{if(window.nbRelayout)window.nbRelayout()},200)};
+setPin(store.get("pinSide")==="1");
+$("pinBtn").onclick=()=>setPin(!document.body.classList.contains("pinned"));
 
 const setTheme=x=>{document.documentElement.dataset.theme=x;store.set("theme",x)};
 setTheme(store.get("theme")||"dark");
