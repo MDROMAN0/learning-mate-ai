@@ -1,6 +1,6 @@
-# Vidya — শুরু এখান থেকে (beginner guide)
+# Learning Mate AI — শুরু এখান থেকে (beginner guide)
 
-**Vidya** = লম্বা YouTube video থেকে ঠিক দরকারি অংশ খুঁজে, timestamp-সহ যাচাই করা উত্তর দেয় (RAG + LLM)।
+**Learning Mate AI** = লম্বা YouTube video থেকে ঠিক দরকারি অংশ খুঁজে, timestamp-সহ যাচাই করা উত্তর দেয় (RAG + LLM)।
 Video **download করে না** — caption সরাসরি YouTube থেকে পড়ে, আর উত্তরের অংশ YouTube player-এই চালায়।
 
 ## ১. চালানো (Windows)

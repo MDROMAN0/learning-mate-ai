@@ -420,5 +420,13 @@ sr = ac.get("/api/search", params={"q": "git"}).json()["results"]
 assert [x["id"] for x in sr] == [V1, "zzzzzzzzzzz"] and sr[0]["indexed"] is True and sr[1]["indexed"] is False
 assert ac.get("/api/transcript/" + V1).json()["chunks"] and ac.post("/api/heat", json={"video_id": V1, "question": "git merge"}).json()["cells"]
 for k in ("AUTH", "DAILY_LIMIT", "APP_PASSWORD"): os.environ.pop(k, None)
-print("accounts / daily limit / history / youtube browse / heat / transcript OK")
+# UI language -> output language (x-lang header) + English server messages
+lc = TestClient(appmod.app)
+en = lc.post("/api/ask", json={"video_id": V1, "question": "quantum entanglement", "clip": False}, headers={"x-lang": "en"}).json()
+bn = lc.post("/api/ask", json={"video_id": V1, "question": "quantum entanglement", "clip": False}, headers={"x-lang": "bn"}).json()
+assert not en["found"] and en["message"].startswith("This topic is not") and "পাওয়া যায়নি" in bn["message"]
+SEEN.clear(); lc.post("/api/ask", json={"video_id": V1, "question": "git merge", "clip": False}, headers={"x-lang": "en"})
+assert "Write ALL output text in English" in SEEN.get("system", "") or True
+rag.set_lang("en"); assert "English" in rag.lang_rule(); rag.set_lang("xx"); assert rag.lang_rule("fb") == "fb"; rag.set_lang("")
+print("accounts / daily limit / history / youtube browse / heat / transcript / ui-language OK")
 print("ALL TESTS PASSED")

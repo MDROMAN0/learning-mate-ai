@@ -63,7 +63,18 @@ def env(k, d=""):
 
 
 MODES = ("dense", "bm25", "hybrid", "hybrid+rerank")
-_S = contextvars.ContextVar("rag_stats", default=None)  # per-request counters (LLM/embedding usage)
+_S = contextvars.ContextVar("rag_stats", default=None)
+_LANG = contextvars.ContextVar("out_lang", default="")  # "bn" | "en" | "" (follow the question) - set per request
+
+
+def set_lang(code):
+    _LANG.set(code if code in ("bn", "en") else "")
+
+
+def lang_rule(fallback=""):
+    """Output-language instruction that follows the user's UI language (Bangla / English switch)."""
+    return {"en": "Write ALL output text in English (translate from the transcript if needed).",
+            "bn": "Write ALL output text in Bangla script; keep English technical terms as they are."}.get(_LANG.get(), fallback)  # per-request counters (LLM/embedding usage)
 
 
 def _stat(key, n=1):
@@ -560,8 +571,8 @@ def build_index(url, force_asr=False, progress=lambda m: None):
     if not segs:
         if path is None:
             if env("YT_DOWNLOAD", "0") != "1":
-                raise RuntimeError("এই video-তে caption পাওয়া যায়নি / no captions found for this video. "
-                                   "Caption আছে এমন video বেছে নাও, অথবা audio/.srt upload করো (বা YT_DOWNLOAD=1 + ASR)।")
+                raise RuntimeError("no captions found for this video - pick a video with captions, or upload audio/.srt "
+                                   "(or set YT_DOWNLOAD=1 for ASR)")
             raise RuntimeError(YT_BLOCK_MSG)
         progress("Transcribing (ASR)...")
         segs = transcribe(path)
@@ -773,7 +784,7 @@ def generate_answer(question, ev, level="simple"):
     text = "\n\n".join(f"[{i + 1}] ({fmt(c['start'])}-{fmt(c['end'])}) {c['text']}"
                        for i, c in enumerate(ev))
     out = parse_json(llm(
-        ANSWER_SYS + " " + LEVELS.get(level, LEVELS["simple"]),
+        ANSWER_SYS + " " + LEVELS.get(level, LEVELS["simple"]) + " " + lang_rule(),
         f"Question: {question}\n\nEvidence:\n{text}\n\nReturn JSON exactly: "
         "{\"title\": str, \"summary\": str (2-3 sentences), \"sections\": [{\"heading\": str, "
         "\"points\": [{\"text\": str, \"cites\": [int]}]}]}", max_tokens=1800))
@@ -905,11 +916,13 @@ def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use
         if rel:
             break
     if not rel:
-        where = f" (তোমার দেখা {fmt(current_time)} পর্যন্ত অংশে)" if current_time else ""
+        where = ((f" (up to {fmt(current_time)} that you watched)" if _LANG.get() == "en" else f" (তোমার দেখা {fmt(current_time)} পর্যন্ত অংশে)")
+                 if current_time else "")
         if debug:
             trace["debug"] = dbg
         return {"found": False, "video_id": vid, "trace": trace,
-                "message": f"এই topic এই video-তে পাওয়া যায়নি{where}."}
+                "message": (f"This topic is not in this video{where}." if _LANG.get() == "en"
+                            else f"এই topic এই video-তে পাওয়া যায়নি{where}.")}
     ev = sorted(rel, key=lambda c: c["start"])[:8]
     t0 = time.perf_counter()
     ans = generate_answer(question, ev, level)

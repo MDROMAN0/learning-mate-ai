@@ -86,8 +86,8 @@ def compare_answers(question, items):
         blocks.append(f"Video {i}: {it['title']}\n" + "\n".join(pts))
     out = parse_json(rag.llm(
         "You compare how different videos answer the same question. Use ONLY the given points. "
-        "Do NOT decide who is right; just show differences and direct contradictions. "
-        "Write in Bangla script with English technical terms if the question is Bangla/Banglish.",
+        "Do NOT decide who is right; just show differences and direct contradictions. " +
+        rag.lang_rule("Write in Bangla script with English technical terms if the question is Bangla/Banglish."),
         f"Question: {question}\n\n" + "\n\n".join(blocks) +
         "\n\nReturn JSON: {\"common\": [{\"text\": str, \"videos\": [int]}], "
         "\"different\": [{\"topic\": str, \"views\": [{\"video\": int, \"says\": str}]}], "
@@ -150,8 +150,8 @@ def plan_start(goal):
     out = parse_json(rag.llm(
         "You are a tutor writing quick diagnostic questions.",
         f"Learner goal: {goal}\nWrite 3 short diagnostic questions (1-2 sentence answers) that reveal what "
-        "they already know. Language: Bangla script (keep English technical terms) if the goal is Bangla/"
-        "Banglish, else English. Return JSON: {\"questions\": [str]}", max_tokens=300))
+        "they already know. " + rag.lang_rule("Language: Bangla script (keep English technical terms) if the goal is "
+        "Bangla/Banglish, else English.") + " Return JSON: {\"questions\": [str]}", max_tokens=300))
     qs = [q for q in (out or {}).get("questions", []) if isinstance(q, str)][:3]
     if not qs:
         raise RuntimeError("could not generate questions")
@@ -210,8 +210,8 @@ def quiz(video_id, n=5, topic=None, current_time=None):
         return []
     text = "\n\n".join(f"[{i}] {c['text'][:900]}" for i, c in enumerate(ev))
     out = parse_json(rag.llm(
-        "You write multiple-choice questions ONLY from the given transcript passages. Language: Bangla "
-        "script (keep English technical terms) if the passages are Bangla, else English.",
+        "You write multiple-choice questions ONLY from the given transcript passages. " + rag.lang_rule(
+            "Language: Bangla script (keep English technical terms) if the passages are Bangla, else English."),
         f"Passages:\n{text}\n\nWrite {n} questions. Return JSON: {{\"questions\": [{{\"q\": str, "
         "\"options\": [4 strings], \"answer\": index 0-3, \"explanation\": str, \"source\": passage index}]}",
         temperature=0.3, max_tokens=1800)) or {}
@@ -237,10 +237,11 @@ def explain(video_id, current_time, style="simple"):
     ix = rag.load_index(video_id)
     seg = [s for c in ix.chunks for s in c["segs"] if current_time - 90 <= s[0] < current_time]
     if not seg:
-        raise ValueError("এই সময়ের আগে কোনো transcript নেই")
+        raise ValueError("no transcript before this time - play the video a bit first")
     passage = " ".join(s[1] for s in seg)
     rng = {"start": seg[0][0], "end": current_time}
-    lang = os.getenv("EXPLAIN_LANG", "Bangla script, keep English technical terms")
+    lang = {"en": "English", "bn": "Bangla script, keep English technical terms"}.get(rag._LANG.get()) or \
+        os.getenv("EXPLAIN_LANG", "Bangla script, keep English technical terms")
     if style == "other_video":
         cands = []
         for m in rag.list_library():

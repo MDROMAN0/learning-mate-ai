@@ -29,10 +29,10 @@ Local-এ `EMB_PROVIDER=local` আর host-এ `api` **মেলাবে না
 তাই design: host-এ YouTube থেকে সরাসরি আনা নয় → (1) Chrome extension, (2) Upload tab, (3) `prepare.py` দিয়ে `library/` — এই তিনটা।
 
 ### Render-এ deploy — ChatGPT-এর মতো public website (login সহ)
-যা পাবে: `https://vidya-rag.onrender.com` — যে কেউ **Sign up / Log in** করে ব্যবহার করবে; প্রতি user-এর দিনে `DAILY_LIMIT`টা প্রশ্ন (তোমার free Gemini quota বাঁচাতে), নিজের history।
+যা পাবে: `https://learning-mate-ai.onrender.com` — যে কেউ **Sign up / Log in** করে ব্যবহার করবে; প্রতি user-এর দিনে `DAILY_LIMIT`টা প্রশ্ন (তোমার free Gemini quota বাঁচাতে), নিজের history।
 
 **Roman-এর কাজ (login/secret — Claude করবে না):**
-1. **GitHub** account-এ নতুন repo বানাও (যেমন `vidya-rag`, Private চলবে)।
+1. **GitHub** account-এ নতুন repo বানাও (যেমন `learning-mate-ai`, Private চলবে)।
 2. **Render.com** → GitHub দিয়ে sign up (card লাগে না)।
 3. (ঐচ্ছিক কিন্তু ভালো) **neon.tech** → free Postgres → connection string (`postgresql://...`) copy। না দিলে Render-এর disk restart-এ মুছে যায় → account-গুলোও মুছে যাবে।
 4. Render → **New → Blueprint** → repo বেছে নাও → `render.yaml` পড়বে → চাইলে দেবে: `LLM_API_KEY` (Gemini key), `DATABASE_URL` (Neon), `APP_PASSWORD` (extension-এর admin key)। `SECRET_KEY` Render নিজে বানায়।

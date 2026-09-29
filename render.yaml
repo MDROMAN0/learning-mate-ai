@@ -1,7 +1,7 @@
 # Render Blueprint (free plan). Secrets marked sync:false are typed by YOU in the Render dashboard.
 services:
   - type: web
-    name: vidya-rag
+    name: learning-mate-ai
     runtime: docker
     plan: free
     healthCheckPath: /healthz

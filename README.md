@@ -1,7 +1,8 @@
-# YouTube Topic RAG
+# Learning Mate AI — YouTube study assistant (RAG)
 
 লম্বা video-তে একটা topic আছে কিনা খুঁজে, সেই অংশের clip + citation-সহ verified notes দেয়। (RAG + LLM API; Bangla/Banglish-friendly)
 
+- **নতুনদের জন্য শুরু:** `docs/START_HERE.md`
 - **Cowork/নতুন কেউ:** আগে `HANDOFF.md` · **Roman-এর নিজের কাজ:** `docs/YOUR_PART.md`
 - **RAG কীভাবে কাজ করে:** `docs/RAG_ARCHITECTURE.md`, আর চালিয়ে দেখো `/lab`
 - **Live presentation (PC-তে):** `docs/LIVE_DEMO.md` + `python doctor.py`

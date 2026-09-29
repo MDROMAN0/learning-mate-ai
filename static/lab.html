@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RAG Lab — Vidya</title>
+<title>RAG Lab — Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/ui.css">
@@ -41,7 +41,7 @@
 </head>
 <body>
 <header class="top">
-  <div class="logo"><i>V</i>Vidya <small>RAG Lab</small></div>
+  <div class="logo"><i>L</i><span data-t="brand"></span> <small>RAG Lab</small></div>
   <nav class="nav"><a href="/" data-t="study"></a><a href="/lab" class="on" data-t="lab"></a></nav>
   <div class="sp"></div>
   <input class="in" id="appkey" type="password" autocomplete="off" data-tp="appKey" style="width:180px;padding:6px 10px;font-size:13px">
@@ -53,16 +53,16 @@
   <div class="card">
     <div class="h" data-t="arch"></div>
     <div class="arch" id="arch">
-      <div class="node" data-k="q">Question<small>bn / en / banglish</small></div><span class="arr">→</span>
-      <div class="node" data-k="rewrite">Query rewrite<small>multi-query + HyDE</small></div><span class="arr">→</span>
-      <div class="node" data-k="dense">Dense<small>gemini-embedding</small></div><span class="arr">+</span>
-      <div class="node" data-k="bm25">BM25<small>lexical</small></div><span class="arr">→</span>
-      <div class="node" data-k="rrf">RRF fusion<small>k = 60</small></div><span class="arr">→</span>
-      <div class="node" data-k="rerank">Rerank<small>LLM judge</small></div><span class="arr">→</span>
-      <div class="node" data-k="grade">Corrective grade<small>drop irrelevant</small></div><span class="arr">→</span>
-      <div class="node" data-k="generate">Grounded answer<small>cited</small></div><span class="arr">→</span>
-      <div class="node" data-k="verify">Claim verify<small>NLI filter</small></div><span class="arr">→</span>
-      <div class="node" data-k="clip">Segments / clip<small>ffmpeg</small></div>
+      <div class="node" data-k="q"><span data-t="a_q"></span><small>bn / en / banglish</small></div><span class="arr">→</span>
+      <div class="node" data-k="rewrite"><span data-t="a_rw"></span><small>multi-query + HyDE</small></div><span class="arr">→</span>
+      <div class="node" data-k="dense"><span data-t="a_dense"></span><small>gemini-embedding</small></div><span class="arr">+</span>
+      <div class="node" data-k="bm25"><span data-t="a_bm25"></span><small>BM25</small></div><span class="arr">→</span>
+      <div class="node" data-k="rrf"><span data-t="a_rrf"></span><small>k = 60</small></div><span class="arr">→</span>
+      <div class="node" data-k="rerank"><span data-t="a_rr"></span><small>LLM judge</small></div><span class="arr">→</span>
+      <div class="node" data-k="grade"><span data-t="a_gr"></span><small>corrective RAG</small></div><span class="arr">→</span>
+      <div class="node" data-k="generate"><span data-t="a_gen"></span><small>cited</small></div><span class="arr">→</span>
+      <div class="node" data-k="verify"><span data-t="a_ver"></span><small>NLI filter</small></div><span class="arr">→</span>
+      <div class="node" data-k="clip"><span data-t="a_seg"></span><small>timestamps</small></div>
     </div>
   </div>
 
@@ -84,7 +84,7 @@
 
   <div class="card" style="margin-top:22px">
     <div class="row" style="justify-content:space-between"><div class="h" style="margin:0" data-t="evalT"></div><span class="muted" data-t="evalHint"></span></div>
-    <textarea class="in" id="evalset" rows="5" style="margin-top:10px;font:12.5px var(--mono)" placeholder='[{"video":"id","question":"...","gold":[120,240]}, {"video":"id","question":"না-থাকা topic","gold":null}]'></textarea>
+    <textarea class="in" id="evalset" rows="5" style="margin-top:10px;font:12.5px var(--mono)" placeholder='[{"video":"id","question":"...","gold":[120,240]}, {"video":"id","question":"topic NOT in the video","gold":null}]'></textarea>
     <div class="acts"><label class="tog"><input type="checkbox" id="full"><span data-t="e2e"></span></label><span class="sp"></span><button class="btn pri" id="evalBtn" data-t="runEval"></button></div>
     <div id="evalout" style="margin-top:12px"></div>
   </div>
@@ -94,111 +94,101 @@
 const $=id=>document.getElementById(id);
 applyLang();applyIcons();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const fmt=t=>{t=Math.max(0,Math.floor(t||0));const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s).padStart(2,"0")};
+const fmt=x=>{x=Math.max(0,Math.floor(x||0));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s).padStart(2,"0")};
 const rng=r=>fmt(r.start)+"–"+fmt(r.end);
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
-const setTheme=t=>{document.documentElement.dataset.theme=t;store.set("theme",t)}; setTheme(store.get("theme")||"dark");
+const setTheme=x=>{document.documentElement.dataset.theme=x;store.set("theme",x)};setTheme(store.get("theme")||"dark");
 $("themeBtn").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
-$("appkey").value=store.get("appkey")||""; $("appkey").onchange=()=>{store.set("appkey",$("appkey").value);loadLib()};
-const hdr=()=>({"Content-Type":"application/json","x-app-key":$("appkey").value});
-async function post(p,b){const r=await fetch(p,{method:"POST",headers:hdr(),credentials:"same-origin",body:JSON.stringify(b)});if(r.status===401){const j=await r.clone().json().catch(()=>({}));if(j.login)location.href="/"}const d=await r.json().catch(()=>({detail:"bad response"}));if(!r.ok)throw new Error(d.detail||r.status);return d}
-async function get(p){const r=await fetch(p,{headers:hdr(),credentials:"same-origin"});if(r.status===401){const j=await r.clone().json().catch(()=>({}));if(j.login)location.href="/"}const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.detail||r.status);return d}
+$("appkey").value=store.get("appkey")||"";$("appkey").onchange=()=>{store.set("appkey",$("appkey").value);loadLib()};
+const hdr=()=>({"Content-Type":"application/json","x-app-key":$("appkey").value,"x-lang":LANG});
+async function req(p,o){const r=await fetch(p,{headers:hdr(),credentials:"same-origin",...o});const d=await r.json().catch(()=>({detail:"bad response"}));if(r.status===401&&d.login)location.href="/";if(!r.ok)throw new Error(tMsg(d.detail||r.status));return d}
+const post=(p,b)=>req(p,{method:"POST",body:JSON.stringify(b)}),get=p=>req(p);
 const vid=()=>$("lib").value;
-const busy=m=>{$("out").innerHTML='<div class="card"><div class="row"><span class="spin"></span><b>'+m+'</b></div><div class="shimmer"></div><div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:40%"></div></div>'};
-const fail=e=>{$("out").innerHTML='<div class="card" style="border-color:var(--bad)"><span class="badge bad">Error</span> '+esc(e.message)+"</div>"};
-async function loadLib(){let d;try{d=await get("/api/library")}catch(e){$("lib").innerHTML='<option value="">উপরে App key দাও ('+esc(e.message)+')</option>';return}
-  $("lib").innerHTML=d.videos.map(v=>'<option value="'+esc(v.video_id)+'">'+esc(v.title)+" ("+fmt(v.duration)+")</option>").join("");
-  if(!$("evalset").value&&d.videos.length)$("evalset").placeholder='[{"video":"'+d.videos[0].video_id+'","question":"...","gold":[120,240]}, {"video":"'+d.videos[0].video_id+'","question":"না-থাকা topic","gold":null}]'}
+const busy=k=>{$("out").innerHTML='<div class="card"><div class="row"><span class="spin"></span><b>'+t(k)+'</b></div><div class="shimmer"></div><div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:40%"></div></div>'};
+const fail=e=>{$("out").innerHTML='<div class="card" style="border-color:var(--bad)"><span class="badge bad">'+t("error")+"</span> "+esc(e.message)+"</div>"};
+let libVideos=[];
+async function loadLib(){try{libVideos=(await get("/api/library")).videos}catch(e){$("lib").innerHTML='<option value="">'+esc(t("noKey"))+"</option>";return}
+  const keep=$("lib").value;$("lib").innerHTML=libVideos.map(v=>'<option value="'+esc(v.video_id)+'">'+esc(v.title)+" ("+fmt(v.duration)+")</option>").join("");if(keep)$("lib").value=keep;
+  if(libVideos.length)$("evalset").placeholder='[{"video":"'+libVideos[0].video_id+'","question":"...","gold":[120,240]}, {"video":"'+libVideos[0].video_id+'","question":"topic NOT in the video","gold":null}]'}
 loadLib();
 const lit=ks=>document.querySelectorAll("#arch .node").forEach(n=>n.classList.toggle("lit",ks.includes(n.dataset.k)));
-let litTimer=null;
-function animateArch(){const seq=["q","rewrite","dense","bm25","rrf","rerank","grade","generate","verify","clip"];let i=0;clearInterval(litTimer);litTimer=setInterval(()=>{lit(seq.slice(0,(i++%seq.length)+1))},650)}
+let litTimer=null;const SEQ=["q","rewrite","dense","bm25","rrf","rerank","grade","generate","verify","clip"];
+function animateArch(){let i=0;clearInterval(litTimer);litTimer=setInterval(()=>lit(SEQ.slice(0,(i++%SEQ.length)+1)),650)}
 function stopArch(ks){clearInterval(litTimer);lit(ks)}
-
-function st(n,title,why,body,cls,badges){return '<div class="st fade '+(cls||"")+'"><div class="num">'+n+'</div><div class="card"><h2>'+title+(badges||"")+'</h2><p class="why">'+why+"</p>"+body+"</div></div>"}
-const bars=(rows,key,lbl)=>{const m=Math.max(1e-9,...rows.map(r=>Math.abs(r[key])));return '<table class="t rk">'+rows.map(r=>"<tr><td>#"+r.idx+"</td><td>"+rng(r)+'</td><td style="width:55%"><span class="bar" style="width:'+Math.max(4,Math.round(100*Math.abs(r[key])/m))+'%"></span></td><td>'+r[key]+"</td></tr>").join("")+"</table>"};
+const st=(n,title,why,body,cls,badges)=>'<div class="st fade '+(cls||"")+'"><div class="num">'+n+'</div><div class="card"><h2>'+title+(badges||"")+'</h2><p class="why">'+why+"</p>"+body+"</div></div>";
+const bars=(rows,key)=>{const m=Math.max(1e-9,...rows.map(r=>Math.abs(r[key])));return '<table class="t rk">'+rows.map(r=>"<tr><td>#"+r.idx+"</td><td>"+rng(r)+'</td><td style="width:55%"><span class="bar" style="width:'+Math.max(4,Math.round(100*Math.abs(r[key])/m))+'%"></span></td><td>'+r[key]+"</td></tr>").join("")+"</table>"};
 
 $("runBtn").onclick=async()=>{
-  if(!vid()||!$("q").value.trim())return; busy("Pipeline চলছে — ৫-৭টা LLM call…"); animateArch();
+  if(!vid()||!$("q").value.trim())return;busy("labBusyRun");animateArch();
   try{
     const d=await post("/api/ask",{video_id:vid(),question:$("q").value,clip:false,debug:true});
-    const t=d.trace,dbg=t.debug||{attempts:[]},tm=t.timings_ms||{},u=t.usage||{};
-    const total=Object.values(tm).reduce((a,b)=>a+b,0);
-    let h='<div class="stats">'+[
-      [d.found?"found":"not found","result"],[(total/1000).toFixed(1)+"s","total latency"],[u.llm_calls||0,"LLM calls"],
-      [(u.embed_calls||0)+" / "+(u.embed_texts||0),"embed calls / texts"],[t.attempts.length,"retrieval attempts"],
-      [d.found?(t.claims_supported+"/"+t.claims_total):"—","claims verified"]].map(([b,s])=>'<div class="stat"><b>'+b+"</b><span>"+s+"</span></div>").join("")+'</div><div class="flow">';
+    const tr=d.trace,dbg=tr.debug||{attempts:[]},tm=tr.timings_ms||{},u=tr.usage||{},total=Object.values(tm).reduce((a,b)=>a+b,0);
+    let h='<div class="stats">'+[[d.found?t("sFound"):t("sNotFound"),t("sResult")],[(total/1000).toFixed(1)+"s",t("sLatency")],[u.llm_calls||0,t("sLlm")],
+      [(u.embed_calls||0)+" / "+(u.embed_texts||0),t("sEmb")],[tr.attempts.length,t("sAttempts")],[d.found?(tr.claims_supported+"/"+tr.claims_total):"—",t("sClaims")]].map(([b,x])=>'<div class="stat"><b>'+b+"</b><span>"+x+"</span></div>").join("")+'</div><div class="flow">';
     dbg.attempts.forEach((a,i)=>{
-      const A=dbg.attempts.length>1?" · attempt "+(i+1):"";
-      h+=st("1"+(A?String.fromCharCode(97+i):""),"Query understanding"+A,i?"প্রথমবার কিছু relevant পাওয়া যায়নি → broader query আর বড় k ("+a.k+") দিয়ে corrective retry।":"এক প্রশ্ন থেকে কয়েকটা query: Bangla, English, technical term, sub-question আর HyDE (hypothetical answer) — Banglish/noisy caption-এর সাথে মেলানোর জন্য।",
-        '<div class="qs">'+a.queries.map((q,j)=>'<span class="badge'+(j===a.queries.length-1&&a.queries.length>2?" warn":"")+'">'+esc(q)+"</span>").join("")+"</div>","",'<span class="badge">'+a.queries.length+" queries</span>");
+      const A=dbg.attempts.length>1?" · "+t("attempt")+" "+(i+1):"",sfx=A?String.fromCharCode(97+i):"";
+      h+=st("1"+sfx,t("s1")+A,i?t("s1retry",{k:a.k}):t("s1why"),'<div class="qs">'+a.queries.map((q,j)=>'<span class="badge'+(j===a.queries.length-1&&a.queries.length>2?" warn":"")+'">'+esc(q)+"</span>").join("")+"</div>","",'<span class="badge">'+a.queries.length+" queries</span>");
       const R=a.rankings||[];
-      h+=st("2"+(A?String.fromCharCode(97+i):""),"Hybrid retrieval"+A,"প্রতিটা query-র জন্য dense (meaning) আর BM25 (exact শব্দ) আলাদা ranking — তারপর Reciprocal Rank Fusion।",
-        '<div class="grid2">'+R.map(r=>'<div><div class="row" style="margin-bottom:6px"><span class="badge'+(r.kind==="bm25"?" warn":"")+'">'+r.kind+'</span><span class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px">'+esc(r.query)+"</span></div>"+bars(r.top,"score")+"</div>").join("")+"</div>"+
-        '<div style="margin-top:14px"><div class="h">RRF fusion → top candidates</div>'+bars(a.fused||[],"rrf")+"</div>"+
-        (a.rerank?'<div style="margin-top:12px"><div class="h">Rerank ('+esc(a.rerank.provider)+')</div><div class="row">'+a.rerank.before.map(x=>'<span class="badge">#'+x+"</span>").join("")+'</div><div style="margin:6px 0;color:var(--muted)">↓</div><div class="row">'+a.rerank.after.map((x,j)=>'<span class="badge '+(a.rerank.before.indexOf(x)>j?"ok":a.rerank.before.indexOf(x)<j?"warn":"")+'">#'+x+"</span>").join("")+"</div></div>":""),"",'<span class="badge">'+R.length+" rankings</span>");
+      h+=st("2"+sfx,t("s2")+A,t("s2why"),'<div class="grid2">'+R.map(r=>'<div><div class="row" style="margin-bottom:6px"><span class="badge'+(r.kind==="bm25"?" warn":"")+'">'+r.kind+'</span><span class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px">'+esc(r.query)+"</span></div>"+(r.top.length?bars(r.top,"score"):'<div class="muted">—</div>')+"</div>").join("")+"</div>"+
+        (a.dense_error?'<div class="muted" style="margin-top:8px">dense: '+esc(a.dense_error)+"</div>":"")+
+        '<div style="margin-top:14px"><div class="h">'+t("s2fused")+"</div>"+bars(a.fused||[],"rrf")+"</div>"+
+        (a.rerank?'<div style="margin-top:12px"><div class="h">'+t("s2rerank")+" ("+esc(a.rerank.provider)+')</div><div class="row">'+a.rerank.before.map(x=>'<span class="badge">#'+x+"</span>").join("")+'</div><div style="margin:6px 0;color:var(--muted)">↓</div><div class="row">'+a.rerank.after.map((x,j)=>'<span class="badge '+(a.rerank.before.indexOf(x)>j?"ok":a.rerank.before.indexOf(x)<j?"warn":"")+'">#'+x+"</span>").join("")+"</div></div>":""),"",'<span class="badge">'+R.length+" rankings</span>");
       const kept=a.graded.filter(x=>x.relevant).length;
-      h+=st("3"+(A?String.fromCharCode(97+i):""),"Corrective grading"+A,"LLM relevance judge প্রতিটা candidate দেখে — শুধু keyword মিললে বাদ। এটাই hallucination-এর প্রথম দেয়াল।",
-        '<table class="t">'+a.graded.map(x=>"<tr><td class='rk'>#"+x.idx+"</td><td class='rk'>"+rng(x)+'</td><td><span class="badge '+(x.relevant?"ok":"bad")+'">'+(x.relevant?"relevant":"dropped")+'</span></td><td style="color:var(--text2)">'+esc(x.preview)+"</td></tr>").join("")+"</table>",kept?"ok":"bad",'<span class="badge '+(kept?"ok":"bad")+'">'+kept+"/"+a.graded.length+" kept</span>");
+      h+=st("3"+sfx,t("s3")+A,t("s3why"),'<table class="t">'+a.graded.map(x=>"<tr><td class='rk'>#"+x.idx+"</td><td class='rk'>"+rng(x)+'</td><td><span class="badge '+(x.relevant?"ok":"bad")+'">'+(x.relevant?t("relevant"):t("dropped"))+'</span></td><td style="color:var(--text2)">'+esc(x.preview)+"</td></tr>").join("")+"</table>",kept?"ok":"bad",'<span class="badge '+(kept?"ok":"bad")+'">'+kept+"/"+a.graded.length+" "+t("s3kept")+"</span>");
     });
-    if(!d.found){h+=st("!","Result: not in video","দুই attempt-এই relevant কিছু নেই → hallucinate না করে সৎভাবে “নেই”।",'<b>'+esc(d.message)+"</b>","bad");stopArch(["q","rewrite","dense","bm25","rrf","rerank","grade"])}
+    if(!d.found){h+=st("!",t("sNo"),t("sNoWhy"),"<b>"+esc(t("notFoundMsg"))+"</b>","bad");stopArch(SEQ.slice(0,7))}
     else{
-      h+=st(4,"Evidence","LLM শুধু এই passage-গুলোই দেখে (numbered, সময়সহ)।",'<table class="t">'+dbg.evidence.map(x=>"<tr><td class='rk'>["+x.n+"]</td><td class='rk'>"+rng(x)+"</td><td style='color:var(--text2)'>"+esc(x.text)+"</td></tr>").join("")+"</table>");
+      h+=st(4,t("s4"),t("s4why"),'<table class="t">'+dbg.evidence.map(x=>"<tr><td class='rk'>["+x.n+"]</td><td class='rk'>"+rng(x)+"</td><td style='color:var(--text2)'>"+esc(x.text)+"</td></tr>").join("")+"</table>");
       const raw=dbg.answer_before_verify||{sections:[]};
-      h+=st(5,"Grounded generation","প্রতিটা point-কে evidence নম্বর cite করতে হয়; outside knowledge নিষেধ।",(raw.sections||[]).map(s=>"<b>"+esc(s.heading)+"</b><ul>"+(s.points||[]).map(p=>"<li>"+esc(p.text||p)+" <span class='badge'>cites "+esc(JSON.stringify(p.cites||[]))+"</span></li>").join("")+"</ul>").join(""));
-      h+=st(6,"Claim verification","প্রতিটা claim তার cited evidence দিয়ে যাচাই (NLI-style)। Unsupported হলে final answer থেকে বাদ।",
-        '<table class="t">'+(t.claims||[]).map(x=>'<tr><td><span class="badge '+(x.verdict==="supported"?"ok":x.verdict==="unverified"?"warn":"bad")+'">'+esc(x.verdict)+"</span></td><td>"+esc(x.text)+"</td></tr>").join("")+"</table>",t.claims_supported<t.claims_total?"":"ok",'<span class="badge '+(t.verify==="ok"?"ok":"warn")+'">'+t.claims_supported+"/"+t.claims_total+" · "+esc(t.verify)+"</span>");
-      h+=st(7,"Final answer + segments","Verified points + merged time ranges (clip/embed)।",(d.answer?"<b>"+esc(d.answer.title)+"</b><p style='color:var(--text2)'>"+esc(d.answer.summary)+"</p>":esc(d.note))+'<div class="row">'+d.segments.map(s=>'<a class="badge" target="_blank" href="'+esc(s.url)+'">'+ic("play",10)+' '+rng(s)+"</a>").join("")+"</div>","ok");
-      stopArch(["q","rewrite","dense","bm25","rrf","rerank","grade","generate","verify","clip"]);
+      h+=st(5,t("s5"),t("s5why"),(raw.sections||[]).map(x=>"<b>"+esc(x.heading)+"</b><ul>"+(x.points||[]).map(p=>"<li>"+esc(p.text||p)+" <span class='badge'>"+t("cites")+" "+esc(JSON.stringify(p.cites||[]))+"</span></li>").join("")+"</ul>").join(""));
+      h+=st(6,t("s6"),t("s6why"),'<table class="t">'+(tr.claims||[]).map(x=>'<tr><td><span class="badge '+(x.verdict==="supported"?"ok":x.verdict==="unverified"?"warn":"bad")+'">'+esc(x.verdict)+"</span></td><td>"+esc(x.text)+"</td></tr>").join("")+"</table>",tr.claims_supported<tr.claims_total?"":"ok",'<span class="badge '+(tr.verify==="ok"?"ok":"warn")+'">'+tr.claims_supported+"/"+tr.claims_total+"</span>");
+      h+=st(7,t("s7"),t("s7why"),(d.answer?"<b>"+esc(d.answer.title)+"</b><p style='color:var(--text2)'>"+esc(d.answer.summary)+"</p>":esc(d.note))+'<div class="row">'+d.segments.map(x=>'<a class="badge" target="_blank" href="'+esc(x.url)+'">'+ic("play",10)+" "+rng(x)+"</a>").join("")+"</div>","ok");
+      stopArch(SEQ);
     }
     const mx=Math.max(1,...Object.values(tm));
-    h+=st("Σ","Latency breakdown","কোন ধাপে কত সময় গেল (ms)।",'<table class="t">'+Object.entries(tm).map(([k,v])=>'<tr><td style="width:120px">'+k+'</td><td><span class="bar" style="width:'+Math.max(2,Math.round(100*v/mx))+'%"></span></td><td class="rk" style="width:80px">'+v+"</td></tr>").join("")+"</table>"+'<div class="muted" style="margin-top:8px">LLM in/out chars: '+(u.llm_in_chars||0)+" / "+(u.llm_out_chars||0)+(u.llm_fallbacks?" · model fallbacks: "+u.llm_fallbacks:"")+"</div>");
+    h+=st("Σ",t("sT"),t("sTwhy"),'<table class="t">'+Object.entries(tm).map(([k,v])=>'<tr><td style="width:120px">'+k+'</td><td><span class="bar" style="width:'+Math.max(2,Math.round(100*v/mx))+'%"></span></td><td class="rk" style="width:80px">'+v+"</td></tr>").join("")+"</table>"+'<div class="muted" style="margin-top:8px">'+t("inOut")+": "+(u.llm_in_chars||0)+" / "+(u.llm_out_chars||0)+(u.llm_fallbacks?" · model fallbacks: "+u.llm_fallbacks:"")+"</div>");
     $("out").innerHTML=h+"</div>";
   }catch(e){stopArch([]);fail(e)}
 };
 
 $("cmpBtn").onclick=async()=>{
-  if(!vid()||!$("q").value.trim())return; busy("চারটা retrieval mode চলছে…");
+  if(!vid()||!$("q").value.trim())return;busy("labBusyCmp");
   try{
     const d=await post("/api/lab/compare",{video_id:vid(),question:$("q").value,use_rewrite:$("rw").checked});
-    let h='<div class="card fade"><div class="row" style="justify-content:space-between"><div class="h" style="margin:0">Retrieval mode তুলনা · top-5</div><span class="muted">একটা chunk-এ hover করো — অন্য mode-এ সেটা কোথায় দেখো</span></div><div class="modes" style="margin-top:12px">';
-    for(const [m,v] of Object.entries(d.modes)){
-      h+='<div class="mcol"><div class="row" style="margin-bottom:8px"><span class="badge">'+esc(m)+'</span><span class="muted">'+v.ms+" ms</span></div>"+v.results.map((r,i)=>'<div class="it" data-i="'+r.idx+'"><b class="rk">'+(i+1)+". #"+r.idx+"</b> <span class='muted rk'>"+rng(r)+"</span><div style='color:var(--text2);margin-top:3px'>"+esc(r.preview)+"</div></div>").join("")+"</div>";
-    }
-    $("out").innerHTML=h+'</div><p class="muted" style="margin:12px 0 0">dense = অর্থ মেলায় · bm25 = হুবহু শব্দ · hybrid = দুটোর RRF · rerank = LLM দিয়ে পুনর্বিন্যাস</p></div>';
+    let h='<div class="card fade"><div class="row" style="justify-content:space-between"><div class="h" style="margin:0">'+t("cmpT")+'</div><span class="muted">'+t("cmpHover")+'</span></div><div class="modes" style="margin-top:12px">';
+    for(const [m,v] of Object.entries(d.modes))h+='<div class="mcol"><div class="row" style="margin-bottom:8px"><span class="badge">'+esc(m)+'</span><span class="muted">'+v.ms+" ms</span></div>"+v.results.map((r,i)=>'<div class="it" data-i="'+r.idx+'"><b class="rk">'+(i+1)+". #"+r.idx+"</b> <span class='muted rk'>"+rng(r)+"</span><div style='color:var(--text2);margin-top:3px'>"+esc(r.preview)+"</div></div>").join("")+"</div>";
+    $("out").innerHTML=h+'</div><p class="muted" style="margin:12px 0 0">'+t("cmpLegend")+"</p></div>";
     document.querySelectorAll(".it").forEach(el=>{el.onmouseenter=()=>document.querySelectorAll('.it[data-i="'+el.dataset.i+'"]').forEach(x=>x.classList.add("hl"));el.onmouseleave=()=>document.querySelectorAll(".it.hl").forEach(x=>x.classList.remove("hl"))});
   }catch(e){fail(e)}
 };
 
 $("chkBtn").onclick=async()=>{
-  if(!vid())return; busy("Chunking data আনছি…");
+  if(!vid())return;busy("labBusyChunk");
   try{
-    const d=await get("/api/lab/chunks/"+vid()); const c=d.chunking,sims=c.sims||[];
-    let svg="";
-    if(sims.length){
-      const W=1000,H=180,mx=Math.max(...sims,0.01),n=sims.length,bw=W/n;
+    const d=await get("/api/lab/chunks/"+vid()),c=d.chunking,sims=c.sims||[];let svg="";
+    if(sims.length){const W=1000,H=180,mx=Math.max(...sims,0.01),n=sims.length,bw=W/n;
       svg+='<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee" stop-opacity=".5"/></linearGradient></defs>';
-      sims.forEach((s,i)=>{svg+='<rect x="'+(i*bw)+'" y="'+(H-H*s/mx)+'" width="'+Math.max(bw-1,0.6)+'" height="'+(H*s/mx)+'" fill="url(#g)" rx="1.5"><title>'+s+"</title></rect>"});
+      sims.forEach((x,i)=>{svg+='<rect x="'+(i*bw)+'" y="'+(H-H*x/mx)+'" width="'+Math.max(bw-1,0.6)+'" height="'+(H*x/mx)+'" fill="url(#g)" rx="1.5"><title>'+x+"</title></rect>"});
       (c.boundaries||[]).forEach(b=>{svg+='<line x1="'+((b+0.5)*bw)+'" x2="'+((b+0.5)*bw)+'" y1="0" y2="'+H+'" stroke="#22c55e" stroke-width="1.5" opacity=".8"/>'});
-      svg+='<line x1="0" x2="'+W+'" y1="'+(H-H*c.thr/mx)+'" y2="'+(H-H*c.thr/mx)+'" stroke="#f43f5e" stroke-dasharray="6 4" stroke-width="1.5"/>';
-    }
+      svg+='<line x1="0" x2="'+W+'" y1="'+(H-H*c.thr/mx)+'" y2="'+(H-H*c.thr/mx)+'" stroke="#f43f5e" stroke-dasharray="6 4" stroke-width="1.5"/>'}
     const durs=d.chunks.map(x=>x.end-x.start),avg=durs.reduce((a,b)=>a+b,0)/Math.max(1,durs.length);
-    $("out").innerHTML='<div class="stats"><div class="stat"><b>'+d.chunks.length+'</b><span>chunks</span></div><div class="stat"><b>'+Math.round(avg)+'s</b><span>avg chunk</span></div><div class="stat"><b>'+c.thr+'</b><span>threshold (mean − '+c.k+'σ)</span></div><div class="stat"><b>'+c.min_dur+"–"+c.max_dur+'s</b><span>min / max</span></div><div class="stat"><b>'+esc(c.signal)+'</b><span>signal</span></div></div>'+
-      '<div class="card fade"><div class="h">Topic-shift curve — '+esc(d.title)+'</div><svg class="ch" viewBox="0 0 1000 185" preserveAspectRatio="none">'+svg+'</svg><div class="row muted" style="margin-top:6px;gap:16px"><span>▮ পাশাপাশি অংশের similarity</span><span style="color:#f43f5e">- - threshold</span><span style="color:#22c55e">| chunk boundary</span><span>(নিচে নামলে topic বদলাচ্ছে)</span></div></div>'+
-      '<div class="card fade" style="margin-top:12px"><table class="t">'+d.chunks.map(x=>"<tr><td class='rk'>#"+x.i+"</td><td class='rk'>"+rng(x)+"</td><td class='muted'>"+x.n_segs+" segs · "+x.chars+" chars</td><td style='color:var(--text2)'>"+esc(x.preview)+"</td></tr>").join("")+"</table></div>";
+    $("out").innerHTML='<div class="stats">'+[[d.chunks.length,t("chN")],[Math.round(avg)+"s",t("chAvg")],[c.thr,t("chThr",{k:c.k})],[c.min_dur+"–"+c.max_dur+"s",t("chMinMax")],[esc(c.signal),t("chSig")]].map(([b,x])=>'<div class="stat"><b>'+b+"</b><span>"+x+"</span></div>").join("")+"</div>"+
+      '<div class="card fade"><div class="h">'+t("chCurve")+" — "+esc(d.title)+'</div><svg class="ch" viewBox="0 0 1000 185" preserveAspectRatio="none">'+svg+'</svg><div class="row muted" style="margin-top:6px;gap:16px"><span>▮ '+t("chL1")+'</span><span style="color:#f43f5e">- - '+t("chL2")+'</span><span style="color:#22c55e">| '+t("chL3")+"</span><span>"+t("chL4")+"</span></div></div>"+
+      '<div class="card fade" style="margin-top:12px"><table class="t">'+d.chunks.map(x=>"<tr><td class='rk'>#"+x.i+"</td><td class='rk'>"+rng(x)+"</td><td class='muted'>"+x.n_segs+" · "+x.chars+"</td><td style='color:var(--text2)'>"+esc(x.preview)+"</td></tr>").join("")+"</table></div>";
   }catch(e){fail(e)}
 };
 
 $("evalBtn").onclick=async()=>{
-  $("evalout").innerHTML='<div class="row"><span class="spin"></span><span class="muted">Eval চলছে…</span></div>';
+  $("evalout").innerHTML='<div class="row"><span class="spin"></span><span class="muted">'+t("labBusyEval")+"</span></div>";
   try{
     const d=await post("/api/lab/eval",{items:JSON.parse($("evalset").value),full:$("full").checked});
-    let h='<table class="t"><tr><th>config</th><th>Hit@5</th><th></th><th>MRR</th><th>avg ms</th><th>n</th></tr>'+Object.entries(d.retrieval).map(([k,v])=>"<tr><td><b>"+esc(k)+"</b></td><td class='rk'>"+v["Hit@k"].toFixed(2)+'</td><td style="width:35%"><span class="bar" style="width:'+Math.max(2,Math.round(100*v["Hit@k"]))+'%"></span></td><td class="rk">'+v.MRR.toFixed(2)+"</td><td class='rk'>"+v.avg_ms+"</td><td class='rk'>"+v.n+"</td></tr>").join("")+"</table>";
-    if(d.end_to_end){h+='<div class="grid2" style="margin-top:14px">'+Object.entries(d.end_to_end).map(([k,v])=>'<div class="card soft"><div class="h">'+esc(k)+"</div>"+(typeof v==="object"?'<table class="t">'+Object.entries(v).map(([a,b])=>"<tr><td>"+esc(a)+"</td><td class='rk'>"+esc(typeof b==="number"?(+b.toFixed(3)):JSON.stringify(b))+"</td></tr>").join("")+"</table>":esc(v))+"</div>").join("")+"</div>"}
+    let h='<table class="t"><tr><th>'+t("evCfg")+'</th><th>Hit@5</th><th></th><th>MRR</th><th>avg ms</th><th>n</th></tr>'+Object.entries(d.retrieval).map(([k,v])=>"<tr><td><b>"+esc(k)+"</b></td><td class='rk'>"+v["Hit@k"].toFixed(2)+'</td><td style="width:35%"><span class="bar" style="width:'+Math.max(2,Math.round(100*v["Hit@k"]))+'%"></span></td><td class="rk">'+v.MRR.toFixed(2)+"</td><td class='rk'>"+v.avg_ms+"</td><td class='rk'>"+v.n+"</td></tr>").join("")+"</table>";
+    if(d.end_to_end)h+='<div class="grid2" style="margin-top:14px">'+Object.entries(d.end_to_end).map(([k,v])=>'<div class="card soft"><div class="h">'+esc(k)+'</div><table class="t">'+Object.entries(v).map(([a,b])=>"<tr><td>"+esc(a)+"</td><td class='rk'>"+esc(typeof b==="number"?(+b.toFixed(3)):JSON.stringify(b))+"</td></tr>").join("")+"</table></div>").join("")+"</div>";
     $("evalout").innerHTML=h;
   }catch(e){$("evalout").innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}
 };
 $("q").onkeydown=e=>{if(e.key==="Enter")$("runBtn").click()};
+window.onLang=()=>{loadLib()};
 </script>
 </body>
 </html>

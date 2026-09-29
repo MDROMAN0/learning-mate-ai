@@ -44,10 +44,11 @@ async def gate(request: Request, call_next):
 
 
 def _charge(request: Request):
-    """Per-user daily quota for LLM-heavy calls (protects the free LLM key)."""
+    """Per-user daily quota for LLM-heavy calls (protects the free LLM key). Also applies the UI language."""
+    rag.set_lang(request.headers.get("x-lang", ""))
     u = getattr(request.state, "user", None)
     if u and not auth.charge(u["id"]):
-        raise HTTPException(429, f"আজকের limit ({auth.daily_limit()}) শেষ — কাল আবার চেষ্টা করো / daily limit reached")
+        raise HTTPException(429, f"daily limit reached ({auth.daily_limit()}) - try again tomorrow")
 
 
 class IndexReq(BaseModel):

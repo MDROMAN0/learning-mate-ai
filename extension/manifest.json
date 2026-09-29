@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Vidya — YouTube Topic RAG",
+  "name": "Learning Mate AI",
   "version": "1.1",
   "description": "Ask topic questions about the YouTube video you are watching (spoiler-free, timestamped).",
   "permissions": [

@@ -22,7 +22,7 @@ from pathlib import Path
 import rag
 
 _LOCK = threading.Lock()
-COOKIE = "vidya_session"
+COOKIE = "lm_session"
 SESSION_DAYS = 30
 
 
