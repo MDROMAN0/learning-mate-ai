@@ -133,6 +133,10 @@
     try {
       const v = $("vid");
       if (v) { const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext("2d").drawImage(v, 0, 0); url = c.toDataURL("image/jpeg", .85); }
+      else if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) {
+        // phones/tablets can't capture the screen from a web page: drop the video thumbnail + exact timestamp instead
+        url = "https://i.ytimg.com/vi/" + encodeURIComponent(cur.video_id) + "/hqdefault.jpg"; toast(t("ssMobile"));
+      }
       else {
         if (!cap) {
           toast(t("ssHint"));
@@ -151,7 +155,7 @@
     } catch (e) { toast(t("ssDenied")); return; }
     const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 400);
     window.openNotes(); await sleep(30); const p = spot();
-    const el = add({ type: "img", x: p.x, y: p.y, w: 620, src: url, cap: '<a class="tsn" data-t="' + Math.floor(sec) + '">' + ic("play", 10) + " " + fmt(sec) + "</a>" });
+    const el = add({ type: "img", x: p.x, y: p.y, w: Math.min(620, Math.max(160, $("nbPage").clientWidth - p.x - 16)), src: url, cap: '<a class="tsn" data-t="' + Math.floor(sec) + '">' + ic("play", 10) + " " + fmt(sec) + "</a>" });
     const a = el.querySelector(".nb-cap .tsn"); if (a) a.onclick = e => { e.stopPropagation(); seek(+a.dataset.t); };
     el.querySelector("img").onload = () => grow(items[items.length - 1], el);
     toast(t("ssDone"));
