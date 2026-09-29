@@ -345,6 +345,29 @@ def history(request: Request):
     return {"items": auth.history(u["id"]) if u else []}
 
 
+class NoteReq(BaseModel):
+    content: dict
+
+
+@app.get("/api/notes/{vid}")
+def get_note(vid: str, request: Request):
+    u = request.state.user
+    if not u:
+        raise HTTPException(400, "log in to sync notes (AUTH=1)")
+    return auth.get_note(u["id"], vid)
+
+
+@app.put("/api/notes/{vid}")
+def put_note(vid: str, req: NoteReq, request: Request):
+    u = request.state.user
+    if not u:
+        raise HTTPException(400, "log in to sync notes (AUTH=1)")
+    try:
+        return auth.save_note(u["id"], vid, req.content)
+    except ValueError as e:
+        raise HTTPException(413, str(e))
+
+
 @app.get("/api/search")
 def search(q: str, n: int = 16):
     return {"results": _safe(features.browse_youtube, q, max(1, min(n, 30)))}

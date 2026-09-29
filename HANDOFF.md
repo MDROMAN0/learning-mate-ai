@@ -15,6 +15,17 @@
 - বাকি সব (install, test, code ঠিক করা, extension test, GitHub push, deploy কমান্ড) তুমি করবে।
 - **Sir-এর মূল শর্ত: RAG + LLM।** এটা কমানো/বাদ দেওয়া যাবে না; Gemini শুধু free বলে default (OpenAI-compatible, বদলানো যায়)।
 
+
+## ★ আপডেট 30 Sep 2026 (Cowork session) — এখনকার আসল অবস্থা
+- **Real run হয়েছে Roman-এর Windows PC-তে** (Python 3.14, ffmpeg+Deno winget দিয়ে): `doctor.py` READY, `test_mock.py` ALL PASSED (Windows-এও)।
+- **Model:** free key-তে `gemini-3.8-flash` 429 (quota) → default `gemini-3.5-flash`; 429/503-তে pool rotation (`LLM_FALLBACK_MODELS`) + per-model cooldown + wait-retry। Gemini 3.x thinking token max_tokens খেয়ে খালি reply দিত → `reasoning_effort=none` (flash-lite-এ বাদ)।
+- **Real smoke (৪টা Bangla video, ১০ প্রশ্ন):** 10/10 ঠিক (6 found + 4 not-found), সব verify ok, ~12–30 s/প্রশ্ন। Grader/verifier prompt noisy Bangla auto-caption-এর জন্য ঠিক করা হয়েছে।
+- **নতুন:** Vidya UI (dark/light, বাংলা/English toggle `static/i18n.js`), in-app YouTube search (`/api/search`), topic heat-map (`/api/heat`), interactive transcript (`/api/transcript`), history, **accounts** (`auth.py`, AUTH=1, PBKDF2, signed cookie, DAILY_LIMIT, optional Postgres `DATABASE_URL`), RAG Lab redesign, extension side panel redesign।
+- **Download বন্ধ (default `YT_DOWNLOAD=0`):** caption সরাসরি YouTube থেকে, segment embedded player-এ। Caption না থাকলে পরিষ্কার error।
+- Eval set: `eval_set.json` (26 positive + 8 negative, gold range Claude transcript পড়ে দিয়েছে — Roman ২-৩টা spot-check করুক)। ফল: `docs/EVALUATION.md` §5।
+- **বাকি (Roman-এর login লাগে):** GitHub repo বানিয়ে push, Render Blueprint + secrets, (ঐচ্ছিক) Neon DATABASE_URL — `docs/DEPLOY.md`। Extension আসল Chrome-এ Load unpacked করে test হয়নি। Docker build চালানো হয়নি।
+- Beginner guide: `docs/START_HERE.md`।
+
 ## 1. প্রজেক্ট এক নজরে
 | ফাইল | কাজ |
 |---|---|

@@ -5,8 +5,8 @@ AUTH=1 in .env turns it on. Then every /api/* call needs a logged-in session coo
 - passwords: PBKDF2-HMAC-SHA256 (200k rounds, per-user salt), never stored in plain text
 - sessions: HMAC-signed token (SECRET_KEY) in an HttpOnly cookie, 30 days
 - per-user daily limit on LLM-heavy calls (DAILY_LIMIT, default 60) so one user can't burn the free quota
-- SQLite file: AUTH_DB (default <DATA_DIR>/users.db). NOTE: free hosts wipe local disk on redeploy/sleep;
-  point AUTH_DB at a persistent disk if accounts must survive (see docs/DEPLOY.md).
+- storage: DATABASE_URL (Postgres, e.g. free Neon) if set - survives free-host restarts;
+  else SQLite file AUTH_DB (default <DATA_DIR>/users.db). Free hosts wipe local disk on restart (docs/DEPLOY.md).
 """
 import hashlib
 import hmac
@@ -38,19 +38,60 @@ def _db_path():
     return Path(os.getenv("AUTH_DB") or (rag.DATA / "users.db"))
 
 
+class _PG:
+    """Tiny adapter so the same SQL runs on Postgres (DATABASE_URL, e.g. free Neon/Supabase) - accounts then
+    survive free-host restarts. Translates '?' -> '%s' and SQLite-only syntax."""
+    def __init__(self, url):
+        import psycopg
+        from psycopg.rows import dict_row
+        self.c = psycopg.connect(url, row_factory=dict_row, autocommit=False)
+
+    def execute(self, sql, args=()):
+        sql = sql.replace("?", "%s").replace("INTEGER PRIMARY KEY", "SERIAL PRIMARY KEY").replace(" REAL", " DOUBLE PRECISION")
+        if sql.lstrip().upper().startswith("INSERT OR REPLACE INTO USAGE"):
+            sql = ("INSERT INTO usage(user_id,day,n) VALUES(%s,%s,%s) "
+                   "ON CONFLICT(user_id,day) DO UPDATE SET n=EXCLUDED.n")
+        ret = sql.lstrip().upper().startswith("INSERT INTO USERS")
+        cur = self.c.execute(sql + (" RETURNING id" if ret else ""), args)
+        if ret:
+            class _R:
+                lastrowid = cur.fetchone()["id"]
+            return _R()
+        return cur
+
+    def executescript(self, script):
+        for stmt in [x.strip() for x in script.split(";") if x.strip()]:
+            self.execute(stmt)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, *a):
+        (self.c.rollback if et else self.c.commit)()
+        self.c.close()
+
+
 def _conn():
+    if os.getenv("DATABASE_URL"):
+        c = _PG(os.environ["DATABASE_URL"])
+        c.executescript(_SCHEMA)
+        return c
     p = _db_path()
     p.parent.mkdir(parents=True, exist_ok=True)
     c = sqlite3.connect(str(p), check_same_thread=False)
     c.row_factory = sqlite3.Row
-    c.executescript("""
-    CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT,
-        pw TEXT NOT NULL, salt TEXT NOT NULL, created REAL);
-    CREATE TABLE IF NOT EXISTS usage(user_id INTEGER, day TEXT, n INTEGER, PRIMARY KEY(user_id, day));
-    CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY, user_id INTEGER, video_id TEXT, title TEXT,
-        question TEXT, found INTEGER, answer TEXT, created REAL);
-    """)
+    c.executescript(_SCHEMA)
     return c
+
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT,
+    pw TEXT NOT NULL, salt TEXT NOT NULL, created REAL);
+CREATE TABLE IF NOT EXISTS usage(user_id INTEGER, day TEXT, n INTEGER, PRIMARY KEY(user_id, day));
+CREATE TABLE IF NOT EXISTS notes(user_id INTEGER, video_id TEXT, content TEXT, updated REAL, PRIMARY KEY(user_id, video_id));
+CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY, user_id INTEGER, video_id TEXT, title TEXT,
+    question TEXT, found INTEGER, answer TEXT, created REAL);
+"""
 
 
 def _secret():
@@ -81,8 +122,10 @@ def signup(email, password, name=""):
         try:
             cur = c.execute("INSERT INTO users(email,name,pw,salt,created) VALUES(?,?,?,?,?)",
                             (email, (name or email.split("@")[0]).strip()[:60], _hash(password, salt), salt, time.time()))
-        except sqlite3.IntegrityError:
-            raise ValueError("this email already has an account - log in instead")
+        except Exception as e:
+            if isinstance(e, sqlite3.IntegrityError) or "unique" in str(e).lower():
+                raise ValueError("this email already has an account - log in instead")
+            raise
         return {"id": cur.lastrowid, "email": email, "name": (name or email.split("@")[0]).strip()[:60]}
 
 
@@ -147,3 +190,24 @@ def history(uid, limit=50):
         rows = c.execute("SELECT id,video_id,title,question,found,created FROM history WHERE user_id=? "
                          "ORDER BY id DESC LIMIT ?", (uid, limit)).fetchall()
     return [dict(r) for r in rows]
+
+
+NOTE_MAX = 6_000_000  # bytes of JSON (notes html + screenshots + whiteboard images)
+
+
+def get_note(uid, video_id):
+    with _LOCK, _conn() as c:
+        r = c.execute("SELECT content, updated FROM notes WHERE user_id=? AND video_id=?", (uid, video_id)).fetchone()
+    return {"content": json.loads(r["content"]), "updated": r["updated"]} if r else {"content": None, "updated": None}
+
+
+def save_note(uid, video_id, content):
+    raw = json.dumps(content, ensure_ascii=False)
+    if len(raw.encode()) > NOTE_MAX:
+        raise ValueError("note too large (remove some screenshots)")
+    now = time.time()
+    with _LOCK, _conn() as c:
+        cur = c.execute("UPDATE notes SET content=?, updated=? WHERE user_id=? AND video_id=?", (raw, now, uid, video_id))
+        if not cur.rowcount:
+            c.execute("INSERT INTO notes(user_id,video_id,content,updated) VALUES(?,?,?,?)", (uid, video_id, raw, now))
+    return {"updated": now}

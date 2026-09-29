@@ -71,3 +71,6 @@ table.t{width:100%;border-collapse:collapse;font-size:13.5px} table.t td,table.t
 .bar{height:7px;border-radius:9px;background:linear-gradient(90deg,var(--brand),var(--brand2));display:inline-block;vertical-align:middle}
 pre.code{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--bg2);border:1px solid var(--line);padding:10px;border-radius:10px;max-height:340px;overflow:auto}
 kbd{font:600 11px var(--mono);padding:1px 6px;border-radius:5px;border:1px solid var(--line2);background:var(--bg2);color:var(--text2)}
+.ico{flex:none;vertical-align:-3px}
+.fi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--brandSoft);color:var(--brand);margin-bottom:6px}
+.btn .ico{margin:-2px 0}

@@ -253,19 +253,29 @@ def embed(texts, kind="passage", batch=32):
         from openai import OpenAI
         _embc = OpenAI(api_key=env("EMB_API_KEY") or os.environ["LLM_API_KEY"],
                        base_url=env("EMB_BASE_URL") or env("LLM_BASE_URL") or None)
-    out = []
-    for i in range(0, len(texts), batch):
+    todo = [t for t in dict.fromkeys(texts) if not (kind == "query" and (emb_model(), t) in _QCACHE)]
+    got = {}
+    for i in range(0, len(todo), batch):
         for attempt in range(5):
             try:
-                r = _embc.embeddings.create(model=emb_model(), input=texts[i:i + batch])
-                out += [d.embedding for d in r.data]
+                r = _embc.embeddings.create(model=emb_model(), input=todo[i:i + batch])
+                got.update({t: d.embedding for t, d in zip(todo[i:i + batch], r.data)})
                 break
-            except Exception:
-                if attempt == 4:
+            except Exception as e:
+                if attempt == 4 or "PerDay" in str(e):   # daily free quota gone: fail fast, caller degrades
                     raise
                 time.sleep(2 ** attempt)
-    v = np.asarray(out, dtype="float32")
+    if kind == "query":
+        for t, e in got.items():
+            if len(_QCACHE) > 5000:
+                _QCACHE.clear()
+            _QCACHE[(emb_model(), t)] = e
+        got = {t: got.get(t) or _QCACHE[(emb_model(), t)] for t in texts}
+    v = np.asarray([got[t] for t in texts], dtype="float32")
     return v / (np.linalg.norm(v, axis=1, keepdims=True) + 1e-9)
+
+
+_QCACHE = {}  # query-embedding cache: same question / rewritten query -> no extra embedding call
 
 
 def rerank_scores(query, texts):
@@ -611,8 +621,18 @@ def retrieve(ix, queries, question, k=8, max_time=None, mode="hybrid+rerank", po
     if not allowed:
         return []
     rankings = []
+    qvecs = None
     if mode in ("dense", "hybrid", "hybrid+rerank"):
-        for q, qv in zip(queries, embed(queries, "query")):
+        try:
+            qvecs = embed(queries, "query")
+        except Exception as e:   # embedding quota/outage: degrade to BM25 instead of failing the question
+            _stat("dense_failed")
+            if dbg is not None:
+                dbg["dense_error"] = str(e)[:160]
+            if mode == "dense":
+                raise
+    if qvecs is not None:
+        for q, qv in zip(queries, qvecs):
             sc = ix.E @ qv
             rankings.append(sorted(allowed, key=lambda i: -sc[i]))
             if dbg is not None:
@@ -972,8 +992,11 @@ def topic_heat(video, question):
     n = len(ix.chunks)
     if not n or not question.strip():
         return {"video_id": vid, "cells": []}
-    d = ix.E @ embed([question], "query")[0]
     b = np.asarray(ix.bm25.get_scores(tokenize(question)), dtype="float32")
+    try:
+        d = ix.E @ embed([question], "query")[0]
+    except Exception:
+        d = b
 
     def norm(x):
         lo, hi = float(np.min(x)), float(np.max(x))

@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/ui.css">
 <script src="/static/i18n.js"></script>
+<script src="/static/icons.js"></script>
 <style>
   .wrap{max-width:1280px;margin:0 auto;padding:22px 20px 60px}
   .ctl{display:grid;grid-template-columns:minmax(220px,1.1fr) 2fr auto;gap:10px;align-items:center}
@@ -44,8 +45,8 @@
   <nav class="nav"><a href="/" data-t="study"></a><a href="/lab" class="on" data-t="lab"></a></nav>
   <div class="sp"></div>
   <input class="in" id="appkey" type="password" autocomplete="off" data-tp="appKey" style="width:180px;padding:6px 10px;font-size:13px">
-  <button class="btn sm" onclick="toggleLang()" data-t="langBtn"></button>
-  <button class="btn icon ghost" id="themeBtn">◐</button>
+  <button class="btn sm" onclick="toggleLang()"><i data-i="globe" data-s="14"></i><span data-t="langBtn"></span></button>
+  <button class="btn icon ghost" id="themeBtn"><i data-i="theme"></i></button>
 </header>
 
 <div class="wrap">
@@ -69,11 +70,11 @@
     <div class="ctl">
       <select class="in" id="lib"></select>
       <input class="in" id="q" data-tp="labQ">
-      <button class="btn pri" id="runBtn" data-t="run"></button>
+      <button class="btn pri" id="runBtn"><i data-i="play" data-s="14"></i><span data-t="run"></span></button>
     </div>
     <div class="acts">
-      <button class="btn" id="cmpBtn" data-t="cmp"></button>
-      <button class="btn" id="chkBtn" data-t="chunkBtn"></button>
+      <button class="btn" id="cmpBtn"><i data-i="scale" data-s="14"></i><span data-t="cmp"></span></button>
+      <button class="btn" id="chkBtn"><i data-i="scissors" data-s="14"></i><span data-t="chunkBtn"></span></button>
       <label class="tog"><input type="checkbox" id="rw"><span data-t="rwToggle"></span></label>
       <span class="sp"></span><span class="muted" data-t="realData"></span>
     </div>
@@ -91,7 +92,7 @@
 
 <script>
 const $=id=>document.getElementById(id);
-applyLang();
+applyLang();applyIcons();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=t=>{t=Math.max(0,Math.floor(t||0));const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s).padStart(2,"0")};
 const rng=r=>fmt(r.start)+"–"+fmt(r.end);
@@ -105,7 +106,7 @@ async function get(p){const r=await fetch(p,{headers:hdr(),credentials:"same-ori
 const vid=()=>$("lib").value;
 const busy=m=>{$("out").innerHTML='<div class="card"><div class="row"><span class="spin"></span><b>'+m+'</b></div><div class="shimmer"></div><div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:40%"></div></div>'};
 const fail=e=>{$("out").innerHTML='<div class="card" style="border-color:var(--bad)"><span class="badge bad">Error</span> '+esc(e.message)+"</div>"};
-async function loadLib(){let d;try{d=await get("/api/library")}catch(e){$("lib").innerHTML='<option value="">🔒 উপরে App key দাও ('+esc(e.message)+')</option>';return}
+async function loadLib(){let d;try{d=await get("/api/library")}catch(e){$("lib").innerHTML='<option value="">উপরে App key দাও ('+esc(e.message)+')</option>';return}
   $("lib").innerHTML=d.videos.map(v=>'<option value="'+esc(v.video_id)+'">'+esc(v.title)+" ("+fmt(v.duration)+")</option>").join("");
   if(!$("evalset").value&&d.videos.length)$("evalset").placeholder='[{"video":"'+d.videos[0].video_id+'","question":"...","gold":[120,240]}, {"video":"'+d.videos[0].video_id+'","question":"না-থাকা topic","gold":null}]'}
 loadLib();
@@ -124,7 +125,7 @@ $("runBtn").onclick=async()=>{
     const t=d.trace,dbg=t.debug||{attempts:[]},tm=t.timings_ms||{},u=t.usage||{};
     const total=Object.values(tm).reduce((a,b)=>a+b,0);
     let h='<div class="stats">'+[
-      [d.found?"✓ found":"✕ not found","result"],[(total/1000).toFixed(1)+"s","total latency"],[u.llm_calls||0,"LLM calls"],
+      [d.found?"found":"not found","result"],[(total/1000).toFixed(1)+"s","total latency"],[u.llm_calls||0,"LLM calls"],
       [(u.embed_calls||0)+" / "+(u.embed_texts||0),"embed calls / texts"],[t.attempts.length,"retrieval attempts"],
       [d.found?(t.claims_supported+"/"+t.claims_total):"—","claims verified"]].map(([b,s])=>'<div class="stat"><b>'+b+"</b><span>"+s+"</span></div>").join("")+'</div><div class="flow">';
     dbg.attempts.forEach((a,i)=>{
@@ -140,14 +141,14 @@ $("runBtn").onclick=async()=>{
       h+=st("3"+(A?String.fromCharCode(97+i):""),"Corrective grading"+A,"LLM relevance judge প্রতিটা candidate দেখে — শুধু keyword মিললে বাদ। এটাই hallucination-এর প্রথম দেয়াল।",
         '<table class="t">'+a.graded.map(x=>"<tr><td class='rk'>#"+x.idx+"</td><td class='rk'>"+rng(x)+'</td><td><span class="badge '+(x.relevant?"ok":"bad")+'">'+(x.relevant?"relevant":"dropped")+'</span></td><td style="color:var(--text2)">'+esc(x.preview)+"</td></tr>").join("")+"</table>",kept?"ok":"bad",'<span class="badge '+(kept?"ok":"bad")+'">'+kept+"/"+a.graded.length+" kept</span>");
     });
-    if(!d.found){h+=st("✕","Result: not in video","দুই attempt-এই relevant কিছু নেই → hallucinate না করে সৎভাবে “নেই”।",'<b>'+esc(d.message)+"</b>","bad");stopArch(["q","rewrite","dense","bm25","rrf","rerank","grade"])}
+    if(!d.found){h+=st("!","Result: not in video","দুই attempt-এই relevant কিছু নেই → hallucinate না করে সৎভাবে “নেই”।",'<b>'+esc(d.message)+"</b>","bad");stopArch(["q","rewrite","dense","bm25","rrf","rerank","grade"])}
     else{
       h+=st(4,"Evidence","LLM শুধু এই passage-গুলোই দেখে (numbered, সময়সহ)।",'<table class="t">'+dbg.evidence.map(x=>"<tr><td class='rk'>["+x.n+"]</td><td class='rk'>"+rng(x)+"</td><td style='color:var(--text2)'>"+esc(x.text)+"</td></tr>").join("")+"</table>");
       const raw=dbg.answer_before_verify||{sections:[]};
       h+=st(5,"Grounded generation","প্রতিটা point-কে evidence নম্বর cite করতে হয়; outside knowledge নিষেধ।",(raw.sections||[]).map(s=>"<b>"+esc(s.heading)+"</b><ul>"+(s.points||[]).map(p=>"<li>"+esc(p.text||p)+" <span class='badge'>cites "+esc(JSON.stringify(p.cites||[]))+"</span></li>").join("")+"</ul>").join(""));
       h+=st(6,"Claim verification","প্রতিটা claim তার cited evidence দিয়ে যাচাই (NLI-style)। Unsupported হলে final answer থেকে বাদ।",
         '<table class="t">'+(t.claims||[]).map(x=>'<tr><td><span class="badge '+(x.verdict==="supported"?"ok":x.verdict==="unverified"?"warn":"bad")+'">'+esc(x.verdict)+"</span></td><td>"+esc(x.text)+"</td></tr>").join("")+"</table>",t.claims_supported<t.claims_total?"":"ok",'<span class="badge '+(t.verify==="ok"?"ok":"warn")+'">'+t.claims_supported+"/"+t.claims_total+" · "+esc(t.verify)+"</span>");
-      h+=st(7,"Final answer + segments","Verified points + merged time ranges (clip/embed)।",(d.answer?"<b>"+esc(d.answer.title)+"</b><p style='color:var(--text2)'>"+esc(d.answer.summary)+"</p>":esc(d.note))+'<div class="row">'+d.segments.map(s=>'<a class="badge" target="_blank" href="'+esc(s.url)+'">▶ '+rng(s)+"</a>").join("")+"</div>","ok");
+      h+=st(7,"Final answer + segments","Verified points + merged time ranges (clip/embed)।",(d.answer?"<b>"+esc(d.answer.title)+"</b><p style='color:var(--text2)'>"+esc(d.answer.summary)+"</p>":esc(d.note))+'<div class="row">'+d.segments.map(s=>'<a class="badge" target="_blank" href="'+esc(s.url)+'">'+ic("play",10)+' '+rng(s)+"</a>").join("")+"</div>","ok");
       stopArch(["q","rewrite","dense","bm25","rrf","rerank","grade","generate","verify","clip"]);
     }
     const mx=Math.max(1,...Object.values(tm));

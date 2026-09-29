@@ -37,21 +37,30 @@ Overlap = retrieved chunk-এর সময়-range `gold`-এর সাথে �
 End-to-end: **baseline** (rewrite/grade/verify বন্ধ) বনাম **full**।
 (কোন config ভালো হবে তা আগে থেকে ধরে নিও না; উল্টো ফলও রিপোর্ট করো।)
 
-## 5. ফলাফলের table (চালিয়ে ভরো)
-Run date: ____  Videos: ____  n(pos)=__ n(neg)=__  Embedding: ____  LLM: ____  Rerank: ____
+## 5. ফলাফলের table (আসল run)
+Run date: **30 Sep 2026** (Roman-এর PC, `python eval.py eval_set.json --full`)  Videos: **4** (DBMS normalization, computer network, binary tree, python intro — সব Bangla, YouTube auto-caption)  n(pos)=**26** n(neg)=**8**  Embedding: `gemini-embedding-001` (3072-d)  LLM: `gemini-3.5-flash` (+ fallback pool)  Rerank: LLM
+Gold range: Claude transcript পড়ে দিয়েছে (video দেখে নয়) — Roman ৩–৪টা spot-check করবে।
 
 | Config | Hit@5 | MRR | avg ms |
 |---|---|---|---|
-| dense | | | |
-| bm25 | | | |
-| hybrid | | | |
-| hybrid+rerank | | | |
-| hybrid+rerank+rewrite | | | |
+| dense | 1.00 | 0.92 | 576 |
+| bm25 | 0.00 | 0.00 | 0 |
+| hybrid | 0.96 | 0.86 | 516 |
+| hybrid+rerank | **1.00** | **0.93** | 1794 |
+| hybrid+rerank+rewrite | 1.00 | 0.86 | 11528 |
+
+**যা শেখা গেল (উল্টো ফলও):**
+- **BM25 = 0**: প্রশ্ন বেশিরভাগ Banglish/English, কিন্তু caption Bangla script-এ ("partial dependency" বনাম "পার্শিয়াল ডিপেন্ডেন্সি") → হুবহু শব্দ মেলে না। এজন্যই dense দরকার, আর query rewrite একটা Bangla-script query বানায়।
+- Hybrid (0.96) dense-এর (1.00) চেয়ে সামান্য খারাপ — BM25-এর noisy ranking RRF-এ একটু টেনে নামায়; LLM rerank সেটা ঠিক করে সবচেয়ে ভালো MRR (0.93) দেয়।
+- Rewrite এই set-এ Hit বাড়ায়নি (আগেই 1.00), MRR কমিয়েছে ও latency ~6× বাড়িয়েছে → retrieval-এর জন্য rewrite ঐচ্ছিক; তবে ছোট set, ৪টা video — প্রাথমিক ফল।
 
 | End-to-end | locate_acc | not_found_acc | claim_support | claims_dropped |
 |---|---|---|---|---|
-| baseline | | | | |
-| full | | | | |
+| baseline | — | — | — | — |
+| full | — | — | — | — |
+
+End-to-end run মাঝপথে থেমেছে: free tier-এর **embedding daily quota (1000 request/দিন)** শেষ (reset: বাংলাদেশ দুপুর ১টা)। পরে আবার চালাও: `python eval.py eval_set.json --full`। এখন app embedding শেষ হলে BM25-এ নেমে যায় ও query embedding cache করে।
+আলাদা informal smoke test (একই ৪ video, ১০ প্রশ্ন, full pipeline): **10/10** (6/6 found, 4/4 “নেই”), সব claim verified।
 
 ## 6. সতর্কতা
 - LLM-as-judge (grading/verification) নিজেই ভুল করে; কিছু dropped claim আসলে ঠিক ছিল কিনা ১০–২০টা হাতে দেখে "judge precision" লিখলে রিপোর্ট শক্ত হয়।

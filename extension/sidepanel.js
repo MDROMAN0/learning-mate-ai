@@ -65,16 +65,16 @@ $("idx").onclick = async () => {
       $("st").textContent = "json3 fail (" + result.error + ") — transcript panel চেষ্টা করছি...";
       [{ result }] = await chrome.scripting.executeScript({ target: { tabId: t.id }, world: "MAIN", func: pageDomTranscript });
     }
-    if (result.error) { $("st").textContent = "❌ " + result.error + " — website-এর Upload tab ব্যবহার করো"; return; }
+    if (result.error) { $("st").textContent = "Error: " + result.error + " — website-এর Upload tab ব্যবহার করো"; return; }
     vid = result.id;
     let d = await api("/api/index_transcript", { video_id: vid, title: result.title, segments: result.segs });
     while (d.status === "running") {
       $("st").textContent = d.msg; await new Promise(r => setTimeout(r, 2000));
       d = await (await fetch($("backend").value + "/api/job/" + vid, { headers: { "x-app-key": $("key").value } })).json();
     }
-    $("st").textContent = d.status === "done" ? "✅ Ready: " + d.meta.title : "❌ " + d.msg;
-    if (d.status === "done") $("vbadge").textContent = "✓ indexed · " + d.meta.n_chunks + " chunks";
-  } catch (e) { $("st").textContent = "❌ " + e.message; }
+    $("st").textContent = d.status === "done" ? "Ready: " + d.meta.title : "Error: " + d.msg;
+    if (d.status === "done") $("vbadge").textContent = "indexed · " + d.meta.n_chunks + " chunks";
+  } catch (e) { $("st").textContent = "Error: " + e.message; }
 };
 
 $("ask").onclick = async () => {
@@ -88,15 +88,15 @@ $("ask").onclick = async () => {
     $("out").innerHTML = '<div class="bub">' + esc(q) + '</div><div class="card"><span class="spin"></span> <span class="muted">retrieve → grade → answer → verify…</span></div>';
     const d = await api("/api/ask", { video_id: vid, question: q, current_time: ct, clip: false });
     let h = '<div class="bub">' + esc(q) + "</div>";
-    if (!d.found) { $("out").innerHTML = h + '<div class="card"><span class="badge bad">✕ Not in video</span><div>' + esc(d.message) + "</div></div>"; return; }
+    if (!d.found) { $("out").innerHTML = h + '<div class="card"><span class="badge bad">Not in video</span><div>' + esc(d.message) + "</div></div>"; return; }
     const tr = d.trace || {};
-    h += '<div class="card"><span class="badge ' + (tr.verify === "ok" ? "ok" : "") + '">✓ ' + (tr.claims_supported || 0) + "/" + (tr.claims_total || 0) + " verified</span>";
+    h += '<div class="card"><span class="badge ' + (tr.verify === "ok" ? "ok" : "") + '">' + (tr.claims_supported || 0) + "/" + (tr.claims_total || 0) + " verified</span>";
     if (d.answer) {
       h += "<b>" + esc(d.answer.title) + '</b><p style="color:var(--text2);margin:4px 0">' + esc(d.answer.summary) + "</p>";
       d.answer.sections.forEach(s => { h += "<h4>" + esc(s.heading) + "</h4><ul>" + s.points.map(p => "<li>" + esc(p.text) + " " +
-        (p.cites || []).map(n => { const r = d.refs.find(x => x.n === n); return r ? '<span class="chip" data-t="' + r.start + '">▶ ' + fmt(r.start) + "</span>" : ""; }).join("") + "</li>").join("") + "</ul>"; });
+        (p.cites || []).map(n => { const r = d.refs.find(x => x.n === n); return r ? '<span class="chip" data-t="' + r.start + '">&#9656; ' + fmt(r.start) + "</span>" : ""; }).join("") + "</li>").join("") + "</ul>"; });
     } else h += esc(d.note);
-    h += '<div style="margin-top:8px">' + (d.segments || []).map(sg => '<span class="chip" data-t="' + sg.start + '">▶ ' + fmt(sg.start) + "–" + fmt(sg.end) + "</span>").join(" ") + "</div>";
+    h += '<div style="margin-top:8px">' + (d.segments || []).map(sg => '<span class="chip" data-t="' + sg.start + '">&#9656; ' + fmt(sg.start) + "–" + fmt(sg.end) + "</span>").join(" ") + "</div>";
     $("out").innerHTML = h + "</div>";
     document.querySelectorAll(".chip").forEach(c => c.onclick = () => chrome.scripting.executeScript({ target: { tabId: t.id }, world: "MAIN",
       func: s => { const v = document.querySelector("video"); if (v) { v.currentTime = s; v.play(); } }, args: [Number(c.dataset.t)] }));

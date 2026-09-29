@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/ui.css">
 <script src="/static/i18n.js"></script>
+<script src="/static/icons.js"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -73,7 +74,7 @@
   .sugg button:hover{border-color:var(--brand);color:var(--text)}
   .opt{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);font:14px var(--font);cursor:pointer}
   .opt:hover{border-color:var(--brand)} .opt.right{background:var(--okSoft);border-color:var(--ok)} .opt.wrong{background:var(--badSoft);border-color:var(--bad)}
-  .hero{max-width:920px;margin:0 auto;padding:7vh 24px 50px;text-align:center}
+  .hero{max-width:920px;margin:0 auto;padding:7vh 24px 20px;text-align:center}
   .hero h1{font-size:46px;line-height:1.12;letter-spacing:-1.2px;margin:14px 0;background:linear-gradient(135deg,var(--text) 30%,var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
   .hero p{color:var(--text2);font-size:17px;max-width:640px;margin:0 auto 26px}
   .bigin{display:flex;gap:8px;max-width:660px;margin:0 auto;padding:6px;border-radius:16px;background:var(--panel);border:1px solid var(--line2);box-shadow:var(--shadow)}
@@ -102,6 +103,70 @@
   .auth label{display:block;font-size:12.5px;color:var(--text2);margin:10px 0 4px;font-weight:600}
   .auth .btn.pri{width:100%;margin-top:16px;padding:11px}
   .auth .sw{text-align:center;margin-top:14px;font-size:13.5px;color:var(--muted)} .auth .sw a{cursor:pointer}
+  /* notes + whiteboard */
+  .qact{display:flex;gap:8px;flex-wrap:wrap;margin-top:-4px}
+  .ntool{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:6px;border:1px solid var(--line);border-radius:10px 10px 0 0;background:var(--panel)}
+  .ntool button{min-width:30px;height:30px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--text);cursor:pointer;font:600 13px var(--font);display:grid;place-items:center;padding:0 6px}
+  .ntool button:hover{background:var(--panel2);border-color:var(--line2)} .ntool button.on{background:var(--brandSoft);border-color:var(--brand)}
+  .ntool .sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+  .ntool .sw{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent;box-shadow:0 0 0 1px var(--line2)} .ntool .sw.on{border-color:var(--text)}
+  .editor{min-height:420px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--bg2);padding:14px;outline:none;font-size:15px;line-height:1.7}
+  .editor:empty::before{content:attr(data-ph);color:var(--muted)}
+  .editor h2{font-size:18px;margin:10px 0 4px} .editor img{max-width:100%;border-radius:10px;border:1px solid var(--line2);display:block}
+  .editor figure{margin:10px 0} .editor figcaption{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .editor .tsn{display:inline-flex;align-items:center;gap:3px;padding:0 7px;border-radius:6px;background:var(--brandSoft);color:#c4b6ff;font:600 12px var(--mono);cursor:pointer;text-decoration:none;user-select:none}
+  :root[data-theme=light] .editor .tsn{color:#5b3fe0}
+  .editor mark{background:rgba(250,204,21,.4)}
+  #board{width:100%;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background-color:var(--bg2);background-image:radial-gradient(var(--line2) 1px,transparent 1px);background-size:22px 22px;touch-action:none;cursor:crosshair;display:block}
+  .flash{position:fixed;inset:0;background:#fff;opacity:.0;pointer-events:none;z-index:90;animation:fsh .35s}
+  @keyframes fsh{20%{opacity:.35}100%{opacity:0}}
+  /* home — dynamic */
+  .home{position:relative;overflow:hidden;padding-bottom:60px}
+  .aurora{position:absolute;inset:-20% -10% auto -10%;height:720px;pointer-events:none;filter:blur(70px);opacity:.55;z-index:0}
+  .aurora span{position:absolute;border-radius:50%;animation:fl 16s ease-in-out infinite alternate}
+  .aurora span:nth-child(1){width:520px;height:520px;left:8%;top:0;background:#7c5cff}
+  .aurora span:nth-child(2){width:460px;height:460px;right:6%;top:60px;background:#22d3ee;animation-duration:19s}
+  .aurora span:nth-child(3){width:380px;height:380px;left:40%;top:220px;background:#f472b6;opacity:.6;animation-duration:23s}
+  @keyframes fl{0%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,40px) scale(1.12)}100%{transform:translate(-40px,20px) scale(.95)}}
+  :root[data-theme=light] .aurora{opacity:.28}
+  .home .hero{position:relative;z-index:1;padding-bottom:10px}
+  .hero h1{background:linear-gradient(90deg,var(--text),#b8a8ff,var(--brand2),var(--text));background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gs 9s linear infinite}
+  @keyframes gs{to{background-position:300% 0}}
+  .bigin .bi{display:grid;place-items:center;padding-left:10px;color:var(--muted)}
+  .try{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+  .try button{border:1px solid var(--line2);background:color-mix(in srgb,var(--panel) 70%,transparent);color:var(--text2);border-radius:99px;padding:5px 12px;font:13px var(--font);cursor:pointer;backdrop-filter:blur(8px);transition:.15s}
+  .try button:hover{border-color:var(--brand);color:var(--text);transform:translateY(-1px)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:720px;margin:30px auto 0}
+  .stats div{padding:14px;border-radius:14px;background:color-mix(in srgb,var(--panel) 75%,transparent);border:1px solid var(--line);backdrop-filter:blur(10px)}
+  .stats b{display:block;font-size:28px;font-weight:800;letter-spacing:-.8px;background:linear-gradient(135deg,var(--text),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stats span{font-size:12px;color:var(--muted);font-weight:600}
+  .demo{position:relative;z-index:1;max-width:1040px;margin:34px auto 0;padding:0 24px}
+  .dlabel{display:flex;align-items:center;gap:8px;font:600 12px var(--mono);color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px}
+  .live{width:8px;height:8px;border-radius:50%;background:#f43f5e;box-shadow:0 0 0 0 rgba(244,63,94,.6);animation:lv 1.6s infinite}
+  @keyframes lv{70%{box-shadow:0 0 0 8px rgba(244,63,94,0)}100%{box-shadow:0 0 0 0 rgba(244,63,94,0)}}
+  .dgrid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;padding:14px;border-radius:20px;background:color-mix(in srgb,var(--panel) 80%,transparent);border:1px solid var(--line2);box-shadow:0 30px 80px rgba(0,0,0,.45);backdrop-filter:blur(14px)}
+  .dvid{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#1e1b4b,#0e7490);background-size:cover;background-position:center}
+  .dvid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.75))}
+  .dplay{position:absolute;inset:0;display:grid;place-items:center;z-index:1;color:#fff}
+  .dplay .ico{width:54px;height:54px;padding:14px;border-radius:50%;background:rgba(124,92,255,.85);box-shadow:0 0 30px rgba(124,92,255,.7)}
+  .dcap{position:absolute;left:12px;right:12px;bottom:10px;z-index:1;color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 4px #000}
+  .dtl{position:relative;height:30px;margin-top:10px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+  .dtl i{position:absolute;top:0;bottom:0;background:#7c5cff;opacity:.08;transition:opacity .6s,background .6s}
+  .dtl .nd{position:absolute;top:0;bottom:0;width:2px;background:var(--brand2);box-shadow:0 0 8px var(--brand2);transition:left 1.2s ease}
+  .dchat{display:flex;flex-direction:column;gap:10px;min-height:280px}
+  .dchat .bub{align-self:flex-end;min-height:22px}
+  .dchat .bub::after{content:"";display:inline-block;width:2px;height:14px;background:#fff;margin-left:2px;vertical-align:-2px;animation:bk 1s steps(1) infinite}
+  @keyframes bk{50%{opacity:0}}
+  .dsteps{display:flex;gap:4px}
+  .dsteps span{flex:1;text-align:center;padding:5px 0;border-radius:8px;font:600 10.5px var(--mono);color:var(--muted);background:var(--panel2);border:1px solid var(--line);transition:.3s}
+  .dsteps span.on{color:#fff;background:linear-gradient(135deg,var(--brand),#5b8cff);border-color:transparent}
+  .dans{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;flex:1}
+  .dans .ln{opacity:0;transform:translateY(6px);transition:.4s;margin:5px 0}
+  .dans .ln.on{opacity:1;transform:none}
+  .hero2{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding:0 24px}
+  .rail{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+  .rail .yt{min-width:240px;max-width:240px;scroll-snap-align:start}
+  @media (max-width:900px){.dgrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:1100px){.work{grid-template-columns:1fr;height:auto}.right{min-height:640px}}
   @media (max-width:780px){.app{grid-template-columns:1fr;height:auto}.steps,.feat{grid-template-columns:1fr}.hero h1{font-size:32px}}
 </style>
@@ -126,26 +191,26 @@
   <nav class="nav"><a href="/" class="on" data-t="study"></a><a href="/lab" data-t="lab"></a></nav>
   <div class="sp"></div>
   <span class="pill" id="health"><span class="dot"></span>…</span>
-  <button class="btn sm" onclick="toggleLang()" data-t="langBtn"></button>
-  <button class="btn icon ghost" id="themeBtn" title="Theme">◐</button>
+  <button class="btn sm" onclick="toggleLang()"><i data-i="globe" data-s="14"></i><span data-t="langBtn"></span></button>
+  <button class="btn icon ghost" id="themeBtn" title="Theme"><i data-i="theme"></i></button>
 </header>
 
 <div class="app">
   <aside class="side">
     <div class="navl">
-      <button data-v="home" class="on">🏠 <span data-t="home"></span></button>
-      <button data-v="browse">🔎 <span data-t="browse"></span></button>
-      <button data-v="hist" id="histNav" class="hide">🕘 <span data-t="historyT"></span></button>
+      <button data-v="home" class="on"><i data-i="home"></i> <span data-t="home"></span></button>
+      <button data-v="browse"><i data-i="search"></i> <span data-t="browse"></span></button>
+      <button data-v="hist" id="histNav" class="hide"><i data-i="history"></i> <span data-t="historyT"></span></button>
     </div>
     <div class="blk hide" id="keyBlk">
-      <div class="h">🔒 <span data-t="appKey"></span></div>
+      <div class="h"><i data-i="lock" data-s="13"></i> <span data-t="appKey"></span></div>
       <input class="in" id="appkey" type="password" autocomplete="off" data-tp="appKeyPh">
     </div>
     <div class="blk">
       <div class="h" data-t="addVideo"></div>
       <div class="row" style="flex-wrap:nowrap"><input class="in" id="url" data-tp="pasteLink"><button class="btn pri" id="idxBtn" data-t="index"></button></div>
       <div class="row" style="margin-top:8px;justify-content:space-between">
-        <label class="btn sm ghost" style="cursor:pointer">⤒ <span data-t="upload"></span><input id="file" type="file" class="hide" accept="video/*,audio/*,.srt,.vtt"></label>
+        <label class="btn sm ghost" style="cursor:pointer"><i data-i="upload" data-s="14"></i> <span data-t="upload"></span><input id="file" type="file" class="hide" accept="video/*,audio/*,.srt,.vtt"></label>
         <span class="muted" data-t="uploadHint"></span>
       </div>
       <div id="status" class="muted" style="margin-top:8px"></div>
@@ -163,20 +228,53 @@
   </aside>
 
   <main class="main">
-    <section id="v_home" class="view hero fade">
-      <span class="badge" data-t="heroBadge"></span>
-      <h1 data-t="heroTitle"></h1>
-      <p data-t="heroSub"></p>
-      <div class="bigin"><input class="in" id="heroQ" data-tp="heroPh"><button class="btn pri" id="heroBtn" data-t="go"></button></div>
-      <div class="steps">
-        <div class="card"><span class="k">1</span><b data-t="step1"></b><span class="muted" data-t="step1d"></span></div>
-        <div class="card"><span class="k">2</span><b data-t="step2"></b><span class="muted" data-t="step2d"></span></div>
-        <div class="card"><span class="k">3</span><b data-t="step3"></b><span class="muted" data-t="step3d"></span></div>
+    <section id="v_home" class="view home">
+      <div class="aurora"><span></span><span></span><span></span></div>
+      <div class="hero fade">
+        <span class="badge"><i data-i="sparkles" data-s="13"></i> <span data-t="heroBadge"></span></span>
+        <h1 data-t="heroTitle"></h1>
+        <p data-t="heroSub"></p>
+        <div class="bigin"><span class="bi"><i data-i="search" data-s="18"></i></span><input class="in" id="heroQ"><button class="btn pri" id="heroBtn"><span data-t="go"></span> <i data-i="arrow" data-s="15"></i></button></div>
+        <div class="try" id="tryChips"></div>
+        <div class="stats" id="stats">
+          <div><b data-n="0" id="stV">0</b><span data-t="stVideos"></span></div>
+          <div><b data-n="0" id="stM">0</b><span data-t="stMinutes"></span></div>
+          <div><b data-n="0" id="stC">0</b><span data-t="stChunks"></span></div>
+          <div><b>3</b><span data-t="stLangs"></span></div>
+        </div>
       </div>
-      <div class="feat">
-        <div class="card soft">🎯<b data-t="f1"></b><span class="muted" data-t="f1d"></span></div>
-        <div class="card soft">✅<b data-t="f2"></b><span class="muted" data-t="f2d"></span></div>
-        <div class="card soft">🧠<b data-t="f3"></b><span class="muted" data-t="f3d"></span></div>
+
+      <div class="demo fade">
+        <div class="dlabel"><span class="live"></span><span data-t="livePreview"></span></div>
+        <div class="dgrid">
+          <div class="dscreen">
+            <div class="dvid" id="dVid"><div class="dplay"><i data-i="play" data-s="22"></i></div><div class="dcap" id="dCap"></div></div>
+            <div class="dtl" id="dTl"></div>
+            <div class="legend"><span>0:00</span><span data-t="timeline"></span><span id="dEnd">12:34</span></div>
+          </div>
+          <div class="dchat">
+            <div class="bub" id="dQ"></div>
+            <div class="dsteps" id="dSteps"></div>
+            <div class="dans" id="dAns"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero2">
+        <div class="steps">
+          <div class="card"><span class="k">1</span><span class="fi"><i data-i="search" data-s="20"></i></span><b data-t="step1"></b><span class="muted" data-t="step1d"></span></div>
+          <div class="card"><span class="k">2</span><span class="fi"><i data-i="layers" data-s="20"></i></span><b data-t="step2"></b><span class="muted" data-t="step2d"></span></div>
+          <div class="card"><span class="k">3</span><span class="fi"><i data-i="chat" data-s="20"></i></span><b data-t="step3"></b><span class="muted" data-t="step3d"></span></div>
+        </div>
+        <div class="feat">
+          <div class="card soft"><span class="fi"><i data-i="target" data-s="20"></i></span><b data-t="f1"></b><span class="muted" data-t="f1d"></span></div>
+          <div class="card soft"><span class="fi"><i data-i="shield" data-s="20"></i></span><b data-t="f2"></b><span class="muted" data-t="f2d"></span></div>
+          <div class="card soft"><span class="fi"><i data-i="brain" data-s="20"></i></span><b data-t="f3"></b><span class="muted" data-t="f3d"></span></div>
+        </div>
+        <div id="contBox" class="hide">
+          <div class="row" style="justify-content:space-between;margin:34px 0 12px"><h3 style="margin:0" data-t="continueT"></h3><button class="btn sm ghost" onclick="view('browse')"><span data-t="browse"></span> <i data-i="arrow" data-s="13"></i></button></div>
+          <div class="rail" id="rail"></div>
+        </div>
       </div>
     </section>
 
@@ -194,6 +292,7 @@
     <section id="v_work" class="view work hide">
       <div class="left">
         <div class="player" id="playerBox"></div>
+        <div class="qact"><button class="btn sm" id="qSnap"><i data-i="camera" data-s="14"></i> <span data-t="ssBtn"></span> <kbd>Alt+S</kbd></button><button class="btn sm" id="qTs"><i data-i="clock" data-s="14"></i> <span data-t="tsBtn"></span> <kbd>Alt+N</kbd></button><button class="btn sm ghost" id="qNotes"><i data-i="book" data-s="14"></i> <span data-t="tNotes"></span></button></div>
         <div><p class="vtitle" id="vtitle"></p><div class="row" style="margin-top:6px" id="vmeta"></div></div>
         <div class="card" style="padding:12px 14px">
           <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="h" style="margin:0" data-t="timeline"></div><span class="muted" id="tlHint"></span></div>
@@ -211,18 +310,19 @@
 
       <div class="right">
         <div class="tabs" id="tabs">
-          <button data-tab="ask" class="on">💬 <span data-t="tAsk"></span></button>
-          <button data-tab="alt">⚖️ <span data-t="tAlt"></span></button>
-          <button data-tab="plan">🗺️ <span data-t="tPlan"></span></button>
-          <button data-tab="quiz">📝 <span data-t="tQuiz"></span></button>
-          <button data-tab="exp">🤔 <span data-t="tExp"></span></button>
+          <button data-tab="ask" class="on"><i data-i="chat"></i> <span data-t="tAsk"></span></button>
+          <button data-tab="alt"><i data-i="scale"></i> <span data-t="tAlt"></span></button>
+          <button data-tab="plan"><i data-i="map"></i> <span data-t="tPlan"></span></button>
+          <button data-tab="quiz"><i data-i="quiz"></i> <span data-t="tQuiz"></span></button>
+          <button data-tab="exp"><i data-i="help"></i> <span data-t="tExp"></span></button>
+          <button data-tab="notes"><i data-i="book"></i> <span data-t="tNotes"></span></button>
         </div>
         <div class="pane" id="p_ask"><div id="chat"></div></div>
         <div class="comp" id="c_ask">
           <div class="sugg" id="sugg"></div>
           <div class="row" style="align-items:flex-end;flex-wrap:nowrap">
             <textarea class="in" id="q" rows="1" data-tp="qPh"></textarea>
-            <button class="btn pri" id="askBtn" style="height:46px">➤</button>
+            <button class="btn pri" id="askBtn" style="height:46px"><i data-i="send"></i></button>
           </div>
           <div class="row" style="margin-top:8px;justify-content:space-between">
             <div class="seg" id="level"><button data-v="simple" class="on" data-t="simple"></button><button data-v="exam" data-t="exam"></button><button data-v="expert" data-t="expert"></button></div>
@@ -248,6 +348,33 @@
             <div class="row" style="margin-top:8px;justify-content:space-between"><label class="tog"><input type="checkbox" id="qspoiler"><span data-t="watchedOnly"></span></label><div class="row"><button class="btn" id="ankiBtn" data-t="anki"></button><button class="btn pri" id="quizBtn" data-t="makeQuiz"></button></div></div>
           </div><div id="quizOut" style="margin-top:14px"></div>
         </div>
+        <div class="pane hide" id="p_notes">
+          <div class="row" style="justify-content:space-between;margin-bottom:10px">
+            <div class="seg" id="nmode"><button data-v="text" class="on" data-t="notesMode"></button><button data-v="board" data-t="boardMode"></button></div>
+            <div class="row"><span class="muted" id="nSave"></span><button class="btn sm" id="pdfBtn"><i data-i="download" data-s="13"></i> <span data-t="exportPdf"></span></button></div>
+          </div>
+          <div id="nText">
+            <div class="ntool" id="ntool">
+              <button data-c="bold" title="Bold"><b>B</b></button><button data-c="italic" title="Italic"><i style="font-style:italic">I</i></button><button data-c="underline" title="Underline"><u>U</u></button>
+              <button data-c="h2" title="Heading">H</button><button data-c="insertUnorderedList" title="List"><i data-i="list" data-s="14"></i></button><button data-c="hl" title="Highlight"><span style="background:rgba(250,204,21,.45);padding:0 4px;border-radius:3px">A</span></button>
+              <span class="sep"></span>
+              <button data-c="ts" data-tt="tsBtn"><i data-i="clock" data-s="14"></i></button><button data-c="ss" data-tt="ssBtn"><i data-i="camera" data-s="14"></i></button>
+              <span class="sep"></span><button data-c="removeFormat" title="Clear format">Tx</button>
+            </div>
+            <div class="editor" id="editor" contenteditable="true" spellcheck="false"></div>
+          </div>
+          <div id="nBoard" class="hide">
+            <div class="ntool" id="btool">
+              <button data-b="pen" class="on" data-tt="pen"><i data-i="pen" data-s="14"></i></button><button data-b="marker" data-tt="marker"><i data-i="marker" data-s="14"></i></button><button data-b="eraser" data-tt="eraser"><i data-i="eraser" data-s="14"></i></button>
+              <span class="sep"></span>
+              <span class="sw" data-col="#f2f4f8" style="background:#f2f4f8"></span><span class="sw on" data-col="#7c5cff" style="background:#7c5cff"></span><span class="sw" data-col="#22d3ee" style="background:#22d3ee"></span><span class="sw" data-col="#f43f5e" style="background:#f43f5e"></span><span class="sw" data-col="#22c55e" style="background:#22c55e"></span><span class="sw" data-col="#facc15" style="background:#facc15"></span>
+              <input type="range" id="bSize" min="1" max="24" value="3" style="width:80px">
+              <span class="sep"></span>
+              <button data-b="undo" data-tt="undo"><i data-i="undo" data-s="14"></i></button><button data-b="clear" data-tt="clear"><i data-i="trash" data-s="14"></i></button><button data-b="tonotes" data-tt="boardToNotes"><i data-i="image" data-s="14"></i></button>
+            </div>
+            <canvas id="board"></canvas>
+          </div>
+        </div>
         <div class="pane hide" id="p_exp">
           <div class="card soft"><div class="h" data-t="expTitle"></div>
             <div class="muted" style="margin-bottom:10px" data-t="expD"></div>
@@ -268,7 +395,7 @@ const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s
 let player=null,ytReady=false,cur=null,lib=[],trChunks=[],heat=null,lastSegs=[],lastQuiz=[],quizScore={ok:0,n:0},level="simple",amode="library",chatHist=[],me={auth:false,user:null},signupMode=false,lastQ="";
 window.onYouTubeIframeAPIReady=()=>{ytReady=true};
 function toast(m){const d=document.createElement("div");d.className="toast fade";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
-applyLang();
+applyLang();applyIcons();
 
 const setTheme=x=>{document.documentElement.dataset.theme=x;store.set("theme",x)};
 setTheme(store.get("theme")||"dark");
@@ -277,8 +404,8 @@ $("themeBtn").onclick=()=>setTheme(document.documentElement.dataset.theme==="dar
 $("appkey").value=store.get("appkey")||"";
 $("appkey").onchange=()=>{store.set("appkey",$("appkey").value);loadLib()};
 const hdr=()=>({"Content-Type":"application/json","x-app-key":$("appkey").value});
-async function api(path,body){
-  const r=await fetch(path,body===undefined?{headers:hdr(),credentials:"same-origin"}:{method:"POST",headers:hdr(),credentials:"same-origin",body:JSON.stringify(body)});
+async function api(path,body,opt){
+  const r=await fetch(path,opt?{method:opt.method,headers:hdr(),credentials:"same-origin",body:JSON.stringify(opt.body)}:body===undefined?{headers:hdr(),credentials:"same-origin"}:{method:"POST",headers:hdr(),credentials:"same-origin",body:JSON.stringify(body)});
   const d=await r.json().catch(()=>({detail:"bad server response"}));
   if(r.status===401){if(d.login)showAuth();else{$("keyBlk").classList.remove("hide");$("appkey").focus()} throw new Error(d.login?t("login"):t("needKey"))}
   if(!r.ok)throw new Error(d.detail||("HTTP "+r.status));
@@ -309,7 +436,7 @@ async function refreshMe(){
 $("logoutBtn").onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()};
 
 /* views */
-function view(v){for(const x of ["home","browse","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);
+function view(v){for(const x of ["home","browse","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="home"&&lib.length&&!demoStarted)startDemo();
   document.querySelectorAll(".navl button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); if(v==="hist")loadHist(); drawLib()}
 document.querySelectorAll(".navl button").forEach(b=>b.onclick=()=>view(b.dataset.v));
 
@@ -322,13 +449,13 @@ function drawLib(){
     :'<div class="empty" style="padding:20px 8px">'+esc(lib.length?t("noMatch"):t("libEmpty"))+"</div>";
   document.querySelectorAll(".vc").forEach(el=>el.onclick=()=>openVid(el.dataset.id));
 }
-async function loadLib(){try{lib=(await api("/api/library")).videos;drawLib()}catch(e){$("lib").innerHTML='<div class="empty">🔒 '+esc(e.message)+"</div>"}}
+async function loadLib(){try{lib=(await api("/api/library")).videos;drawLib();homeStats()}catch(e){$("lib").innerHTML='<div class="empty">'+ic("lock")+' '+esc(e.message)+"</div>"}}
 $("libq").oninput=drawLib;
 
 /* index / upload */
 async function poll(id){
   try{const d=await api("/api/job/"+id);
-    if(d.status==="done"){$("status").innerHTML='<span class="badge ok">✓ '+t("ready")+"</span>";await loadLib();show(d.meta)}
+    if(d.status==="done"){$("status").innerHTML='<span class="badge ok">'+ic("check",12)+' '+t("ready")+"</span>";await loadLib();show(d.meta)}
     else if(d.status==="error"){$("status").innerHTML='<span class="badge bad">'+t("error")+"</span> "+esc(d.msg);document.querySelectorAll(".yt .go .spin").forEach(s=>s.parentNode.textContent=t("indexIt"))}
     else{$("status").innerHTML=esc(d.msg||"…")+'<div class="prog"><i></i></div>';setTimeout(()=>poll(id),1500)}
   }catch(e){$("status").textContent=e.message}
@@ -356,9 +483,9 @@ async function browse(){
   try{const d=await api("/api/search?q="+encodeURIComponent(q));
     if(!d.results.length){$("bOut").innerHTML='<div class="empty">'+t("nothing")+"</div>";return}
     const nf=new Intl.NumberFormat(LANG==="bn"?"bn-BD":"en",{notation:"compact"});
-    $("bOut").innerHTML='<div class="grid">'+d.results.map(v=>'<div class="yt fade" data-id="'+esc(v.id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.id)+'" alt="">'+(v.duration?'<span class="dur">'+fmt(v.duration)+"</span>":"")+(v.indexed?'<span class="ix badge ok">✓ '+t("indexed")+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+esc(v.channel||"")+(v.views?" · "+nf.format(v.views)+" views":"")+'</div><button class="btn '+(v.indexed?"":"pri ")+'sm go">'+(v.indexed?t("open"):t("indexIt"))+"</button></div></div>").join("")+"</div>";
+    $("bOut").innerHTML='<div class="grid">'+d.results.map(v=>'<div class="yt fade" data-id="'+esc(v.id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.id)+'" alt="">'+(v.duration?'<span class="dur">'+fmt(v.duration)+"</span>":"")+(v.indexed?'<span class="ix badge ok">'+ic("check",12)+' '+t("indexed")+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+esc(v.channel||"")+(v.views?" · "+nf.format(v.views)+" views":"")+'</div><button class="btn '+(v.indexed?"":"pri ")+'sm go">'+(v.indexed?t("open"):t("indexIt"))+"</button></div></div>").join("")+"</div>";
     document.querySelectorAll(".yt[data-id]").forEach(el=>el.onclick=()=>{const id=el.dataset.id;if(lib.some(v=>v.video_id===id))openVid(id);else{el.querySelector(".go").innerHTML='<span class="spin"></span>';indexUrl("https://www.youtube.com/watch?v="+id)}});
-  }catch(e){$("bOut").innerHTML='<div class="card" style="margin-top:14px"><span class="badge warn">!</span> '+esc(t("browseErr"))+'<div class="muted" style="margin-top:6px">'+esc(e.message)+"</div></div>"}
+  }catch(e){$("bOut").innerHTML='<div class="card" style="margin-top:14px"><span class="badge warn">'+ic("alert",12)+'</span> '+esc(t("browseErr"))+'<div class="muted" style="margin-top:6px">'+esc(e.message)+"</div></div>"}
 }
 $("bBtn").onclick=browse;$("bq").onkeydown=e=>{if(e.key==="Enter")browse()};
 
@@ -366,7 +493,7 @@ $("bBtn").onclick=browse;$("bq").onkeydown=e=>{if(e.key==="Enter")browse()};
 async function loadHist(){
   $("hOut").innerHTML='<div class="shimmer"></div>';
   try{const d=await api("/api/history");
-    $("hOut").innerHTML=d.items.length?d.items.map(h=>'<div class="hi" data-v="'+esc(h.video_id)+'" data-q="'+esc(h.question)+'"><b>'+esc(h.question)+"</b> "+(h.found?'<span class="badge ok">✓</span>':'<span class="badge bad">✕</span>')+'<div class="muted">'+esc(h.title||h.video_id)+" · "+new Date(h.created*1000).toLocaleString(LANG==="bn"?"bn-BD":"en")+"</div></div>").join(""):'<div class="empty">'+t("histEmpty")+"</div>";
+    $("hOut").innerHTML=d.items.length?d.items.map(h=>'<div class="hi" data-v="'+esc(h.video_id)+'" data-q="'+esc(h.question)+'"><b>'+esc(h.question)+"</b> "+(h.found?'<span class="badge ok">'+ic("check",12)+'</span>':'<span class="badge bad">'+ic("x",12)+'</span>')+'<div class="muted">'+esc(h.title||h.video_id)+" · "+new Date(h.created*1000).toLocaleString(LANG==="bn"?"bn-BD":"en")+"</div></div>").join(""):'<div class="empty">'+t("histEmpty")+"</div>";
     document.querySelectorAll(".hi").forEach(el=>el.onclick=async()=>{await openVid(el.dataset.v);$("q").value=el.dataset.q;$("q").focus()});
   }catch(e){$("hOut").innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}
 }
@@ -380,11 +507,11 @@ function show(meta){
   $("vtitle").textContent=meta.title; $("vmeta").innerHTML=metaBadges(meta);
   $("clipLbl").classList.toggle("hide",!meta.has_video); $("clip").checked=!!meta.has_video;
   $("tlEnd").textContent=fmt(meta.duration); $("tlHint").textContent=""; drawTL();
-  $("chat").innerHTML='<div class="empty fade"><div style="font-size:30px">💬</div><b style="color:var(--text)">'+t("askEmptyT")+'</b><div class="muted">'+t("askEmptyD")+"</div></div>";
+  $("chat").innerHTML='<div class="empty fade"><div style="color:var(--brand)">'+ic("chat",34)+'</div><b style="color:var(--text)">'+t("askEmptyT")+'</b><div class="muted">'+t("askEmptyD")+"</div></div>";
   suggest();player=null;
   if(meta.kind==="upload")$("playerBox").innerHTML=meta.media_url?'<video id="vid" controls src="'+esc(meta.media_url)+'"></video>':'<div class="empty">Transcript-only</div>';
   else{$("playerBox").innerHTML='<div id="player"></div>';const mk=()=>{if(!ytReady){setTimeout(mk,250);return}player=new YT.Player("player",{videoId:meta.video_id,playerVars:{rel:0,modestbranding:1}})};mk()}
-  loadTranscript();
+  loadTranscript();loadNotes();
 }
 const now=()=>{if(!cur)return 0;if(cur.kind==="upload"){const v=$("vid");return v?v.currentTime:0}return player&&player.getCurrentTime?player.getCurrentTime():0};
 function seek(s,vid){
@@ -423,8 +550,8 @@ setInterval(()=>{if(!cur||$("v_work").classList.contains("hide"))return;const s=
 /* tabs + controls */
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
-  for(const x of ["ask","alt","plan","quiz","exp"])$("p_"+x).classList.toggle("hide",x!==b.dataset.tab);
-  $("c_ask").classList.toggle("hide",b.dataset.tab!=="ask");
+  for(const x of ["ask","alt","plan","quiz","exp","notes"])$("p_"+x).classList.toggle("hide",x!==b.dataset.tab);
+  $("c_ask").classList.toggle("hide",b.dataset.tab!=="ask");if(b.dataset.tab==="notes")sizeBoard();
 });
 const segCtl=(id,fn)=>document.querySelectorAll("#"+id+" button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#"+id+" button").forEach(x=>x.classList.toggle("on",x===b));fn(b.dataset.v)});
 segCtl("level",v=>level=v);segCtl("amode",v=>amode=v);
@@ -434,7 +561,7 @@ $("askBtn").onclick=ask;
 document.addEventListener("keydown",e=>{if(e.key==="/"&&!["INPUT","TEXTAREA"].includes(document.activeElement.tagName)&&cur&&!$("v_work").classList.contains("hide")){e.preventDefault();$("q").focus()}});
 
 /* ask */
-const refChip=(rf,vid)=>'<span class="chip" onclick="seek('+rf.start+(vid?",'"+esc(vid)+"'":"")+')">▶ '+(rf.n?rf.n+" · ":"")+fmt(rf.start)+"</span>";
+const refChip=(rf,vid)=>'<span class="chip" onclick="seek('+rf.start+(vid?",'"+esc(vid)+"'":"")+')">'+ic("play",10)+' '+(rf.n?rf.n+" · ":"")+fmt(rf.start)+"</span>";
 const chips=(cites,refs,vid)=>(cites||[]).map(n=>{const rf=(refs||[]).find(x=>x.n===n);return rf?refChip(rf,vid):""}).join("");
 function answerHtml(a,refs,vid){let h="<h3>"+esc(a.title)+'</h3><p class="sum">'+esc(a.summary)+"</p>";
   (a.sections||[]).forEach(s=>{h+=(s.heading?"<h4>"+esc(s.heading)+"</h4>":"")+"<ul>";(s.points||[]).forEach(p=>{h+="<li>"+esc(p.text)+" "+chips(p.cites,refs,vid)+"</li>"});h+="</ul>"});return h}
@@ -453,20 +580,20 @@ async function ask(){
   try{
     const d=await api("/api/ask",{video_id:cur.video_id,question:q,current_time:$("spoiler").checked?now():null,clip:$("clip").checked,level});
     chatHist.push({q,d});const tr=d.trace||{};let h;
-    if(!d.found){lastSegs=[];h='<div class="ans" style="border-color:var(--bad)"><div class="meta"><span class="badge bad">✕ '+t("notFound")+"</span></div><b>"+esc(d.message)+'</b><p class="muted" style="margin:6px 0 0">'+t("notFoundD")+"</p>"+pipeHtml(tr)+"</div>"}
+    if(!d.found){lastSegs=[];h='<div class="ans" style="border-color:var(--bad)"><div class="meta"><span class="badge bad">'+ic("x",12)+' '+t("notFound")+"</span></div><b>"+esc(d.message)+'</b><p class="muted" style="margin:6px 0 0">'+t("notFoundD")+"</p>"+pipeHtml(tr)+"</div>"}
     else{
       lastSegs=d.segments||[];const tot=tr.claims_total||0,sup=tr.claims_supported||0;
-      const vb=tr.verify==="ok"?'<span class="badge ok">✓ '+sup+"/"+tot+" "+t("verified")+"</span>":'<span class="badge warn">⚠ '+esc(tr.verify||"unverified")+"</span>";
+      const vb=tr.verify==="ok"?'<span class="badge ok">'+ic("check",12)+' '+sup+"/"+tot+" "+t("verified")+"</span>":'<span class="badge warn">'+ic("alert",12)+' '+esc(tr.verify||"unverified")+"</span>";
       h='<div class="ans"><div class="meta">'+vb+'<span class="badge">'+(d.refs||[]).length+" "+t("evidence")+'</span><span class="badge">'+esc(t(level))+"</span></div>"+(d.answer?answerHtml(d.answer,d.refs):"<p><b>"+esc(d.note)+"</b></p>");
-      h+='<div class="segs">'+lastSegs.map(s=>'<div class="sgi"><button class="play" onclick="seek('+s.start+')">▶</button><div style="flex:1;min-width:0"><b style="font-family:var(--mono);font-size:13px">'+fmt(s.start)+" – "+fmt(s.end)+'</b> <span class="muted">· '+Math.round(s.end-s.start)+"s "+t("segment")+"</span>"+(s.clip?"<details><summary>"+t("clipFile")+"</summary>"+(s.clip.endsWith(".m4a")?'<audio controls preload="none" src="'+esc(s.clip)+'"></audio>':'<video controls preload="metadata" src="'+esc(s.clip)+'"></video>')+"</details>":"")+'</div><a class="btn sm ghost" target="_blank" href="'+esc(s.url)+'">YouTube ↗</a></div>').join("")+"</div>";
-      h+=pipeHtml(tr)+'<div class="acts"><button class="btn sm" data-a="copy">⧉ '+t("copy")+'</button><button class="btn sm" data-a="md">⤓ '+t("notes")+'</button><button class="btn sm" data-a="trace">{ } '+t("trace")+'</button></div><pre class="code hide">'+esc(JSON.stringify(tr,null,2))+"</pre></div>";
+      h+='<div class="segs">'+lastSegs.map(s=>'<div class="sgi"><button class="play" onclick="seek('+s.start+')">'+ic("play",13)+'</button><div style="flex:1;min-width:0"><b style="font-family:var(--mono);font-size:13px">'+fmt(s.start)+" – "+fmt(s.end)+'</b> <span class="muted">· '+Math.round(s.end-s.start)+"s "+t("segment")+"</span>"+(s.clip?"<details><summary>"+t("clipFile")+"</summary>"+(s.clip.endsWith(".m4a")?'<audio controls preload="none" src="'+esc(s.clip)+'"></audio>':'<video controls preload="metadata" src="'+esc(s.clip)+'"></video>')+"</details>":"")+'</div><a class="btn sm ghost" target="_blank" href="'+esc(s.url)+'">YouTube '+ic("external",12)+'</a></div>').join("")+"</div>";
+      h+=pipeHtml(tr)+'<div class="acts"><button class="btn sm" data-a="copy">'+ic("copy",13)+' '+t("copy")+'</button><button class="btn sm" data-a="md">'+ic("download",13)+' '+t("notes")+'</button><button class="btn sm" data-a="note">'+ic("book",13)+' '+t("addToNotes")+'</button><button class="btn sm" data-a="trace">'+ic("code",13)+' '+t("trace")+'</button></div><pre class="code hide">'+esc(JSON.stringify(tr,null,2))+"</pre></div>";
     }
     box.lastChild.innerHTML=h;drawTL();
     const idx=chatHist.length-1;
     box.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{const {q,d}=chatHist[idx];
       if(b.dataset.a==="copy"){navigator.clipboard.writeText(toMd(q,d));toast(t("copied"))}
       if(b.dataset.a==="md"){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([toMd(q,d)],{type:"text/markdown"}));a.download="notes.md";a.click()}
-      if(b.dataset.a==="trace")box.querySelector("pre").classList.toggle("hide")});
+      if(b.dataset.a==="trace")box.querySelector("pre").classList.toggle("hide");if(b.dataset.a==="note")answerToNotes(q,d)});
   }catch(e){box.lastChild.innerHTML='<div class="ans" style="border-color:var(--bad)"><span class="badge bad">'+t("error")+"</span> "+esc(e.message)+"</div>"}
   $("askBtn").disabled=false;$("p_ask").scrollTop=1e9;
 }
@@ -483,10 +610,10 @@ $("altBtn").onclick=async()=>{
     const c=d.comparison;
     if(c){const tbl=rows=>'<table class="t">'+rows.map(x=>"<tr><th>"+esc(x.topic)+"</th><td>"+(x.views||[]).map(v=>"<b>"+L(v.video)+":</b> "+esc(v.says)).join("<br>")+"</td></tr>").join("")+"</table>";
       h+='<div class="card fade"><div class="h">'+t("compare")+"</div>";
-      if(c.common.length)h+="<b>✓ "+t("common")+"</b><ul>"+c.common.map(x=>"<li>"+esc(x.text)+"</li>").join("")+"</ul>";
-      if(c.different.length)h+="<b>↔ "+t("diff")+"</b>"+tbl(c.different);
-      if(c.conflicts.length)h+='<b style="color:var(--bad)">⚠ '+t("conflict")+'</b> <span class="muted">'+t("noVerdict")+"</span>"+tbl(c.conflicts);
-      if(c.unique.length)h+="<b>★ "+t("unique")+"</b><ul>"+c.unique.map(x=>"<li><b>"+L(x.video)+":</b> "+esc(x.text)+"</li>").join("")+"</ul>";
+      if(c.common.length)h+="<b>"+ic("check",13)+" "+t("common")+"</b><ul>"+c.common.map(x=>"<li>"+esc(x.text)+"</li>").join("")+"</ul>";
+      if(c.different.length)h+="<b>"+ic("scale",13)+" "+t("diff")+"</b>"+tbl(c.different);
+      if(c.conflicts.length)h+='<b style="color:var(--bad)">'+ic("alert",12)+' '+t("conflict")+'</b> <span class="muted">'+t("noVerdict")+"</span>"+tbl(c.conflicts);
+      if(c.unique.length)h+="<b>"+ic("star",13)+" "+t("unique")+"</b><ul>"+c.unique.map(x=>"<li><b>"+L(x.video)+":</b> "+esc(x.text)+"</li>").join("")+"</ul>";
       h+="</div>"}
     if(d.skipped&&d.skipped.length)h+='<div class="muted" style="margin-top:8px">'+t("skipped")+": "+d.skipped.map(s=>esc(s.title||s.id)+" ("+esc(s.reason)+")").join("; ")+"</div>";
     $("altOut").innerHTML=h}catch(e){errBox("altOut",e)}
@@ -505,7 +632,7 @@ async function planFinish(){
   try{const d=await api("/api/plan/finish",{goal:$("goal").value,qa:planQs.map((q,i)=>({q,a:$("pa"+i).value})),video_ids:lib.map(v=>v.video_id)});
     let h='<div class="card fade"><div class="row"><span class="badge ok">'+t("known")+": "+esc((d.known||[]).join(", ")||"—")+'</span><span class="badge warn">'+t("gaps")+": "+esc((d.gaps||[]).join(", "))+"</span></div></div>";
     if(d.total_sec)h+='<div class="card fade" style="margin-top:10px"><b style="font-size:22px">'+Math.round(d.watch_sec/60)+" "+t("minutes")+'</b> <span class="muted">'+t("planSave")+" "+Math.round(d.total_sec/60)+" "+t("minutes")+"</span></div>";
-    h+=(d.plan||[]).map((p,i)=>'<div class="sgi fade" style="margin-top:8px"><span class="play" style="background:var(--panel);color:var(--text);border:1px solid var(--line2)">'+(i+1)+'</span><div style="flex:1"><b>'+esc(p.gap)+'</b><div class="muted">'+esc(p.title)+" · "+fmt(p.start)+"–"+fmt(p.end)+'</div><div style="font-size:13.5px">'+esc(p.why)+'</div></div><a class="btn sm" target="_blank" href="'+esc(p.url)+'">'+t("watch")+" ↗</a></div>").join("");
+    h+=(d.plan||[]).map((p,i)=>'<div class="sgi fade" style="margin-top:8px"><span class="play" style="background:var(--panel);color:var(--text);border:1px solid var(--line2)">'+(i+1)+'</span><div style="flex:1"><b>'+esc(p.gap)+'</b><div class="muted">'+esc(p.title)+" · "+fmt(p.start)+"–"+fmt(p.end)+'</div><div style="font-size:13.5px">'+esc(p.why)+'</div></div><a class="btn sm" target="_blank" href="'+esc(p.url)+'">'+t("watch")+" "+ic("external",12)+"</a></div>").join("");
     $("planOut").innerHTML=h}catch(e){errBox("planOut",e)}
 }
 
@@ -519,7 +646,7 @@ $("quizBtn").onclick=async()=>{
 function pickOpt(i,j){
   const q=lastQuiz[i];if(q.done)return;q.done=true;quizScore.n++;if(j===q.answer)quizScore.ok++;
   $("o"+i+"_"+j).classList.add(j===q.answer?"right":"wrong");$("o"+i+"_"+q.answer).classList.add("right");
-  $("fb"+i).innerHTML='<div style="margin-top:8px">'+(j===q.answer?'<span class="badge ok">✓ '+t("right")+"</span> ":'<span class="badge bad">✕ '+t("wrong")+"</span> ")+esc(q.explanation)+' <span class="chip" onclick="seek('+q.start+')">▶ '+fmt(q.start)+"</span></div>";
+  $("fb"+i).innerHTML='<div style="margin-top:8px">'+(j===q.answer?'<span class="badge ok">'+ic("check",12)+' '+t("right")+"</span> ":'<span class="badge bad">'+ic("x",12)+' '+t("wrong")+"</span> ")+esc(q.explanation)+' <span class="chip" onclick="seek('+q.start+')">'+ic("play",10)+' '+fmt(q.start)+"</span></div>";
   $("score").innerHTML="<b>"+t("score")+": "+quizScore.ok+" / "+lastQuiz.length+"</b>"+(quizScore.n===lastQuiz.length?' <span class="muted">'+t("quizDone")+"</span>":"");
 }
 $("ankiBtn").onclick=()=>{
@@ -532,12 +659,143 @@ $("ankiBtn").onclick=()=>{
 document.querySelectorAll("#p_exp [data-s]").forEach(b=>b.onclick=async()=>{
   if(!cur)return;busy("expOut");
   try{const d=await api("/api/explain",{video_id:cur.video_id,current_time:now(),style:b.dataset.s});
-    let h='<div class="ans fade"><div class="meta"><span class="chip" onclick="seek('+d.passage.start+')">▶ '+fmt(d.passage.start)+"–"+fmt(d.passage.end)+'</span><span class="badge">'+esc(d.style)+'</span></div><p style="white-space:pre-wrap;margin:0">'+esc(d.explanation)+"</p>";
-    if(d.source)h+='<div class="sgi" style="margin-top:10px"><span>🎬</span><div style="flex:1"><b>'+t("otherVideo")+":</b> "+esc(d.source.title)+'</div><a class="btn sm" target="_blank" href="'+esc(d.source.url)+'">'+fmt(d.source.start)+" ↗</a></div>";
+    let h='<div class="ans fade"><div class="meta"><span class="chip" onclick="seek('+d.passage.start+')">'+ic("play",10)+' '+fmt(d.passage.start)+"–"+fmt(d.passage.end)+'</span><span class="badge">'+esc(d.style)+'</span></div><p style="white-space:pre-wrap;margin:0">'+esc(d.explanation)+"</p>";
+    if(d.source)h+='<div class="sgi" style="margin-top:10px">'+ic("film",18)+'<div style="flex:1"><b>'+t("otherVideo")+":</b> "+esc(d.source.title)+'</div><a class="btn sm" target="_blank" href="'+esc(d.source.url)+'">'+fmt(d.source.start)+" "+ic("external",12)+"</a></div>";
     $("expOut").innerHTML=h+"</div>"}catch(e){errBox("expOut",e)}
 });
 
-window.onLang=()=>{drawLib();if(cur&&!$("v_work").classList.contains("hide")){suggest();drawTL();$("vmeta").innerHTML=metaBadges(cur)}refreshMe()};
+/* ---------- notes, screenshots, whiteboard, PDF ---------- */
+let noteTimer=null,boardHist=[],btool="pen",bcol="#7c5cff",drawing=false,lastPt=null,boardData=null,capStream=null,capVideo=null;
+const ED=$("editor");
+function noteKey(){return "notes_"+(cur?cur.video_id:"")}
+function tsChip(sec){return '<a class="tsn" contenteditable="false" data-t="'+Math.floor(sec)+'">'+ic("play",10)+" "+fmt(sec)+"</a>&nbsp;"}
+function insertHTML(h){ED.focus();const sel=getSelection();if(!sel.rangeCount||!ED.contains(sel.anchorNode)){const r=document.createRange();r.selectNodeContents(ED);r.collapse(false);sel.removeAllRanges();sel.addRange(r)}document.execCommand("insertHTML",false,h);saveNotesSoon()}
+function saveNotesSoon(){$("nSave").textContent=t("saving");clearTimeout(noteTimer);noteTimer=setTimeout(saveNotes,800)}
+async function saveNotes(){
+  if(!cur)return;const content={html:ED.innerHTML,board:boardData,title:cur.title};
+  if(me.user){try{await api("/api/notes/"+cur.video_id,undefined,{method:"PUT",body:{content}});$("nSave").innerHTML=ic("check",12)+" "+t("saved")}catch(e){$("nSave").textContent=e.message}}
+  else{try{localStorage.setItem(noteKey(),JSON.stringify(content));$("nSave").innerHTML=ic("check",12)+" "+t("savedLocal")}catch(e){$("nSave").textContent=t("tooBig")}}
+}
+async function loadNotes(){
+  ED.innerHTML="";boardData=null;boardHist=[];$("nSave").textContent="";let c=null;
+  if(me.user){try{c=(await api("/api/notes/"+cur.video_id)).content}catch(e){}}
+  else{try{c=JSON.parse(localStorage.getItem(noteKey())||"null")}catch(e){}}
+  if(c){ED.innerHTML=c.html||"";boardData=c.board||null}
+  drawBoardData();
+}
+ED.dataset.ph=t("notesPh");
+ED.addEventListener("input",saveNotesSoon);
+ED.addEventListener("click",e=>{const a=e.target.closest(".tsn");if(a){e.preventDefault();seek(+a.dataset.t)}});
+document.querySelectorAll("#ntool button").forEach(b=>b.onmousedown=e=>e.preventDefault());
+document.querySelectorAll("#ntool button").forEach(b=>b.onclick=()=>{const c=b.dataset.c;
+  if(c==="ts")return insertHTML(tsChip(now()));
+  if(c==="ss")return snap();
+  if(c==="h2")document.execCommand("formatBlock",false,"h2");
+  else if(c==="hl")document.execCommand("hiliteColor",false,"rgba(250,204,21,.4)");
+  else document.execCommand(c,false,null);
+  saveNotesSoon()});
+segCtl("nmode",v=>{$("nText").classList.toggle("hide",v!=="text");$("nBoard").classList.toggle("hide",v!=="board");if(v==="board")sizeBoard()});
+function openNotes(){document.querySelector('#tabs button[data-tab="notes"]').click()}
+$("qNotes").onclick=openNotes;
+$("qTs").onclick=()=>{openNotes();insertHTML(tsChip(now()))};
+$("qSnap").onclick=()=>snap();
+document.addEventListener("keydown",e=>{if(!e.altKey||!cur||$("v_work").classList.contains("hide"))return;const k=e.key.toLowerCase();
+  if(k==="s"){e.preventDefault();snap()} if(k==="n"){e.preventDefault();openNotes();insertHTML(tsChip(now()))}});
+
+/* fast screenshot: <video> (uploads) directly; YouTube iframe via one-time tab-capture permission, cropped to the player */
+async function snap(){
+  if(!cur)return; const sec=now(); let url=null; const box=$("playerBox");
+  try{
+    const v=$("vid");
+    if(v){const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);url=c.toDataURL("image/jpeg",.85)}
+    else{
+      if(!capStream){toast(t("ssHint"));
+        capStream=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:"browser",frameRate:5},audio:false,preferCurrentTab:true,selfBrowserSurface:"include"});
+        capVideo=document.createElement("video");capVideo.muted=true;capVideo.srcObject=capStream;await capVideo.play();
+        capStream.getVideoTracks()[0].addEventListener("ended",()=>{capStream=null;capVideo=null});await sleep(300)}
+      for(let i=0;i<25;i++){const a=capVideo.videoWidth/capVideo.videoHeight,b=innerWidth/innerHeight;if(capVideo.videoWidth&&Math.abs(a-b)<0.012)break;await sleep(80)}   // wait for the "sharing this tab" bar re-layout
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const r=box.getBoundingClientRect(),sx=capVideo.videoWidth/innerWidth,sy=sx;
+      const w=Math.round(r.width*sx),h=Math.round(r.height*sy),c=document.createElement("canvas"),sc=Math.min(1,1280/w);
+      c.width=Math.round(w*sc);c.height=Math.round(h*sc);c.getContext("2d").drawImage(capVideo,r.left*sx,r.top*sy,w,h,0,0,c.width,c.height);url=c.toDataURL("image/jpeg",.82)}
+  }catch(e){toast(t("ssDenied"));return}
+  const f=document.createElement("div");f.className="flash";document.body.appendChild(f);setTimeout(()=>f.remove(),400);
+  openNotes(); if($("nText").classList.contains("hide"))document.querySelector('#nmode button[data-v="text"]').click();
+  insertHTML('<figure><img src="'+url+'" alt="screenshot"><figcaption>'+tsChip(sec)+esc(cur.title)+"</figcaption></figure><p><br></p>");
+  toast(t("ssDone"));
+}
+
+/* whiteboard */
+const BC=$("board"),BX=BC.getContext("2d");
+function sizeBoard(){const w=BC.clientWidth||600,h=Math.round(w*0.72),d=devicePixelRatio||1;if(BC.width===Math.round(w*d))return;const keep=BC.width>300?BC.toDataURL():null;BC.width=Math.round(w*d);BC.height=Math.round(h*d);BC.style.height=h+"px";BX.setTransform(d,0,0,d,0,0);drawBoardData(boardData?null:keep)}
+function drawBoardData(src){BX.save();BX.setTransform(1,0,0,1,0,0);BX.clearRect(0,0,BC.width,BC.height);BX.restore();const u=src||boardData;if(!u)return;const im=new Image();im.onload=()=>{BX.save();BX.setTransform(1,0,0,1,0,0);BX.drawImage(im,0,0,BC.width,BC.height);BX.restore()};im.src=u}
+document.querySelectorAll("#btool [data-b]").forEach(b=>b.onclick=()=>{const k=b.dataset.b;
+  if(["pen","marker","eraser"].includes(k)){btool=k;document.querySelectorAll("#btool [data-b]").forEach(x=>x.classList.toggle("on",x.dataset.b===k));return}
+  if(k==="undo"){const u=boardHist.pop();boardData=u||null;drawBoardData();saveNotesSoon()}
+  if(k==="clear"){boardHist.push(BC.toDataURL());boardData=null;drawBoardData();saveNotesSoon()}
+  if(k==="tonotes"){const c=document.createElement("canvas");c.width=BC.width;c.height=BC.height;const x=c.getContext("2d");x.fillStyle=getComputedStyle(document.body).backgroundColor;x.fillRect(0,0,c.width,c.height);x.drawImage(BC,0,0);
+    document.querySelector('#nmode button[data-v="text"]').click();insertHTML('<figure><img src="'+c.toDataURL("image/jpeg",.9)+'" alt="whiteboard"><figcaption>'+t("boardMode")+" · "+tsChip(now())+"</figcaption></figure><p><br></p>")}
+});
+document.querySelectorAll("#btool .sw").forEach(sw=>sw.onclick=()=>{bcol=sw.dataset.col;document.querySelectorAll("#btool .sw").forEach(x=>x.classList.toggle("on",x===sw))});
+const bpt=e=>{const r=BC.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top,p:e.pressure||.5}};
+BC.addEventListener("pointerdown",e=>{drawing=true;BC.setPointerCapture(e.pointerId);boardHist.push(BC.toDataURL());if(boardHist.length>40)boardHist.shift();lastPt=bpt(e)});
+BC.addEventListener("pointermove",e=>{if(!drawing)return;const p=bpt(e),sz=+$("bSize").value;
+  BX.globalCompositeOperation=btool==="eraser"?"destination-out":"source-over";BX.globalAlpha=btool==="marker"?.35:1;
+  BX.strokeStyle=btool==="marker"?"#facc15":bcol;BX.lineWidth=btool==="eraser"?sz*5:btool==="marker"?sz*5:sz*(0.6+p.p);BX.lineCap="round";BX.lineJoin="round";
+  BX.beginPath();BX.moveTo(lastPt.x,lastPt.y);BX.lineTo(p.x,p.y);BX.stroke();lastPt=p});
+const endDraw=()=>{if(!drawing)return;drawing=false;BX.globalAlpha=1;BX.globalCompositeOperation="source-over";boardData=BC.toDataURL("image/png");saveNotesSoon()};
+BC.addEventListener("pointerup",endDraw);BC.addEventListener("pointerleave",endDraw);
+addEventListener("resize",()=>{if(!$("nBoard").classList.contains("hide"))sizeBoard()});
+
+/* export PDF (print-ready page; browser "Save as PDF") */
+$("pdfBtn").onclick=()=>{
+  if(!cur)return;const w=open("","_blank");if(!w){toast("popup blocked");return}
+  const body=ED.innerHTML.replace(/<a class="tsn"[^>]*data-t="(\d+)"[^>]*>[\s\S]*?<\/a>/g,(m,s)=>'<a class="ts" href="https://www.youtube.com/watch?v='+encodeURIComponent(cur.video_id)+"&t="+s+'s">&#9654; '+fmt(+s)+"</a>");
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(cur.title)+' — notes</title><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet"><style>body{font:14.5px/1.7 Inter,"Hind Siliguri",sans-serif;color:#000;max-width:760px;margin:28px auto;padding:0 20px}h1{font-size:22px;margin:0 0 4px}.src{color:#444;font-size:12.5px;margin-bottom:18px;border-bottom:2px solid #7c5cff;padding-bottom:10px}img{max-width:100%;border-radius:8px;border:1px solid #ddd}figure{margin:12px 0;break-inside:avoid}figcaption{font-size:12px;color:#444}a.ts{background:#efeaff;color:#4b2fd0;padding:0 6px;border-radius:5px;text-decoration:none;font-weight:600;font-size:12px}h2{font-size:17px}</style></head><body><h1>'+esc(cur.title)+'</h1><div class="src">https://www.youtube.com/watch?v='+esc(cur.video_id)+" · Vidya · "+new Date().toLocaleDateString()+"</div>"+body+(boardData?'<h2>'+esc(t("boardMode"))+'</h2><img src="'+boardData+'" style="background:#fff">':"")+'<script>onload=()=>setTimeout(()=>print(),500)<\/script></body></html>');
+  w.document.close();
+};
+
+/* "add answer to notes" */
+function answerToNotes(q,d){const a=d.answer;let h="<h2>"+esc(a?a.title:q)+"</h2><p><i>"+esc(q)+"</i></p>"+(a?"<p>"+esc(a.summary)+"</p>":"");
+  if(a)a.sections.forEach(s=>{h+="<p><b>"+esc(s.heading)+"</b></p><ul>"+s.points.map(p=>"<li>"+esc(p.text)+" "+(p.cites||[]).map(n=>{const r=d.refs.find(x=>x.n===n);return r?tsChip(r.start):""}).join("")+"</li>").join("")+"</ul>"});
+  openNotes();insertHTML(h+"<p><br></p>");toast(t("addedToNotes"))}
+
+/* ---------- home: live stats, typing placeholder, animated product preview, continue rail ---------- */
+function countUp(el,to){const from=+el.dataset.n||0;el.dataset.n=to;const t0=performance.now(),d=900;const f=n=>{const k=Math.min(1,(n-t0)/d),v=Math.round(from+(to-from)*(1-Math.pow(1-k,3)));el.textContent=v.toLocaleString(LANG==="bn"?"bn-BD":"en");if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)}
+function homeStats(){countUp($("stV"),lib.length);countUp($("stM"),Math.round(lib.reduce((a,v)=>a+(v.duration||0),0)/60));countUp($("stC"),lib.reduce((a,v)=>a+(v.n_chunks||0),0));
+  const yt=lib.filter(v=>v.kind==="youtube");$("contBox").classList.toggle("hide",!yt.length);
+  $("rail").innerHTML=yt.map(v=>'<div class="yt" data-id="'+esc(v.video_id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.video_id)+'" alt=""><span class="dur">'+fmt(v.duration)+'</span></div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+v.n_chunks+" "+t("chunks")+"</div></div></div>").join("");
+  document.querySelectorAll("#rail .yt").forEach(el=>el.onclick=()=>openVid(el.dataset.id));
+  if(yt.length&&!demoStarted)startDemo()}
+$("tryChips").innerHTML="";
+function tryChips(){$("tryChips").innerHTML=t("tryList").map(x=>'<button>'+esc(x)+"</button>").join("");document.querySelectorAll("#tryChips button").forEach(b=>b.onclick=()=>{$("heroQ").value=b.textContent;$("heroBtn").click()})}
+tryChips();
+let phI=0,phJ=0,phDel=false;
+setInterval(()=>{const L=t("heroPhList"),w=L[phI%L.length];if(document.activeElement===$("heroQ")||$("heroQ").value){return}
+  phJ+=phDel?-1:1;$("heroQ").placeholder=w.slice(0,phJ)+(phDel?"":"▍");if(!phDel&&phJ>=w.length+12)phDel=true;if(phDel&&phJ<=0){phDel=false;phI++}},70);
+let demoStarted=false;
+function startDemo(){
+  demoStarted=true;const S=["Rewrite","Retrieve","Grade","Answer","Verify"];$("dSteps").innerHTML=S.map(x=>"<span>"+x+"</span>").join("");
+  let k=0;
+  const run=async()=>{
+    const yt=lib.filter(v=>v.kind==="youtube");if(!yt.length)return;const ex=t("demoQs")[k%t("demoQs").length];const v=yt.find(x=>new RegExp(ex.key,"i").test(x.title))||yt[k%yt.length];k++;
+    $("dVid").style.backgroundImage="url(https://i.ytimg.com/vi/"+encodeURIComponent(v.video_id)+"/hqdefault.jpg)";$("dCap").textContent=v.title;$("dEnd").textContent=fmt(v.duration);
+    const n=24;$("dTl").innerHTML=Array.from({length:n},(_,i)=>'<i style="left:'+(100*i/n)+"%;width:"+(100/n+.2)+'%"></i>').join("")+'<div class="nd" style="left:0"></div>';
+    $("dAns").innerHTML="";document.querySelectorAll("#dSteps span").forEach(x=>x.classList.remove("on"));
+    const q=ex.q;for(let i=0;i<=q.length;i++){$("dQ").textContent=q.slice(0,i);await sleep(38)}
+    const hot=Math.floor(Math.random()*(n-6))+3;
+    document.querySelectorAll("#dTl i").forEach((c,i)=>{const d=Math.abs(i-hot),a=d===0?1:d===1?.7:d===2?.35:Math.random()*.12;setTimeout(()=>{c.style.opacity=.08+.9*a},90*i)});
+    for(const x of document.querySelectorAll("#dSteps span")){await sleep(420);x.classList.add("on")}
+    document.querySelector("#dTl .nd").style.left=(100*hot/n)+"%";
+    const mm=fmt(v.duration*hot/n);
+    $("dAns").innerHTML='<div class="ln"><span class="badge ok">'+ic("check",12)+" "+ex.v+'</span></div><div class="ln"><b>'+esc(ex.a1)+'</b></div><div class="ln">• '+esc(ex.a2)+' <span class="chip">'+ic("play",10)+" "+mm+'</span></div><div class="ln">• '+esc(ex.a3)+' <span class="chip">'+ic("play",10)+" "+fmt(v.duration*(hot+1)/n)+"</span></div>";
+    for(const x of document.querySelectorAll("#dAns .ln")){await sleep(350);x.classList.add("on")}
+    await sleep(4200);if(!$("v_home").classList.contains("hide"))run();else demoStarted=false;
+  };run();
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+window.onLang=()=>{ED.dataset.ph=t("notesPh");drawLib();tryChips();homeStats();if(cur&&!$("v_work").classList.contains("hide")){suggest();drawTL();$("vmeta").innerHTML=metaBadges(cur)}refreshMe()};
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user))loadLib()});
 </script>

@@ -154,8 +154,22 @@ real_embed = rag.__dict__["embed"]
 src = open("rag.py", encoding="utf-8").read()
 ns = {}; exec(compile(src, "rag_copy", "exec"), ns)          # fresh copy to test the real api-embed path
 ns["_embc"] = FakeEmb; ns["time"].sleep = lambda s: None
-v = ns["embed"](["t"] * 70)
+v = ns["embed"]([f"t{i}" for i in range(70)])
 assert v.shape == (70, 3) and abs(np.linalg.norm(v[0]) - 1) < 1e-5 and FakeEmb.calls == 4   # 3 batches + 1 retry
+c0 = FakeEmb.calls; q1 = ns["embed"](["same q", "other q", "same q"], "query"); q2 = ns["embed"](["same q"], "query")
+assert FakeEmb.calls == c0 + 1 and q1.shape == (3, 3) and np.allclose(q1[0], q2[0])          # query cache: 1 call total
+class DayGone:
+    class embeddings:
+        @staticmethod
+        def create(model, input): raise RuntimeError("429 EmbedContentRequestsPerDayPerProjectPerModel-FreeTier")
+ns["_embc"] = DayGone; ns["_QCACHE"].clear()
+try: ns["embed"](["x"], "query"); raise SystemExit("should fail fast")
+except RuntimeError as e: assert "PerDay" in str(e)
+_ns_embed = ns["embed"]; ns["embed"] = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("PerDay quota"))   # dense down -> BM25 still answers
+ix3 = rag.load_index(V1); dd = {}
+r = ns["retrieve"](ix3, ["git branch merge"], "git branch merge", mode="hybrid", dbg=dd)
+assert r and "dense_error" in dd
+ns["embed"] = _ns_embed; ns["_embc"] = FakeEmb
 bad = dict(rag.load_index(V3).meta); bad["emb_id"] = "api:other-model"
 p = rag.DATA / "index" / f"{V3}.json"; d = json.loads(p.read_text(encoding="utf-8")); d["meta"] = bad; p.write_text(json.dumps(d), encoding="utf-8"); rag._cache.pop(V3, None)
 try: rag.load_index(V3); raise SystemExit("mismatch not detected")
@@ -390,6 +404,10 @@ assert ac.get("/api/library").status_code == 401
 assert ac.post("/api/auth/login", json={"email": "roman@test.com", "password": "nope"}).status_code == 401
 assert ac.post("/api/auth/login", json={"email": "roman@test.com", "password": "secret1"}).status_code == 200
 assert ac.get("/api/library").status_code == 200
+assert ac.get("/api/notes/" + V1).json()["content"] is None
+assert ac.put("/api/notes/" + V1, json={"content": {"html": "<b>n</b>", "board": None}}).status_code == 200
+assert ac.get("/api/notes/" + V1).json()["content"]["html"] == "<b>n</b>"
+assert ac.put("/api/notes/" + V1, json={"content": {"html": "x" * 6_100_000}}).status_code == 413
 assert auth.user_from_token("1.9999999999.forged") is None and auth.user_from_token("garbage") is None
 fy = types.ModuleType("yt_dlp")
 class _Y2:
