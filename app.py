@@ -59,6 +59,15 @@ async def gate(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def revalidate_static(request: Request, call_next):
+    """Browsers must re-check /static files on every load (cheap 304s) so a deploy never mixes old JS with new HTML."""
+    resp = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 def _charge(request: Request):
     """Per-user daily quota for LLM-heavy calls (protects the free LLM key). Also applies the UI language."""
     rag.set_lang(request.headers.get("x-lang", ""))

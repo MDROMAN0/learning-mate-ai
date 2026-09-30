@@ -6,9 +6,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css">
-<script src="/static/i18n.js"></script>
-<script src="/static/icons.js"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261001">
+<script src="/static/i18n.js?v=20261001"></script>
+<script src="/static/icons.js?v=20261001"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -466,7 +466,7 @@
     <section id="v_work" class="view work hide">
       <div class="left">
         <div class="player" id="playerBox"></div>
-        <div class="qact"><button class="btn sm" id="qSnap"><i data-i="camera" data-s="14"></i> <span data-t="ssBtn"></span> <kbd>Alt+S</kbd></button><button class="btn sm" id="qTs"><i data-i="clock" data-s="14"></i> <span data-t="tsBtn"></span> <kbd>Alt+N</kbd></button><button class="btn sm ghost" id="qNotes"><i data-i="book" data-s="14"></i> <span data-t="tNotes"></span></button></div>
+        <div class="qact"><button class="btn sm" id="qSnap"><i data-i="camera" data-s="14"></i> <span data-t="ssBtn"></span> <kbd>Alt+S</kbd></button><button class="btn sm" id="qTs"><i data-i="clock" data-s="14"></i> <span data-t="tsBtn"></span> <kbd>Alt+N</kbd></button><button class="btn sm ghost" id="qNotes"><i data-i="book" data-s="14"></i> <span data-t="tNotes"></span></button><a class="btn sm ghost" id="qYt" target="_blank" rel="noopener"><i data-i="external" data-s="14"></i> <span data-t="openYt"></span></a></div>
         <div><p class="vtitle" id="vtitle"></p><div class="row" style="margin-top:6px" id="vmeta"></div></div>
         <div class="card" style="padding:12px 14px" id="chapCard">
           <div class="row" style="justify-content:space-between"><div class="h" style="margin:0"><i data-i="list" data-s="13"></i> <span data-t="chapTitle"></span></div><button class="btn sm hide" id="chapBtn"><i data-i="sparkles" data-s="13"></i> <span data-t="chapMake"></span></button></div>
@@ -738,6 +738,7 @@ function show(meta){
   else{$("playerBox").innerHTML='<div id="player"></div>';const mk=()=>{if(!ytReady){setTimeout(mk,250);return}player=new YT.Player("player",{videoId:meta.video_id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:meta.pending?1:0},events:{onReady:e=>{if(cur!==meta)return;try{if(!cur.duration){cur.duration=e.target.getDuration()||0;$("tlEnd").textContent=fmt(cur.duration)}const vd=e.target.getVideoData&&e.target.getVideoData();if(cur.pending&&vd&&vd.title&&(!cur.title||cur.title==="YouTube")){cur.title=vd.title;$("vtitle").textContent=vd.title}}catch(_){}}}})};mk()}
   if(meta.pending){trChunks=[];$("tr").innerHTML='<div class="muted">'+esc(t("trPrep"))+"</div>"}else loadTranscript();
   setTab("ask");loadChapters();
+  $("qYt").classList.toggle("hide",meta.kind==="upload");$("qYt").href="https://www.youtube.com/watch?v="+encodeURIComponent(meta.video_id);
   loadNotes();
 }
 const now=()=>{if(!cur)return 0;if(cur.kind==="upload"){const v=$("vid");return v?v.currentTime:0}return player&&player.getCurrentTime?player.getCurrentTime():0};
@@ -1004,6 +1005,6 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js"></script>
+<script src="/static/notebook.js?v=20261001"></script>
 </body>
 </html>
