@@ -7,11 +7,14 @@ A YouTube study assistant built on **Retrieval-Augmented Generation (RAG)**. Wat
 ## Features
 
 - **Watch instantly** — search YouTube or paste a link; the video plays right on the site (no download).
+- **Demo mode** — try the sample lecture library without an account (a few free questions per day).
+- **Ask across all videos** — one question searched over the whole library; the answer cites the exact video + moment and shows which videos cover the topic.
+- **Auto chapters + summary** — every video gets timestamped chapters (grounded on real transcript passages) shown on the timeline.
 - **Grounded Q&A** — answers with citations `[1] [2]` that jump to the exact moment in the video; says "not found" instead of guessing.
 - **Topic timeline** — a heat-map showing where in the video a topic is discussed.
 - **Notebook** — type, draw, take screenshots of the player, add timestamps, ask the AI, export to PDF.
 - **Study tools** — quiz, "explain this part", watch plan, compare videos.
-- **RAG Lab** (`/lab`) — shows every pipeline step live: query rewrite, hybrid retrieval, rerank, grading, answer, claim verification.
+- **RAG Lab** (`/lab`) — shows every pipeline step live (query rewrite, hybrid retrieval, rerank, grading, answer, claim verification), plus an Evaluation tab with measured Hit@5 / MRR per retrieval mode and a one-click live test run.
 - **Bangla / English** — full UI switch; handles Bangla, English and Banglish questions.
 - Accounts, question history, daily usage limit; works on phones and desktop.
 

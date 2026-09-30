@@ -37,7 +37,20 @@
   svg.ch{width:100%;height:210px;display:block}
   .tabs2{display:flex;gap:6px;margin:18px 0 12px}
   @media (max-width:900px){.ctl{grid-template-columns:1fr}.modes{grid-template-columns:1fr 1fr}}
+  .ltabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+  .ltabs button{border:0;background:transparent;color:var(--muted);padding:10px 14px;font:650 14px var(--font);cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;gap:7px;align-items:center}
+  .ltabs button.on{color:var(--text);border-bottom-color:var(--brand)}
+  .evrow{display:grid;grid-template-columns:190px 1fr 70px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .evrow:last-child{border-bottom:0} .evrow.best b{color:var(--brand2)}
+  .evbars{display:flex;flex-direction:column;gap:5px}
+  .evbar{display:flex;align-items:center;gap:8px;font:600 12px var(--mono)} .evbar i{display:block;height:10px;border-radius:6px;min-width:3px}
+  .evbar.h i{background:linear-gradient(90deg,#7c5cff,#a78bfa)} .evbar.m i{background:linear-gradient(90deg,#0891b2,#22d3ee)}
+  .evleg{display:flex;gap:16px;font-size:12.5px;color:var(--muted);margin:6px 0 4px} .evleg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .evleg .h::before{background:#7c5cff} .evleg .m::before{background:#22d3ee}
+  .why{margin:10px 0 0;padding-left:18px;color:var(--text2)} .why li{margin:5px 0}
+  details.cust summary{cursor:pointer;color:var(--text2);font-weight:600}
   @media (max-width:780px){
+    .evrow{grid-template-columns:1fr;gap:6px}
     .top{gap:6px;padding:8px 10px} .top>*{flex:none} .top .sp{flex:1} .logo{font-size:16px;white-space:nowrap} .logo small,#health{display:none} .nav{margin-left:0} .nav a{padding:5px 8px;font-size:13px;white-space:nowrap} .top .btn{height:36px;padding:0 10px} .logo span{display:none} #appkey{width:110px!important}
     .wrap{padding:14px 12px 40px} .in,textarea.in,select.in{font-size:16px}
     .modes{grid-template-columns:1fr} .grid2{grid-template-columns:1fr}
@@ -57,6 +70,11 @@
 </header>
 
 <div class="wrap">
+  <div class="ltabs" id="ltabs">
+    <button data-lt="pipe" class="on"><i data-i="layers" data-s="15"></i><span data-t="labTabPipe"></span></button>
+    <button data-lt="eval"><i data-i="gauge" data-s="15"></i><span data-t="labTabEval"></span></button>
+  </div>
+  <div id="lt_pipe">
   <div class="card">
     <div class="h" data-t="arch"></div>
     <div class="arch" id="arch">
@@ -88,12 +106,32 @@
   </div>
 
   <div id="out" style="margin-top:16px"></div>
+  </div>
 
-  <div class="card" style="margin-top:22px">
-    <div class="row" style="justify-content:space-between"><div class="h" style="margin:0" data-t="evalT"></div><span class="muted" data-t="evalHint"></span></div>
+  <div id="lt_eval" class="hide">
+  <div class="card">
+    <div class="h" style="margin:0 0 4px" data-t="evSaved"></div>
+    <div class="muted" data-t="evSavedD"></div>
+    <div class="evleg"><span class="h">Hit@5</span><span class="m">MRR</span><span>avg ms</span></div>
+    <div id="evSaved"></div>
+    <div class="h" style="margin:14px 0 0" data-t="evWhy"></div>
+    <ul class="why"><li data-t="evWhy1"></li><li data-t="evWhy2"></li><li data-t="evWhy3"></li></ul>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><div class="h" style="margin:0 0 4px" data-t="evBuiltin"></div><div class="muted" data-t="evBuiltinD"></div><div class="muted" id="evInfo" style="margin-top:6px"></div></div>
+      <button class="btn pri" id="evQuick"><i data-i="play" data-s="14"></i><span data-t="evQuick"></span></button>
+    </div>
+    <div id="evLive" style="margin-top:12px"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+  <details class="cust"><summary data-t="evCustom"></summary>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><div class="h" style="margin:0" data-t="evalT"></div><span class="muted" data-t="evalHint"></span></div>
     <textarea class="in" id="evalset" rows="5" style="margin-top:10px;font:12.5px var(--mono)" placeholder='[{"video":"id","question":"...","gold":[120,240]}, {"video":"id","question":"topic NOT in the video","gold":null}]'></textarea>
     <div class="acts"><label class="tog"><input type="checkbox" id="full"><span data-t="e2e"></span></label><span class="sp"></span><button class="btn pri" id="evalBtn" data-t="runEval"></button></div>
     <div id="evalout" style="margin-top:12px"></div>
+  </details>
+  </div>
   </div>
 </div>
 
@@ -108,7 +146,10 @@ const setTheme=x=>{document.documentElement.dataset.theme=x;store.set("theme",x)
 $("themeBtn").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
 $("appkey").value=store.get("appkey")||"";fetch("/api/auth/me",{credentials:"same-origin"}).then(r=>r.json()).then(d=>{if(!d.auth&&d.app_password)$("appkey").classList.remove("hide")}).catch(()=>{});$("appkey").onchange=()=>{store.set("appkey",$("appkey").value);loadLib()};
 const hdr=()=>({"Content-Type":"application/json","x-app-key":$("appkey").value,"x-lang":LANG});
-async function req(p,o){const r=await fetch(p,{headers:hdr(),credentials:"same-origin",...o});const d=await r.json().catch(()=>({detail:"bad response"}));if(r.status===401&&d.login)location.href="/";if(!r.ok)throw new Error(tMsg(d.detail||r.status));return d}
+let triedGuest=false;
+async function req(p,o){let r=await fetch(p,{headers:hdr(),credentials:"same-origin",...o});
+  if(r.status===401&&!triedGuest){triedGuest=true;const g=await fetch("/api/auth/guest",{method:"POST",credentials:"same-origin"}).catch(()=>null);if(g&&g.ok)r=await fetch(p,{headers:hdr(),credentials:"same-origin",...o})}
+  const d=await r.json().catch(()=>({detail:"bad response"}));if(r.status===401&&d.login)location.href="/";if(!r.ok)throw new Error(tMsg(d.detail||r.status));return d}
 const post=(p,b)=>req(p,{method:"POST",body:JSON.stringify(b)}),get=p=>req(p);
 const vid=()=>$("lib").value;
 const busy=k=>{$("out").innerHTML='<div class="card"><div class="row"><span class="spin"></span><b>'+t(k)+'</b></div><div class="shimmer"></div><div class="shimmer" style="width:70%"></div><div class="shimmer" style="width:40%"></div></div>'};
@@ -195,7 +236,30 @@ $("evalBtn").onclick=async()=>{
   }catch(e){$("evalout").innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}
 };
 $("q").onkeydown=e=>{if(e.key==="Enter")$("runBtn").click()};
-window.onLang=()=>{loadLib()};
+/* tabs */
+document.querySelectorAll("#ltabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#ltabs button").forEach(x=>x.classList.toggle("on",x===b));
+  $("lt_pipe").classList.toggle("hide",b.dataset.lt!=="pipe");$("lt_eval").classList.toggle("hide",b.dataset.lt!=="eval");store.set("labTab",b.dataset.lt)});
+if(store.get("labTab")==="eval")document.querySelector('#ltabs button[data-lt="eval"]').click();
+/* evaluation charts */
+const SAVED={"dense":{"Hit@k":1.00,"MRR":0.92,"avg_ms":576,"n":26},"bm25":{"Hit@k":0,"MRR":0,"avg_ms":0,"n":26},"hybrid":{"Hit@k":0.96,"MRR":0.86,"avg_ms":516,"n":26},
+  "hybrid+rerank":{"Hit@k":1.00,"MRR":0.93,"avg_ms":1794,"n":26},"hybrid+rerank+rewrite":{"Hit@k":1.00,"MRR":0.86,"avg_ms":11528,"n":26}};
+function evChart(res){const best=Object.entries(res).sort((a,b)=>(b[1].MRR+b[1]["Hit@k"])-(a[1].MRR+a[1]["Hit@k"]))[0][0];
+  return Object.entries(res).map(([k,v])=>'<div class="evrow'+(k===best?" best":"")+'"><b style="font-family:var(--mono);font-size:13px">'+esc(k)+(k===best?" ★":"")+'</b><div class="evbars">'+
+    '<div class="evbar h"><i style="width:'+(v["Hit@k"]*100)+'%"></i>'+v["Hit@k"].toFixed(2)+'</div><div class="evbar m"><i style="width:'+(v.MRR*100)+'%"></i>'+v.MRR.toFixed(2)+"</div></div>"+
+    '<span class="muted" style="font:600 12px var(--mono);text-align:right">'+(v.avg_ms||0)+" ms</span></div>").join("")}
+$("evSaved").innerHTML=evChart(SAVED);
+let evItems=null;const nf=n=>n.toLocaleString(LANG==="bn"?"bn-BD":"en");
+function evInfo(){if(evItems)$("evInfo").textContent=t("evLoaded",{p:nf(evItems.filter(x=>x.gold).length),n:nf(evItems.filter(x=>!x.gold).length)})}
+async function loadEvalSet(){try{const d=await get("/api/lab/evalset");evItems=d.items;evInfo();
+  if(!$("evalset").value.trim())$("evalset").value=JSON.stringify(d.items.slice(0,6))}catch(e){$("evInfo").textContent=e.message}}
+loadEvalSet();
+$("evQuick").onclick=async()=>{
+  if(!evItems)await loadEvalSet();const pos=(evItems||[]).filter(x=>x.gold);if(!pos.length)return;
+  const step=Math.max(1,Math.floor(pos.length/8)),pick=pos.filter((_,i)=>i%step===0).slice(0,8);
+  $("evLive").innerHTML='<div class="row"><span class="spin"></span><span class="muted">'+t("labBusyEval")+"</span></div>";$("evQuick").disabled=true;
+  try{const d=await post("/api/lab/eval",{items:pick,full:false});$("evLive").innerHTML='<div class="evleg"><span class="h">Hit@5</span><span class="m">MRR</span><span>n = '+pick.length+"</span></div>"+evChart(d.retrieval)}
+  catch(e){$("evLive").innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}finally{$("evQuick").disabled=false}};
+window.onLang=()=>{loadLib();$("evSaved").innerHTML=evChart(SAVED);evInfo()};
 </script>
 </body>
 </html>

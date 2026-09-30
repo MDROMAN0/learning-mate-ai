@@ -63,6 +63,9 @@ def fake_llm(system, user, temperature=0.1, max_tokens=1500):
         return json.dumps({"pick": 0, "explanation": "other video explains it"})
     if system.startswith("Reply in"):
         return "simple explanation"
+    if "split a lecture transcript into chapters" in system:
+        return json.dumps({"summary": "about git", "chapters": [{"start": 0, "title": "Intro", "gist": "g"},
+                          {"start": 2, "title": "Merge", "gist": "g"}, {"start": 1, "title": "out of order"}, {"start": 99, "title": "bad"}]})
     if "label transcript" in system:
         return "ctx line"
     return "{}"
@@ -439,5 +442,28 @@ assert not en["found"] and en["message"].startswith("This topic is not") and "рж
 SEEN.clear(); lc.post("/api/ask", json={"video_id": V1, "question": "git merge", "clip": False}, headers={"x-lang": "en"})
 assert "Write ALL output text in English" in SEEN.get("system", "") or True
 rag.set_lang("en"); assert "English" in rag.lang_rule(); rag.set_lang("xx"); assert rag.lang_rule("fb") == "fb"; rag.set_lang("")
+# guest demo mode: sample library + a few questions, no indexing / notes; forged cookie rejected
+os.environ.update(AUTH="1", GUEST_LIMIT="2"); gc = TestClient(appmod.app)
+assert gc.get("/api/library").status_code == 401
+assert gc.post("/api/auth/guest").json()["guest"] and gc.get("/api/auth/me").json()["guest"]
+assert gc.get("/api/library").status_code == 200 and gc.get("/api/transcript/" + V1).status_code == 200
+assert gc.post("/api/index", json={"url": V1}).status_code == 401 and gc.get("/api/notes/" + V1).status_code == 401
+for _ in range(2):
+    assert gc.post("/api/ask", json={"video_id": V1, "question": "git merge", "clip": False}).status_code == 200
+assert gc.post("/api/ask", json={"video_id": V1, "question": "git", "clip": False}).status_code == 429
+assert gc.get("/api/auth/me").json()["used"] == 2
+assert gc.post("/api/lab/eval", json={"items": [{"video": V1, "question": "q", "gold": [0, 5]}], "full": True}).status_code in (400, 429)
+fc = TestClient(appmod.app); fc.cookies.set("lm_guest", "abcd.ffff"); assert fc.get("/api/library").status_code == 401
+for k in ("AUTH", "GUEST_LIMIT"): os.environ.pop(k, None)
+# auto chapters (grounded on real chunk starts, cached) + course-wide ask + eval set + notes list
+ch = lc.get("/api/chapters/" + V1).json()
+assert [c["title"] for c in ch["chapters"]] == ["Intro", "Merge"] and ch["chapters"][0]["start"] == 0 and not ch["cached"]
+assert ch["chapters"][0]["end"] == ch["chapters"][1]["start"] and ch["summary"] == "about git"
+assert lc.get("/api/chapters/" + V1).json()["cached"] is True
+aa = lc.post("/api/ask_all", json={"question": "git merge"}).json()
+assert aa["found"] and aa["refs"][0]["video_id"] and aa["coverage"][0]["hits"] >= 1 and aa["videos_searched"] >= 1, aa
+nf = lc.post("/api/ask_all", json={"question": "quantum entanglement"}).json(); assert not nf["found"] and nf["message"]
+assert "items" in lc.get("/api/lab/evalset").json() and lc.get("/api/notes").json() == {"items": []}
+print("guest demo / chapters / ask-all / evalset OK")
 print("accounts / daily limit / history / youtube browse / heat / transcript / ui-language OK")
 print("ALL TESTS PASSED")

@@ -220,6 +220,30 @@
   .rail .yt{min-width:240px;max-width:240px;scroll-snap-align:start}
   @media (max-width:900px){.dgrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:1100px){.work{grid-template-columns:1fr;height:auto}.right{min-height:640px}}
+  .csel{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .csel button{display:inline-flex;align-items:center;gap:8px;max-width:280px;padding:4px 10px 4px 4px;border-radius:10px;border:1px solid var(--line2);background:var(--panel2);color:var(--text2);font:600 12.5px var(--font);cursor:pointer}
+  .csel button img{width:44px;height:26px;border-radius:6px;object-fit:cover;flex:none} .csel button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .csel button.on{border-color:var(--brand);background:var(--brandSoft);color:var(--text)}
+  .vchip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px 2px 3px;border-radius:8px;background:var(--brandSoft);color:var(--text);font:600 12px var(--font);cursor:pointer;vertical-align:1px;max-width:260px}
+  .vchip img{width:32px;height:18px;border-radius:4px;object-fit:cover} .vchip em{font-style:normal;font-family:var(--mono);color:var(--brand2)} .vchip span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:120px}
+  .cov{display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);margin-top:8px}
+  .cov img{width:112px;height:63px;border-radius:9px;object-fit:cover;flex:none;cursor:pointer}
+  .covbar{height:6px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0} .covbar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .stbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px;border-bottom:1px solid var(--line);flex:none}
+  .stbar button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font:650 13.5px var(--font)}
+  .stbar button small{font:500 11.5px var(--font);color:var(--muted);line-height:1.35}
+  .stbar button.on{border-color:var(--brand);background:var(--brandSoft)}
+  .chap{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:2px;margin-top:8px}
+  .chap .cr{display:grid;grid-template-columns:54px 1fr;gap:8px;padding:7px 8px;border-radius:9px;cursor:pointer}
+  .chap .cr:hover{background:var(--panel2)} .chap .cr.now{background:var(--brandSoft)}
+  .chap .cr .ts{font:600 12px var(--mono);color:var(--brand2);padding-top:2px} .chap .cr b{font-size:14px} .chap .cr div div{font-size:12.5px;color:var(--muted)}
+  .tl .chm{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.28);z-index:1}
+  .libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px}
+  .addcard{border:1px dashed var(--line2);border-radius:14px;padding:16px;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+  .gdiv{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:14px 0 10px} .gdiv::before,.gdiv::after{content:"";flex:1;height:1px;background:var(--line)}
+  #guestBtn{width:100%;padding:11px}
+  .aclose{position:absolute;right:12px;top:12px}
+  .auth .box{position:relative}
   .scrim{display:none} .navl .mlab{display:none}
   /* ---------- phones: drawer menu, sticky player, thumb-friendly controls ---------- */
   @media (max-width:780px){
@@ -266,6 +290,7 @@
     .player{position:sticky;top:52px;z-index:15;border-radius:0;box-shadow:0 8px 20px rgba(0,0,0,.35)}
     .left>*:not(.player){margin:10px 12px 0} .left>.card:last-child{margin-bottom:12px}
     .qact{margin-top:0} .qact kbd{display:none} .qact .btn{flex:1}
+    .stbar{grid-template-columns:1fr 1fr;padding:10px} .cov img{width:84px;height:47px} .libgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .vtitle{font-size:16px}
     .tr{max-height:240px} #trq{width:100%!important} .card .row{flex-wrap:wrap}
     .right{border-left:0;border-top:1px solid var(--line);height:calc(100dvh - 53px - 56.25vw);min-height:460px}
@@ -290,6 +315,7 @@
 <body>
 <div class="auth hide" id="authBox">
   <div class="box fade">
+    <button class="btn icon ghost aclose hide" id="aClose"><i data-i="x" data-s="16"></i></button>
     <div class="logo"><i>L</i><span data-t="brand"></span></div>
     <h2 data-t="authTitle"></h2><p data-t="authSub"></p>
     <div id="nameRow" class="hide"><label data-t="name"></label><input class="in" id="aName" autocomplete="name"></div>
@@ -297,6 +323,8 @@
     <label data-t="password"></label><input class="in" id="aPass" type="password" autocomplete="current-password">
     <div id="aErr" class="muted" style="color:var(--bad);margin-top:8px"></div>
     <button class="btn pri" id="aBtn" data-t="login"></button>
+    <div class="gdiv"><span data-t="guestOr"></span></div>
+    <button class="btn" id="guestBtn"><i data-i="play" data-s="14"></i> <span data-t="guestBtn"></span></button>
     <div class="sw"><span id="swTxt" data-t="noAcct"></span> <a id="swLink" data-t="create"></a></div>
     <div class="sw"><a onclick="toggleLang()" data-t="langBtn"></a></div>
   </div>
@@ -318,21 +346,15 @@
     <div class="navl">
       <button data-v="home" class="on"><i data-i="home"></i> <span data-t="home"></span></button>
       <button data-v="browse"><i data-i="search"></i> <span data-t="browse"></span></button>
+      <button data-v="lib"><i data-i="film"></i> <span data-t="navLib"></span></button>
+      <button data-v="course"><i data-i="sparkles"></i> <span data-t="navCourse"></span></button>
+      <button data-v="notes" id="notesNav" class="hide"><i data-i="book"></i> <span data-t="navNotes"></span></button>
       <button data-v="hist" id="histNav" class="hide"><i data-i="history"></i> <span data-t="historyT"></span></button>
       <button class="mlab" onclick="location.href='/lab'"><i data-i="code"></i> <span data-t="lab"></span></button>
     </div>
     <div class="blk hide" id="keyBlk">
       <div class="h"><i data-i="lock" data-s="13"></i> <span data-t="appKey"></span></div>
       <input class="in" id="appkey" type="password" autocomplete="off" data-tp="appKeyPh">
-    </div>
-    <div class="blk">
-      <div class="h" data-t="addVideo"></div>
-      <div class="row" style="flex-wrap:nowrap"><input class="in" id="url" data-tp="pasteLink"><button class="btn pri" id="idxBtn" data-t="index"></button></div>
-      <div class="row" style="margin-top:8px;justify-content:space-between">
-        <label class="btn sm ghost" style="cursor:pointer"><i data-i="upload" data-s="14"></i> <span data-t="upload"></span><input id="file" type="file" class="hide" accept="video/*,audio/*,.srt,.vtt"></label>
-        <span class="muted" data-t="uploadHint"></span>
-      </div>
-      <div id="status" class="muted" style="margin-top:8px"></div>
     </div>
     <div class="blk" style="padding-bottom:6px">
       <div class="h" style="margin:0"><span data-t="library"></span> <span id="libN"></span></div>
@@ -359,10 +381,11 @@
           <div><b data-n="0" id="stV">0</b><span data-t="stVideos"></span></div>
           <div><b data-n="0" id="stM">0</b><span data-t="stMinutes"></span></div>
           <div><b data-n="0" id="stC">0</b><span data-t="stChunks"></span></div>
-          <div><b>3</b><span data-t="stLangs"></span></div>
+          <div><b data-n="0" id="stL">0</b><span data-t="stLangs"></span></div>
         </div>
       </div>
 
+      <div class="hero2" id="retSlot"></div>
       <div class="demo fade">
         <div class="dlabel"><span class="live"></span><span data-t="livePreview"></span></div>
         <div class="dgrid">
@@ -391,7 +414,7 @@
           <div class="card soft"><span class="fi"><i data-i="brain" data-s="20"></i></span><b data-t="f3"></b><span class="muted" data-t="f3d"></span></div>
         </div>
         <div id="contBox" class="hide">
-          <div class="row" style="justify-content:space-between;margin:34px 0 12px"><h3 style="margin:0" data-t="continueT"></h3><button class="btn sm ghost" onclick="view('browse')"><span data-t="browse"></span> <i data-i="arrow" data-s="13"></i></button></div>
+          <div class="row" style="justify-content:space-between;margin:34px 0 12px"><h3 style="margin:0" data-t="continueT"></h3><button class="btn sm ghost" onclick="view('lib')"><span data-t="navLib"></span> <i data-i="arrow" data-s="13"></i></button></div>
           <div class="rail" id="rail"></div>
         </div>
       </div>
@@ -401,6 +424,35 @@
       <div class="row" style="justify-content:space-between"><h2 style="margin:0" data-t="browseTitle"></h2><span class="muted" data-t="browseHint"></span></div>
       <div class="bigin" style="max-width:none;margin-top:14px"><input class="in" id="bq" data-tp="browsePh"><button class="btn pri" id="bBtn" data-t="search"></button></div>
       <div id="bOut"><div class="empty" data-t="browseEmpty"></div></div>
+    </section>
+
+    <section id="v_lib" class="view bw hide">
+      <div class="row" style="justify-content:space-between"><div><h2 style="margin:0" data-t="libTitle"></h2><div class="muted" data-t="libSub"></div></div><span class="badge" id="libCount"></span></div>
+      <div class="libgrid" id="libGrid"><div class="addcard" id="addCard">
+
+      <div class="h" data-t="libAdd"></div>
+      <div class="row" style="flex-wrap:nowrap"><input class="in" id="url" data-tp="pasteLink"><button class="btn pri" id="idxBtn" data-t="index"></button></div>
+      <div class="row" style="margin-top:8px;justify-content:space-between">
+        <label class="btn sm ghost" style="cursor:pointer"><i data-i="upload" data-s="14"></i> <span data-t="upload"></span><input id="file" type="file" class="hide" accept="video/*,audio/*,.srt,.vtt"></label>
+        <span class="muted" data-t="uploadHint"></span>
+      </div>
+      <div id="status" class="muted" style="margin-top:8px"></div>
+    </div></div>
+    </section>
+
+    <section id="v_course" class="view bw hide">
+      <h2 style="margin:0" data-t="courseTitle"></h2>
+      <p class="muted" style="margin:6px 0 14px;max-width:760px" data-t="courseSub"></p>
+      <div class="bigin" style="max-width:none"><span class="bi"><i data-i="sparkles" data-s="18"></i></span><input class="in" id="cq" data-tp="coursePh"><button class="btn pri" id="cBtn"><i data-i="send" data-s="15"></i> <span data-t="courseAsk"></span></button></div>
+      <div class="try" id="cTry" style="justify-content:flex-start"></div>
+      <div class="card" style="margin-top:14px;padding:12px 14px"><div class="row" style="justify-content:space-between"><div class="h" style="margin:0" data-t="courseVideos"></div><button class="btn sm ghost" id="cAll" data-t="courseAll"></button></div><div class="csel" id="cSel"></div></div>
+      <div id="cOut" style="margin-top:16px"></div>
+    </section>
+
+    <section id="v_notes" class="view bw hide">
+      <h2 style="margin:0" data-t="notesTitle"></h2>
+      <div class="muted" data-t="notesSub"></div>
+      <div class="libgrid" id="notesGrid"></div>
     </section>
 
     <section id="v_hist" class="view bw hide">
@@ -413,6 +465,10 @@
         <div class="player" id="playerBox"></div>
         <div class="qact"><button class="btn sm" id="qSnap"><i data-i="camera" data-s="14"></i> <span data-t="ssBtn"></span> <kbd>Alt+S</kbd></button><button class="btn sm" id="qTs"><i data-i="clock" data-s="14"></i> <span data-t="tsBtn"></span> <kbd>Alt+N</kbd></button><button class="btn sm ghost" id="qNotes"><i data-i="book" data-s="14"></i> <span data-t="tNotes"></span></button></div>
         <div><p class="vtitle" id="vtitle"></p><div class="row" style="margin-top:6px" id="vmeta"></div></div>
+        <div class="card" style="padding:12px 14px" id="chapCard">
+          <div class="row" style="justify-content:space-between"><div class="h" style="margin:0"><i data-i="list" data-s="13"></i> <span data-t="chapTitle"></span></div><button class="btn sm hide" id="chapBtn"><i data-i="sparkles" data-s="13"></i> <span data-t="chapMake"></span></button></div>
+          <div id="chapBody" class="muted" style="margin-top:6px"></div>
+        </div>
         <div class="card" style="padding:12px 14px">
           <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="h" style="margin:0" data-t="timeline"></div><span class="muted" id="tlHint"></span></div>
           <div class="tl" id="tl"></div>
@@ -429,12 +485,15 @@
 
       <div class="right">
         <div class="tabs" id="tabs">
-          <button data-tab="ask" class="on"><i data-i="chat"></i> <span data-t="tAsk"></span></button>
-          <button data-tab="alt"><i data-i="scale"></i> <span data-t="tAlt"></span></button>
-          <button data-tab="plan"><i data-i="map"></i> <span data-t="tPlan"></span></button>
-          <button data-tab="quiz"><i data-i="quiz"></i> <span data-t="tQuiz"></span></button>
-          <button data-tab="exp"><i data-i="help"></i> <span data-t="tExp"></span></button>
+          <button data-tab="ask" class="on"><i data-i="chat"></i> <span data-t="tChat"></span></button>
+          <button data-tab="study"><i data-i="quiz"></i> <span data-t="tStudy"></span></button>
           <button data-tab="notes"><i data-i="book"></i> <span data-t="tNotes"></span></button>
+        </div>
+        <div class="stbar hide" id="stbar">
+          <button data-st="quiz" class="on"><span><i data-i="quiz" data-s="14"></i> <span data-t="tQuiz"></span></span><small data-t="sQuizD"></small></button>
+          <button data-st="exp"><span><i data-i="help" data-s="14"></i> <span data-t="tExp"></span></span><small data-t="sExpD"></small></button>
+          <button data-st="plan"><span><i data-i="map" data-s="14"></i> <span data-t="tPlan"></span></span><small data-t="sPlanD"></small></button>
+          <button data-st="alt"><span><i data-i="scale" data-s="14"></i> <span data-t="tAlt"></span></span><small data-t="sAltD"></small></button>
         </div>
         <div class="pane" id="p_ask"><div id="chat"></div></div>
         <div class="comp" id="c_ask">
@@ -536,9 +595,9 @@ async function api(path,body,opt){
   if(cur&&cur.pending&&body&&body.video_id===cur.video_id&&/\/api\/(ask|heat|quiz|explain|alternatives|plan)/.test(path))throw new Error(t(cur.pending==="fail"?"aiFail":"aiWait"));
   const r=await fetch(path,opt?{method:opt.method,headers:hdr(),credentials:"same-origin",body:JSON.stringify(opt.body)}:body===undefined?{headers:hdr(),credentials:"same-origin"}:{method:"POST",headers:hdr(),credentials:"same-origin",body:JSON.stringify(body)});
   const d=await r.json().catch(()=>({detail:"bad server response"}));
-  if(r.status===401){if(d.login)showAuth();else{$("keyBlk").classList.remove("hide");$("appkey").focus()} throw new Error(d.login?t("login"):t("needKey"))}
+  if(r.status===401){if(d.login){showAuth();if(d.guest){$("aErr").textContent=t("guestNeed");setAuthMode(true)}}else{$("keyBlk").classList.remove("hide");$("appkey").focus()} throw new Error(d.login?t("login"):t("needKey"))}
   if(!r.ok)throw new Error(d.detail||("HTTP "+r.status));
-  if(me.user&&/\/api\/(ask|quiz|explain|alternatives|plan)/.test(path))refreshMe();
+  if((me.user||me.guest)&&/\/api\/(ask|quiz|explain|alternatives|plan|chapters|lab)/.test(path))refreshMe();
   return d;
 }
 let healthOk=null;const drawHealth=()=>{if(healthOk!==null)$("health").innerHTML='<span class="dot '+(healthOk?"ok":"bad")+'"></span>'+t(healthOk?"online":"offline")};
@@ -556,17 +615,26 @@ async function doAuth(){
   }catch(e){$("aErr").textContent=e.message}
 }
 $("aBtn").onclick=doAuth; $("aPass").onkeydown=e=>{if(e.key==="Enter")doAuth()};
+async function startGuest(){try{const r=await fetch("/api/auth/guest",{method:"POST",credentials:"same-origin"});if(!r.ok)throw 0;
+    $("authBox").classList.add("hide");await refreshMe();loadLib()}catch(e){$("aErr").textContent=t("error")}}
+$("guestBtn").onclick=startGuest;
+$("aClose").onclick=()=>$("authBox").classList.add("hide");
 async function refreshMe(){
   try{me=await (await fetch("/api/auth/me",{headers:hdr(),credentials:"same-origin"})).json()}catch(e){return}
   if(me.app_password&&!$("appkey").value)$("keyBlk").classList.remove("hide");
+  $("aClose").classList.toggle("hide",!me.guest);document.body.classList.toggle("guest",!!me.guest);
+  if(me.guest){$("meBox").classList.remove("hide");$("meAv").textContent="D";$("meName").textContent=t("guestBadge");
+    $("meUse").textContent=t("guestUse",{u:me.used,l:me.limit});$("meBar").style.width=Math.min(100,100*me.used/Math.max(1,me.limit))+"%";
+    $("logoutBtn").textContent=t("guestCta");$("logoutBtn").onclick=()=>{setAuthMode(true);showAuth()};return}
+  $("logoutBtn").textContent=t("logout");$("logoutBtn").onclick=logout;
   if(me.auth&&!me.user){showAuth();return}
-  if(me.user){$("meBox").classList.remove("hide");$("histNav").classList.remove("hide");$("meAv").textContent=(me.user.name||me.user.email)[0].toUpperCase();$("meName").textContent=me.user.name||me.user.email;
+  if(me.user){$("meBox").classList.remove("hide");$("histNav").classList.remove("hide");$("notesNav").classList.remove("hide");$("meAv").textContent=(me.user.name||me.user.email)[0].toUpperCase();$("meName").textContent=me.user.name||me.user.email;
     $("meUse").textContent=t("usage")+": "+me.used+" / "+me.limit;$("meBar").style.width=Math.min(100,100*me.used/Math.max(1,me.limit))+"%"}
 }
-$("logoutBtn").onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()};
+async function logout(){await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()}
 
 /* views */
-function view(v){document.body.classList.remove("drawer");for(const x of ["home","browse","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="home"&&lib.length&&!demoStarted)startDemo();
+function view(v){document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes")loadNotesList();if(v==="home"&&lib.length&&!demoStarted)startDemo();
   document.querySelectorAll(".navl button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); if(v==="hist")loadHist(); drawLib()}
 document.querySelectorAll(".navl button").forEach(b=>b.onclick=()=>view(b.dataset.v));
 
@@ -642,7 +710,7 @@ async function bgIndex(id){
 }
 async function bgPoll(id){
   try{const d=await api("/api/job/"+id);
-    if(d.status==="done"){await loadLib();if(cur&&cur.video_id===id&&cur.pending){const dur=cur.duration;Object.assign(cur,d.meta,{pending:false});if(!cur.duration)cur.duration=dur;$("vtitle").textContent=cur.title;$("vmeta").innerHTML=metaBadges(cur);$("tlEnd").textContent=fmt(cur.duration);drawTL();loadTranscript();toast(t("aiReady"))}}
+    if(d.status==="done"){await loadLib();if(cur&&cur.video_id===id&&cur.pending){const dur=cur.duration;Object.assign(cur,d.meta,{pending:false});if(!cur.duration)cur.duration=dur;$("vtitle").textContent=cur.title;$("vmeta").innerHTML=metaBadges(cur);$("tlEnd").textContent=fmt(cur.duration);drawTL();loadTranscript();loadChapters();toast(t("aiReady"))}}
     else if(d.status==="error")aiFailed(id);
     else if(cur&&cur.video_id===id)setTimeout(()=>bgPoll(id),2000);
   }catch(e){aiFailed(id)}
@@ -666,6 +734,7 @@ function show(meta){
   if(meta.kind==="upload")$("playerBox").innerHTML=meta.media_url?'<video id="vid" controls src="'+esc(meta.media_url)+'"></video>':'<div class="empty">'+t("transcriptOnly")+'</div>';
   else{$("playerBox").innerHTML='<div id="player"></div>';const mk=()=>{if(!ytReady){setTimeout(mk,250);return}player=new YT.Player("player",{videoId:meta.video_id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:meta.pending?1:0},events:{onReady:e=>{if(cur!==meta)return;try{if(!cur.duration){cur.duration=e.target.getDuration()||0;$("tlEnd").textContent=fmt(cur.duration)}const vd=e.target.getVideoData&&e.target.getVideoData();if(cur.pending&&vd&&vd.title&&(!cur.title||cur.title==="YouTube")){cur.title=vd.title;$("vtitle").textContent=vd.title}}catch(_){}}}})};mk()}
   if(meta.pending){trChunks=[];$("tr").innerHTML='<div class="muted">'+esc(t("trPrep"))+"</div>"}else loadTranscript();
+  setTab("ask");loadChapters();
   loadNotes();
 }
 const now=()=>{if(!cur)return 0;if(cur.kind==="upload"){const v=$("vid");return v?v.currentTime:0}return player&&player.getCurrentTime?player.getCurrentTime():0};
@@ -692,6 +761,7 @@ function drawTL(){
   const D=(cur&&cur.duration)||1;let h="";
   if(heat&&heat.cells.length)heat.cells.forEach(c=>{const a=Math.pow(c.score,1.6);h+='<div class="cell" title="'+fmt(c.start)+"–"+fmt(c.end)+" · "+Math.round(c.score*100)+'%" style="left:'+(100*c.start/D)+"%;width:"+(100*(c.end-c.start)/D)+"%;background:rgba(124,92,255,"+(0.08+0.85*a)+')"></div>'});
   else h+='<div class="lbl">'+t("tlHint")+"</div>";
+  (chaps||[]).forEach(c=>{if(c.start>0)h+='<div class="chm" title="'+esc(fmt(c.start)+" · "+c.title)+'" style="left:'+(100*c.start/D)+'%"></div>'});
   lastSegs.forEach(s=>{h+='<div class="segm" style="left:'+(100*s.start/D)+"%;width:"+Math.max(0.6,100*(s.end-s.start)/D)+'%"></div>'});
   $("tl").innerHTML=h+'<div class="needle" id="needle" style="left:0"></div>';
   if(heat&&lastQ)$("tlHint").textContent="“"+lastQ.slice(0,40)+"” — "+t("tlOn");
@@ -703,11 +773,13 @@ setInterval(()=>{if(!cur||$("v_work").classList.contains("hide"))return;const s=
 },500);
 
 /* tabs + controls */
-document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
-  for(const x of ["ask","alt","plan","quiz","exp","notes"])$("p_"+x).classList.toggle("hide",x!==b.dataset.tab);
-  $("c_ask").classList.toggle("hide",b.dataset.tab!=="ask");if(b.dataset.tab==="notes")setTimeout(()=>window.nbRelayout(),0);
-});
+let studyTool="quiz";
+function setTab(tab){document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.tab===tab));
+  $("p_ask").classList.toggle("hide",tab!=="ask");$("c_ask").classList.toggle("hide",tab!=="ask");$("stbar").classList.toggle("hide",tab!=="study");
+  for(const x of ["alt","plan","quiz","exp"])$("p_"+x).classList.toggle("hide",!(tab==="study"&&x===studyTool));
+  $("p_notes").classList.toggle("hide",tab!=="notes");if(tab==="notes")setTimeout(()=>window.nbRelayout(),0)}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.querySelectorAll("#stbar button").forEach(b=>b.onclick=()=>{studyTool=b.dataset.st;document.querySelectorAll("#stbar button").forEach(x=>x.classList.toggle("on",x===b));setTab("study")});
 const segCtl=(id,fn)=>document.querySelectorAll("#"+id+" button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#"+id+" button").forEach(x=>x.classList.toggle("on",x===b));fn(b.dataset.v)});
 segCtl("level",v=>level=v);segCtl("amode",v=>amode=v);
 $("q").oninput=()=>{$("q").style.height="auto";$("q").style.height=Math.min(140,$("q").scrollHeight)+"px"};
@@ -716,7 +788,7 @@ $("askBtn").onclick=ask;
 document.addEventListener("keydown",e=>{if(e.key==="/"&&!["INPUT","TEXTAREA"].includes(document.activeElement.tagName)&&cur&&!$("v_work").classList.contains("hide")){e.preventDefault();$("q").focus()}});
 
 /* ask */
-const refChip=(rf,vid)=>'<span class="chip" onclick="seek('+rf.start+(vid?",'"+esc(vid)+"'":"")+')">'+ic("play",10)+' '+(rf.n?rf.n+" · ":"")+fmt(rf.start)+"</span>";
+const refChip=(rf,vid)=>'<span class="chip" title="'+esc(rf.preview||"")+'" onclick="seek('+rf.start+(vid?",'"+esc(vid)+"'":"")+')">'+ic("play",10)+' '+(rf.n?rf.n+" · ":"")+fmt(rf.start)+"</span>";
 const chips=(cites,refs,vid)=>(cites||[]).map(n=>{const rf=(refs||[]).find(x=>x.n===n);return rf?refChip(rf,vid):""}).join("");
 function answerHtml(a,refs,vid){let h="<h3>"+esc(a.title)+'</h3><p class="sum">'+esc(a.summary)+"</p>";
   (a.sections||[]).forEach(s=>{h+=(s.heading?"<h4>"+esc(s.heading)+"</h4>":"")+"<ul>";(s.points||[]).forEach(p=>{h+="<li>"+esc(p.text)+" "+chips(p.cites,refs,vid)+"</li>"});h+="</ul>"});return h}
@@ -819,6 +891,64 @@ document.querySelectorAll("#p_exp [data-s]").forEach(b=>b.onclick=async()=>{
     $("expOut").innerHTML=h+"</div>"}catch(e){errBox("expOut",e)}
 });
 
+/* ---------- library page ---------- */
+function vcard(v,sub){return '<div class="yt fade" data-id="'+esc(v.video_id)+'"><div class="th">'+(v.kind==="youtube"?'<img loading="lazy" src="'+thumb(v.video_id)+'" alt="">':"")+(v.duration?'<span class="dur">'+fmt(v.duration)+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+(sub||"")+"</div></div></div>"}
+function drawLibGrid(){const g=$("libGrid");g.querySelectorAll(".yt,.empty").forEach(x=>x.remove());
+  $("libCount").textContent=t("libCount",{n:lib.length.toLocaleString(LANG==="bn"?"bn-BD":"en")});
+  $("addCard").classList.toggle("hide",!!me.guest);
+  $("addCard").insertAdjacentHTML("afterend",lib.map(v=>vcard(v,v.n_chunks+" "+t("chunksShort"))).join(""));
+  g.querySelectorAll(".yt").forEach(el=>el.onclick=()=>openVid(el.dataset.id))}
+
+/* ---------- my notes page ---------- */
+async function loadNotesList(){const g=$("notesGrid");
+  if(!me.user){g.innerHTML='<div class="empty">'+t("notesLogin")+"</div>";return}
+  g.innerHTML='<div class="shimmer"></div>';
+  try{const d=await api("/api/notes");if(!d.items.length){g.innerHTML='<div class="empty">'+t("notesEmpty")+"</div>";return}
+    const lc=LANG==="bn"?"bn-BD":"en";
+    g.innerHTML=d.items.map(n=>vcard({video_id:n.video_id,title:n.title,kind:n.kind},ic("book",12)+" "+t("notesUpdated")+" "+new Date(n.updated*1000).toLocaleString(lc))).join("");
+    g.querySelectorAll(".yt").forEach(el=>el.onclick=async()=>{await openVid(el.dataset.id);window.openNotes()})}catch(e){g.innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}}
+
+/* ---------- open a video at a moment (used by course answers) ---------- */
+window.openAt=async(v,s)=>{if(!cur||cur.video_id!==v)await openVid(v);let n=0;const go=()=>{try{if(player&&player.seekTo&&player.getPlayerState){player.seekTo(s,true);player.playVideo();return}}catch(e){}if(++n<40)setTimeout(go,250)};go()};
+
+/* ---------- ask across all videos ---------- */
+let cSel=null;
+function drawCourse(){
+  const yt=lib;if(cSel===null)cSel=new Set(yt.map(v=>v.video_id));
+  $("cSel").innerHTML=yt.length?yt.map(v=>'<button data-id="'+esc(v.video_id)+'" class="'+(cSel.has(v.video_id)?"on":"")+'">'+(v.kind==="youtube"?'<img src="'+thumb(v.video_id)+'" alt="">':"")+"<span>"+esc(v.title)+"</span></button>").join(""):'<div class="muted">'+t("courseEmpty")+"</div>";
+  $("cSel").querySelectorAll("button").forEach(b=>b.onclick=()=>{cSel.has(b.dataset.id)?cSel.delete(b.dataset.id):cSel.add(b.dataset.id);b.classList.toggle("on")});
+  $("cTry").innerHTML=t("courseTry").map(x=>"<button>"+esc(x)+"</button>").join("");
+  $("cTry").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("cq").value=b.textContent;courseAsk()})}
+$("cAll").onclick=()=>{cSel=new Set(cSel&&cSel.size===lib.length?[]:lib.map(v=>v.video_id));drawCourse()};
+const vchip=r=>'<span class="vchip" title="'+esc(r.title+" — "+(r.preview||""))+'" onclick="openAt(\''+esc(r.video_id)+"',"+r.start+')"><img src="'+thumb(r.video_id)+'" alt=""><span>'+esc(r.title)+"</span><em>"+fmt(r.start)+"</em></span>";
+async function courseAsk(){
+  const q=$("cq").value.trim();if(!q)return;if(!lib.length){toast(t("courseEmpty"));return}
+  $("cOut").innerHTML='<div class="ans"><div class="row" style="gap:10px"><span class="spin"></span><b>'+t("thinking")+'</b><span class="muted">'+t("courseSearched",{n:(cSel?cSel.size:lib.length)})+'</span></div><div class="shimmer" style="margin-top:14px"></div><div class="shimmer" style="width:70%"></div></div>';$("cBtn").disabled=true;
+  try{const d=await api("/api/ask_all",{question:q,video_ids:cSel?[...cSel]:null,level});
+    const tr=d.trace||{},tm=tr.timings_ms||{};
+    if(!d.found){$("cOut").innerHTML='<div class="ans" style="border-color:var(--bad)"><span class="badge bad">'+ic("x",12)+" "+t("notFound")+"</span> <b>"+esc(d.message)+'</b><div class="muted" style="margin-top:6px">'+t("courseSearched",{n:d.videos_searched})+"</div></div>";return}
+    const refs=d.refs||[],mx=Math.max(...(d.coverage||[]).map(c=>c.hits),1);
+    let h='<div class="ans fade"><div class="meta"><span class="badge ok">'+ic("check",12)+" "+(tr.claims_supported??0)+"/"+(tr.claims_total??0)+" "+t("verified")+'</span><span class="badge">'+t("courseSearched",{n:d.videos_searched})+'</span><span class="badge">'+refs.length+" "+t("evidence")+"</span></div>";
+    if(d.answer){h+="<h3>"+esc(d.answer.title)+'</h3><p class="sum">'+esc(d.answer.summary)+"</p>";
+      (d.answer.sections||[]).forEach(sc=>{h+=(sc.heading?"<h4>"+esc(sc.heading)+"</h4>":"")+"<ul>"+(sc.points||[]).map(pt=>"<li>"+esc(pt.text)+" "+(pt.cites||[]).map(n=>{const r=refs.find(x=>x.n===n);return r?vchip(r):""}).join(" ")+"</li>").join("")+"</ul>"})}
+    h+='<div class="muted" style="margin-top:10px;font:12px var(--mono)">'+Object.entries(tm).map(([k,v])=>k+" "+(v/1000).toFixed(1)+"s").join(" · ")+"</div></div>";
+    h+='<div class="card fade" style="margin-top:14px"><div class="h" style="margin:0">'+ic("map",13)+" "+t("courseWhere")+"</div>"+(d.coverage||[]).map(c=>'<div class="cov"><img src="'+thumb(c.video_id)+'" alt="" onclick="openAt(\''+esc(c.video_id)+"',"+(c.moments[0]||0)+')"><div style="flex:1;min-width:0"><b style="font-size:14px">'+esc(c.title)+'</b><div class="covbar"><i style="width:'+(100*c.hits/mx)+'%"></i></div><div class="row" style="gap:6px"><span class="muted" style="font-size:12px">'+t("courseHits",{n:c.hits})+"</span>"+c.moments.map(m=>'<span class="chip" onclick="openAt(\''+esc(c.video_id)+"',"+m+')">'+ic("play",10)+" "+fmt(m)+"</span>").join("")+"</div></div></div>").join("")+"</div>";
+    $("cOut").innerHTML=h}catch(e){$("cOut").innerHTML='<div class="card" style="border-color:var(--bad)"><span class="badge bad">'+t("error")+"</span> "+esc(tMsg(e.message))+"</div>"}
+  finally{$("cBtn").disabled=false}}
+$("cBtn").onclick=courseAsk;$("cq").onkeydown=e=>{if(e.key==="Enter")courseAsk()};
+
+/* ---------- chapters + summary ---------- */
+let chaps=null;
+async function loadChapters(auto){const vid=cur&&cur.video_id;chaps=null;$("chapBtn").classList.add("hide");
+  if(!cur||cur.pending||cur.kind==="upload"&&!cur.n_chunks){$("chapBody").textContent=t("chapNone");return}
+  $("chapBody").innerHTML='<div class="row"><span class="spin"></span><span>'+t("chapLoading")+'</span></div>';
+  try{const d=await api("/api/chapters/"+encodeURIComponent(vid));if(!cur||cur.video_id!==vid)return;chaps=d.chapters||[];drawChapters(d);drawTL()}
+  catch(e){if(!cur||cur.video_id!==vid)return;$("chapBody").innerHTML='<span class="muted">'+esc(tMsg(e.message))+"</span>";$("chapBtn").classList.remove("hide")}}
+function drawChapters(d){$("chapBody").innerHTML=(d.summary?'<p style="margin:0 0 4px;color:var(--text2);font-size:14px">'+esc(d.summary)+"</p>":"")+'<div class="chap">'+chaps.map((c,i)=>'<div class="cr" id="cr'+i+'" onclick="seek('+c.start+')"><span class="ts">'+fmt(c.start)+"</span><div><b>"+esc(c.title)+"</b>"+(c.gist?"<div>"+esc(c.gist)+"</div>":"")+"</div></div>").join("")+"</div>"}
+$("chapBtn").onclick=()=>loadChapters(true);
+setInterval(()=>{if(!chaps||!cur||$("v_work").classList.contains("hide"))return;const s=now();let k=-1;chaps.forEach((c,i)=>{if(s>=c.start)k=i});
+  document.querySelectorAll(".chap .cr").forEach((el,i)=>el.classList.toggle("now",i===k))},1000);
+
 /* ---------- notebook glue (logic lives in /static/notebook.js) ---------- */
 window.openNotes=()=>document.querySelector('#tabs button[data-tab="notes"]').click();
 $("qNotes").onclick=window.openNotes;
@@ -829,7 +959,9 @@ document.addEventListener("keydown",e=>{if(!e.altKey||!cur||$("v_work").classLis
 
 /* ---------- home: live stats, typing placeholder, animated product preview, continue rail ---------- */
 function countUp(el,to){const from=+el.dataset.n||0;el.dataset.n=to;const t0=performance.now(),d=900;const f=n=>{const k=Math.min(1,(n-t0)/d),v=Math.round(from+(to-from)*(1-Math.pow(1-k,3)));el.textContent=v.toLocaleString(LANG==="bn"?"bn-BD":"en");if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)}
-function homeStats(){countUp($("stV"),lib.length);countUp($("stM"),Math.round(lib.reduce((a,v)=>a+(v.duration||0),0)/60));countUp($("stC"),lib.reduce((a,v)=>a+(v.n_chunks||0),0));
+function placeCont(){const ret=!!(me.user&&lib.length);const box=$("contBox");
+  if(ret&&box.parentNode.id!=="retSlot")$("retSlot").appendChild(box);if(!ret&&box.parentNode.id==="retSlot")document.querySelector(".hero2:not(#retSlot)").appendChild(box)}
+function homeStats(){placeCont();countUp($("stL"),3);countUp($("stV"),lib.length);countUp($("stM"),Math.round(lib.reduce((a,v)=>a+(v.duration||0),0)/60));countUp($("stC"),lib.reduce((a,v)=>a+(v.n_chunks||0),0));
   const yt=lib.filter(v=>v.kind==="youtube");$("contBox").classList.toggle("hide",!yt.length);
   $("rail").innerHTML=yt.map(v=>'<div class="yt" data-id="'+esc(v.video_id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.video_id)+'" alt=""><span class="dur">'+fmt(v.duration)+'</span></div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+v.n_chunks+" "+t("chunks")+"</div></div></div>").join("");
   document.querySelectorAll("#rail .yt").forEach(el=>el.onclick=()=>openVid(el.dataset.id));
@@ -864,9 +996,9 @@ function startDemo(){
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-window.onLang=()=>{drawHealth();if(demoStarted){demoStarted=false;if(!$("v_home").classList.contains("hide")&&lib.length)startDemo()}drawLib();tryChips();homeStats();if(cur&&!$("v_work").classList.contains("hide")){suggest();drawTL();$("vmeta").innerHTML=metaBadges(cur)}refreshMe()};
+window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(!$("v_lib").classList.contains("hide"))drawLibGrid();if(chaps&&cur)loadChapters();drawHealth();if(demoStarted){demoStarted=false;if(!$("v_home").classList.contains("hide")&&lib.length)startDemo()}drawLib();tryChips();homeStats();if(cur&&!$("v_work").classList.contains("hide")){suggest();drawTL();$("vmeta").innerHTML=metaBadges(cur)}refreshMe()};
 setAuthMode(false);
-refreshMe().then(()=>{if(!(me.auth&&!me.user))loadLib()});
+refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
 <script src="/static/notebook.js"></script>
 </body>

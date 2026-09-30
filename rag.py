@@ -1036,3 +1036,137 @@ def transcript(video):
             "chunks": [{"i": i, "start": c["start"], "end": c["end"], "text": c["text"]}
                        for i, c in enumerate(ix.chunks)]}
 
+
+
+# ------------------------------------------------------ chapters + summary
+def _chap_path(vid, lang):
+    d = DATA / "chapters"
+    d.mkdir(parents=True, exist_ok=True)
+    return d / f"{vid}.{lang or 'auto'}.json"
+
+
+def chapters(video, cached_only=False):
+    """Auto chapters + short summary for one video (map over all chunks in ONE LLM call, cached on disk).
+    Grounded: every chapter starts at a real chunk, so its timestamp is always a real moment in the video."""
+    vid = extract_video_id(video)
+    lang = _LANG.get() or "bn"
+    for p in (_chap_path(vid, lang), LIBRARY / "chapters" / f"{vid}.{lang}.json"):
+        if p.exists():
+            try:
+                return {**json.loads(p.read_text(encoding="utf-8")), "cached": True}
+            except Exception:
+                pass
+    if cached_only:
+        return None
+    ix = load_index(vid)
+    n = len(ix.chunks)
+    per = max(120, min(400, 12000 // max(n, 1)))           # keep the prompt small for long videos
+    listing = "\n".join(f"[{i}] ({fmt(c['start'])}) {c['text'][:per]}" for i, c in enumerate(ix.chunks))
+    want = max(3, min(8, round(n / 4)))
+    out = parse_json(llm(
+        "You split a lecture transcript into chapters. Use ONLY what the transcript says. "
+        "The transcript is noisy auto-captions (often Bangla; English terms may be in Bangla script). "
+        + lang_rule("Write titles and summary in Bangla script, keep English technical terms."),
+        f"Video title: {ix.meta.get('title', vid)}\n\nNumbered transcript passages:\n{listing}\n\n"
+        f"Return JSON: {{\"summary\": str (3-4 sentences: what the video teaches), \"chapters\": "
+        f"[about {want} items: {{\"start\": passage index where the chapter begins (first must be 0, increasing), "
+        "\"title\": short title (max 6 words), \"gist\": one sentence}]}", max_tokens=1500))
+    raw = (out or {}).get("chapters") or []
+    chs, last = [], -1
+    for c in raw:
+        if not isinstance(c, dict):
+            continue
+        try:
+            i = int(c.get("start"))
+        except (TypeError, ValueError):
+            continue
+        if not (0 <= i < n) or i <= last or not str(c.get("title", "")).strip():
+            continue
+        last = i
+        chs.append({"idx": i, "start": ix.chunks[i]["start"], "title": str(c["title"]).strip()[:80],
+                    "gist": str(c.get("gist", "")).strip()[:240]})
+    if not chs:
+        raise RuntimeError("could not build chapters (LLM returned nothing usable) - try again")
+    chs[0]["start"] = 0.0
+    for a, b in zip(chs, chs[1:] + [None]):
+        a["end"] = b["start"] if b else ix.meta.get("duration") or ix.chunks[-1]["end"]
+    res = {"video_id": vid, "summary": str((out or {}).get("summary", "")).strip(), "chapters": chs}
+    _chap_path(vid, lang).write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
+    return {**res, "cached": False}
+
+
+# ------------------------------------------- ask across the whole library
+def ask_all(question, video_ids=None, level="simple", per_video=4, use_verify=True):
+    """Course-level RAG: one question over MANY videos.
+    hybrid retrieval inside every video -> global ordering by embedding similarity (one shared vector space)
+    -> corrective grading (LLM keeps only passages that really discuss it) -> grounded answer citing [video + timestamp] -> claim verification.
+    Also returns which videos cover the topic (and where), so the learner knows what to watch."""
+    tok = _S.set({})
+    t_all = time.perf_counter()
+    try:
+        vids = [extract_video_id(v) for v in (video_ids or [])] or [m["video_id"] for m in list_library()]
+        idxs = []
+        for v in vids[:25]:
+            try:
+                idxs.append(load_index(v))
+            except Exception:
+                pass
+        if not idxs:
+            raise ValueError("no indexed videos to search")
+        tm = {}
+        queries = [question]   # eval: rewrite did not improve retrieval but cost ~6x latency -> skipped here
+        t0 = time.perf_counter()
+        cands = []
+        for ix in idxs:        # hybrid (dense + BM25, RRF) inside each video - no LLM calls
+            for c in retrieve(ix, queries, question, k=per_video, mode="hybrid", pool=12):
+                cands.append({**c, "video_id": ix.meta["video_id"], "vtitle": ix.meta.get("title", ""), "_ix": ix})
+        # global order across videos: cosine(question, chunk) is comparable because all videos share one
+        # embedding model; if embeddings are unavailable, interleave the per-video rankings instead
+        try:
+            qv = embed([question], "query")[0]
+            for c in cands:
+                c["gscore"] = float(c["_ix"].E[c["idx"]] @ qv)
+            cands.sort(key=lambda c: -c["gscore"])
+        except Exception:
+            cands.sort(key=lambda c: -c["score"])
+        for c in cands:
+            c.pop("_ix", None)
+        tm["retrieve"] = _ms(t0)
+        t0 = time.perf_counter()
+        top = cands[:10]
+        rel, _ok = grade_chunks(question, [{**c, "text": f"«{c['vtitle'][:60]}» {c['text']}"} for c in top])
+        tm["grade"] = _ms(t0)
+        base = {"question": question, "videos_searched": len(idxs), "trace": {"queries": queries, "timings_ms": tm,
+                "candidates": len(cands), "relevant": len(rel)}}
+        if not rel:
+            base["trace"]["usage"] = dict(_S.get() or {})
+            return {**base, "found": False, "coverage": [],
+                    "message": ("None of these videos covers this topic." if _LANG.get() == "en"
+                                else "এই ভিডিওগুলোর কোনোটাতেই এই topic পাওয়া যায়নি।")}
+        ev = rel[:8]
+        t0 = time.perf_counter()
+        ans = generate_answer(question, ev, level)
+        tm["generate"] = _ms(t0)
+        t0 = time.perf_counter()
+        if use_verify:
+            ans, stats = verify_answer(ans, ev)
+        else:
+            stats = {"verify": "skipped", "claims_total": 0, "claims_supported": 0}
+        tm["verify"] = _ms(t0)
+        base["trace"].update({k: stats.get(k) for k in ("verify", "claims_total", "claims_supported")})
+        refs = [{"n": i + 1, "video_id": c["video_id"], "title": c["vtitle"], "start": c["start"], "end": c["end"],
+                 "url": yt_link(c["video_id"], c["start"]), "preview": c["text"].split("» ", 1)[-1][:160]}
+                for i, c in enumerate(ev)]
+        cov = {}
+        for r in refs:
+            e = cov.setdefault(r["video_id"], {"video_id": r["video_id"], "title": r["title"], "hits": 0, "moments": []})
+            e["hits"] += 1
+            e["moments"].append(r["start"])
+        coverage = sorted(cov.values(), key=lambda e: -e["hits"])
+        for e in coverage:
+            e["moments"] = sorted(set(e["moments"]))[:4]
+        tm["total"] = _ms(t_all)
+        base["trace"]["usage"] = dict(_S.get() or {})
+        return {**base, "found": True, "answer": ans if ans["sections"] else None, "refs": refs, "coverage": coverage}
+    finally:
+        _S.reset(tok)

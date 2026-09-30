@@ -93,7 +93,17 @@ window.I18N = {
     cmpLegend: "dense = matches meaning · bm25 = matches exact words · hybrid = RRF of both · rerank = re-ordered by an LLM",
     chN: "parts", chAvg: "average part", chThr: "threshold (mean − {k}σ)", chMinMax: "min / max", chSig: "signal",
     chCurve: "Topic-shift curve", chL1: "similarity of neighbouring lines", chL2: "threshold", chL3: "part boundary", chL4: "(a dip = the topic changes)",
-    evCfg: "config", noKey: "Enter the app key above"
+    evCfg: "config", noKey: "Enter the app key above",
+    navLib: "My library", navCourse: "Ask all videos", navNotes: "My notes",
+    guestBtn: "Try it without an account", guestOr: "or", guestBadge: "Demo mode", guestUse: "{u} / {l} demo questions used", guestCta: "Create a free account", guestNeed: "Demo mode covers the sample videos. Create a free account to add your own videos and save notes.",
+    tChat: "AI chat", tStudy: "Study", studyPick: "Pick a study tool",
+    sQuizD: "Test yourself with questions made from this video", sExpD: "Didn't get a part? Get it explained another way", sPlanD: "Tell your goal, get a short watch plan", sAltD: "See how other videos explain the same topic",
+    libTitle: "My library", libSub: "Every video you added. Click one to study it.", libAdd: "Add a video", libCount: "{n} videos",
+    notesTitle: "My notes", notesSub: "Your notebooks from every video, in one place.", notesEmpty: "No notes yet — open a video and use the Notebook tab.", notesLogin: "Log in to keep your notes.", notesUpdated: "updated",
+    courseTitle: "Ask across all your videos", courseSub: "One question, every video searched at once. The answer cites the exact video and moment, and shows which video covers the topic.", coursePh: "e.g. what is the difference between 2NF and 3NF?", courseAsk: "Ask", courseWhere: "Where it's covered", courseVideos: "Videos to search", courseAll: "All", courseSearched: "{n} videos searched", courseHits: "{n} passages", courseEmpty: "Add at least one video to your library first.", courseTry: ["what is a primary key?", "types of binary tree", "LAN vs WAN", "why learn Python?"],
+    chapTitle: "Chapters & summary", chapMake: "Make chapters", chapLoading: "Reading the whole video…", chapNone: "Chapters appear once the AI has read the video.",
+    labTabPipe: "Pipeline", labTabTools: "Compare & chunks", labTabEval: "Evaluation",
+    evSaved: "Measured results", evSavedD: "Real run on 30 Sep 2026 — 4 Bangla lecture videos, 26 questions with a known answer + 8 whose topic is not in the video.", evBuiltin: "Run the built-in test set", evBuiltinD: "Runs the questions below live against the current library (retrieval only, no answer generation).", evLoaded: "{p} questions with a known answer · {n} not-in-video", evCustom: "Custom test set (JSON)", evWhy: "What this shows", evWhy1: "BM25 alone finds nothing: questions are typed in Banglish/English but captions are in Bangla script, so exact words never match.", evWhy2: "Meaning-based (dense) search fixes that; hybrid + LLM rerank gives the best ranking (MRR 0.93).", evWhy3: "Query rewrite did not help retrieval here and was 6× slower, so it is optional.", evQuick: "Quick run (8 questions)"
   },
   bn: {
     pinMenu: "মেনু খোলা রাখো", nbMove: "সরাও", nbAskPh: "নোট নিতে নিতে এই ভিডিও নিয়ে AI-কে জিজ্ঞেস করো…", nbExplain: "এটা বুঝিয়ে দাও", nbPlace: "নোটবুকে বসাও", nbClose: "বন্ধ", nbExplainHint: "আগে নোটবুকের কোনো লেখা সিলেক্ট করো, অথবা কোনো স্ক্রিনশট / timestamp-এ ক্লিক করো", nbAboutSel: "তোমার সিলেক্ট করা অংশ নিয়ে", nbAboutAt: "এই সময়ের অংশের ব্যাখ্যা:", nbPlaced: "নোটবুকে বসানো হয়েছে — টেনে যেকোনো জায়গায় নাও", a_q: "প্রশ্ন", a_rw: "প্রশ্ন নতুন করে লেখা", a_dense: "অর্থ দিয়ে খোঁজা", a_bm25: "শব্দ দিয়ে খোঁজা", a_rrf: "দুই তালিকা মেলানো", a_rr: "আবার সাজানো", a_gr: "প্রাসঙ্গিকতা যাচাই", a_gen: "প্রমাণভিত্তিক উত্তর", a_ver: "তথ্য যাচাই", a_seg: "ভিডিওর অংশ",
@@ -186,7 +196,17 @@ window.I18N = {
     cmpLegend: "dense = অর্থ মেলায় · bm25 = হুবহু শব্দ মেলায় · hybrid = দুটোর RRF · rerank = LLM দিয়ে আবার সাজানো",
     chN: "অংশ", chAvg: "গড় অংশ", chThr: "সীমা (গড় − {k}σ)", chMinMax: "সর্বনিম্ন / সর্বোচ্চ", chSig: "সংকেত",
     chCurve: "বিষয় বদলের রেখা", chL1: "পাশাপাশি লাইনের মিল", chL2: "সীমা", chL3: "অংশের সীমানা", chL4: "(নিচে নামলে বিষয় বদলাচ্ছে)",
-    evCfg: "ধরন", noKey: "উপরে অ্যাপ key দাও"
+    evCfg: "ধরন", noKey: "উপরে অ্যাপ key দাও",
+    navLib: "আমার লাইব্রেরি", navCourse: "সব ভিডিওতে প্রশ্ন", navNotes: "আমার নোট",
+    guestBtn: "Account ছাড়াই চালিয়ে দেখো", guestOr: "অথবা", guestBadge: "Demo mode", guestUse: "{u} / {l}টা demo প্রশ্ন ব্যবহার হয়েছে", guestCta: "ফ্রি account খোলো", guestNeed: "Demo mode-এ শুধু নমুনা ভিডিওগুলো চলে। নিজের ভিডিও যোগ করতে আর নোট রাখতে ফ্রি account খোলো।",
+    tChat: "AI চ্যাট", tStudy: "পড়া", studyPick: "একটা পড়ার টুল বাছো",
+    sQuizD: "এই ভিডিও থেকে বানানো প্রশ্নে নিজেকে যাচাই করো", sExpD: "কোনো অংশ বোঝোনি? অন্যভাবে বুঝিয়ে নাও", sPlanD: "লক্ষ্য বলো, ছোট একটা দেখার প্ল্যান পাও", sAltD: "একই বিষয় অন্য ভিডিও কীভাবে বোঝায় দেখো",
+    libTitle: "আমার লাইব্রেরি", libSub: "তোমার যোগ করা সব ভিডিও। যেকোনোটাতে চাপ দিয়ে পড়া শুরু করো।", libAdd: "ভিডিও যোগ করো", libCount: "{n}টা ভিডিও",
+    notesTitle: "আমার নোট", notesSub: "সব ভিডিওর নোটবুক এক জায়গায়।", notesEmpty: "এখনো কোনো নোট নেই — একটা ভিডিও খুলে নোটবুক tab ব্যবহার করো।", notesLogin: "নোট রাখতে লগইন করো।", notesUpdated: "আপডেট",
+    courseTitle: "সব ভিডিও মিলিয়ে প্রশ্ন করো", courseSub: "একটা প্রশ্ন, একসাথে সব ভিডিওতে খোঁজা। উত্তরে ঠিক কোন ভিডিওর কোন মুহূর্ত থেকে এসেছে তা দেখায়, আর কোন ভিডিওতে বিষয়টা আছে তাও বলে দেয়।", coursePh: "যেমন: 2NF আর 3NF-এর পার্থক্য কী?", courseAsk: "জিজ্ঞেস করো", courseWhere: "কোথায় আছে", courseVideos: "যে ভিডিওগুলোতে খুঁজবে", courseAll: "সব", courseSearched: "{n}টা ভিডিওতে খোঁজা হয়েছে", courseHits: "{n}টা অংশ", courseEmpty: "আগে লাইব্রেরিতে অন্তত একটা ভিডিও যোগ করো।", courseTry: ["primary key কী?", "binary tree কত প্রকার?", "LAN আর WAN-এর পার্থক্য", "Python কেন শিখবো?"],
+    chapTitle: "অধ্যায় ও সারাংশ", chapMake: "অধ্যায় বানাও", chapLoading: "পুরো ভিডিওটা পড়ছি…", chapNone: "AI ভিডিওটা পড়া শেষ করলে অধ্যায় দেখা যাবে।",
+    labTabPipe: "Pipeline", labTabTools: "তুলনা ও chunk", labTabEval: "মূল্যায়ন",
+    evSaved: "মাপা ফলাফল", evSavedD: "আসল run, ৩০ সেপ্টেম্বর ২০২৬ — ৪টা বাংলা lecture ভিডিও, উত্তর জানা ২৬টা প্রশ্ন + ভিডিওতে নেই এমন ৮টা প্রশ্ন।", evBuiltin: "Built-in test set চালাও", evBuiltinD: "নিচের প্রশ্নগুলো এখনকার লাইব্রেরিতে live চালায় (শুধু retrieval, উত্তর বানায় না)।", evLoaded: "উত্তর জানা {p}টা প্রশ্ন · ভিডিওতে নেই {n}টা", evCustom: "নিজের test set (JSON)", evWhy: "এখান থেকে যা বোঝা যায়", evWhy1: "শুধু BM25 কিছুই পায় না: প্রশ্ন Banglish/English-এ, কিন্তু caption বাংলা হরফে, তাই হুবহু শব্দ কখনো মেলে না।", evWhy2: "অর্থ দিয়ে খোঁজা (dense) এটা ঠিক করে; hybrid + LLM rerank সবচেয়ে ভালো ক্রম দেয় (MRR 0.93)।", evWhy3: "Query rewrite এখানে retrieval-এ সাহায্য করেনি আর ৬ গুণ ধীর, তাই এটা ঐচ্ছিক।", evQuick: "দ্রুত run (৮টা প্রশ্ন)"
   }
 };
 window.LANG = (() => { try { return localStorage.getItem("lang") || "bn"; } catch (e) { return "bn"; } })();

@@ -211,3 +211,49 @@ def save_note(uid, video_id, content):
         if not cur.rowcount:
             c.execute("INSERT INTO notes(user_id,video_id,content,updated) VALUES(?,?,?,?)", (uid, video_id, raw, now))
     return {"updated": now}
+
+
+# ------------------------------------------------------------- guest / demo
+GUEST_COOKIE = "lm_guest"
+_GUEST_USE = {}          # (guest_id, day) -> n ; in memory is fine: a guest's quota only needs to hold for a day
+_GUEST_IP = {}           # (ip, day) -> n   ; stops one person from minting endless guest cookies
+
+
+def guest_limit():
+    return int(os.getenv("GUEST_LIMIT", "8"))
+
+
+def make_guest_token():
+    gid = secrets.token_hex(8)
+    return gid + "." + hmac.new(_secret(), ("guest:" + gid).encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def guest_from_token(tok):
+    try:
+        gid, sig = (tok or "").split(".")
+        good = hmac.new(_secret(), ("guest:" + gid).encode(), hashlib.sha256).hexdigest()[:32]
+        return gid if hmac.compare_digest(sig, good) else None
+    except Exception:
+        return None
+
+
+def guest_used(gid):
+    return _GUEST_USE.get((gid, _today()), 0)
+
+
+def guest_charge(gid, ip=""):
+    day = _today()
+    with _LOCK:
+        n, m = _GUEST_USE.get((gid, day), 0), _GUEST_IP.get((ip, day), 0)
+        if n >= guest_limit() or (ip and m >= guest_limit() * 3):
+            return False
+        _GUEST_USE[(gid, day)] = n + 1
+        if ip:
+            _GUEST_IP[(ip, day)] = m + 1
+    return True
+
+
+def list_notes(uid):
+    with _LOCK, _conn() as c:
+        rows = c.execute("SELECT video_id, updated FROM notes WHERE user_id=? ORDER BY updated DESC", (uid,)).fetchall()
+    return [dict(r) for r in rows]

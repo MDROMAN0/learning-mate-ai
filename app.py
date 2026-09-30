@@ -24,12 +24,22 @@ JOBS = {}
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
 
 
+# what a guest (demo mode, no account) may call: read the sample library and ask about it; no indexing/uploads/notes
+GUEST_OK = ("/api/library", "/api/job/", "/api/transcript/", "/api/chapters/", "/api/ask", "/api/heat", "/api/quiz",
+            "/api/explain", "/api/lab/", "/api/search", "/api/alternatives", "/api/plan/")
+
+
+def _ip(request: Request):
+    return (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
+
+
 @app.middleware("http")
 async def gate(request: Request, call_next):
     """AUTH=1 -> every /api call needs a logged-in user (or the admin APP_PASSWORD, e.g. the Chrome extension).
     AUTH off -> optional shared APP_PASSWORD only (old behaviour)."""
     path = request.url.path
     request.state.user = None
+    request.state.guest = None
     if path.startswith("/api") and request.method != "OPTIONS":
         pw = os.getenv("APP_PASSWORD")
         admin = bool(pw) and request.headers.get("x-app-key") == pw
@@ -37,7 +47,13 @@ async def gate(request: Request, call_next):
             tok = request.cookies.get(auth.COOKIE) or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
             request.state.user = auth.user_from_token(tok) if tok else None
             if not path.startswith("/api/auth/") and not request.state.user and not admin:
-                return JSONResponse({"detail": "login required", "login": True}, status_code=401)
+                gid = auth.guest_from_token(request.cookies.get(auth.GUEST_COOKIE))
+                if gid and path.startswith(GUEST_OK):
+                    request.state.guest = gid
+                else:
+                    return JSONResponse({"detail": "log in to use this (demo mode only covers the sample videos)"
+                                         if gid else "login required", "login": True, "guest": bool(gid)},
+                                        status_code=401)
         elif pw and not admin and path != "/api/auth/me":
             return JSONResponse({"detail": "wrong or missing app key"}, status_code=401)
     return await call_next(request)
@@ -46,6 +62,9 @@ async def gate(request: Request, call_next):
 def _charge(request: Request):
     """Per-user daily quota for LLM-heavy calls (protects the free LLM key). Also applies the UI language."""
     rag.set_lang(request.headers.get("x-lang", ""))
+    g = getattr(request.state, "guest", None)
+    if g and not auth.guest_charge(g, _ip(request)):
+        raise HTTPException(429, f"demo limit reached ({auth.guest_limit()} questions) - create a free account to continue")
     u = getattr(request.state, "user", None)
     if u and not auth.charge(u["id"]):
         raise HTTPException(429, f"daily limit reached ({auth.daily_limit()}) - try again tomorrow")
@@ -242,7 +261,8 @@ def ask(req: AskReq, request: Request):
 
 
 @app.post("/api/lab/compare")
-def lab_compare(req: CompareReq):
+def lab_compare(req: CompareReq, request: Request):
+    _charge(request)
     return _safe(rag.compare_modes, req.video_id, req.question, req.k, req.current_time, req.use_rewrite)
 
 
@@ -254,8 +274,12 @@ def lab_chunks(vid: str):
 @app.post("/api/lab/eval")
 def lab_eval(req: EvalReq, request: Request):
     _charge(request)
-    if not req.items or len(req.items) > 30 or (req.full and len(req.items) > 15):
-        raise HTTPException(400, "items: 1..30 (1..15 with full=true)")
+    if req.full:
+        rag.set_lang(request.headers.get("x-lang", ""))
+    if not req.items or len(req.items) > 40 or (req.full and len(req.items) > 15):
+        raise HTTPException(400, "items: 1..40 (1..15 with full=true)")
+    if request.state.guest and (req.full or len(req.items) > 12):
+        raise HTTPException(400, "demo mode: retrieval eval only, up to 12 questions - log in for the full run")
     def run():
         out = {"retrieval": rag_eval.retrieval_ablation(req.items, req.k)}
         if req.full:
@@ -294,6 +318,52 @@ def explain(req: ExplainReq, request: Request):
     return _safe(features.explain, req.video_id, req.current_time, req.style)
 
 
+class AskAllReq(BaseModel):
+    question: str
+    video_ids: Optional[List[str]] = None
+    level: str = "simple"
+
+
+@app.post("/api/ask_all")
+def ask_all(req: AskAllReq, request: Request):
+    """Ask one question across the whole library (or a chosen set of videos)."""
+    if not req.question.strip():
+        raise HTTPException(400, "empty question")
+    _charge(request)
+    out = _safe(rag.ask_all, req.question, req.video_ids, req.level)
+    u = request.state.user
+    if u:
+        try:
+            auth.add_history(u["id"], "course", "All videos", req.question, out)
+        except Exception:
+            pass
+    return out
+
+
+@app.get("/api/chapters/{vid}")
+def chapters(vid: str, request: Request):
+    rag.set_lang(request.headers.get("x-lang", ""))
+    got = _safe(rag.chapters, vid, True)
+    if got:
+        return got
+    _charge(request)
+    return _safe(rag.chapters, vid)
+
+
+@app.get("/api/lab/evalset")
+def lab_evalset():
+    """The built-in evaluation questions (eval_set.json) for videos that are in the library."""
+    try:
+        import json as _json
+        items = _json.loads(Path("eval_set.json").read_text(encoding="utf-8"))
+    except Exception:
+        items = []
+    have = {m["video_id"] for m in rag.list_library()}
+    items = [it for it in items if rag.extract_video_id(it.get("video", "")) in have]
+    return {"items": items, "n_pos": sum(1 for it in items if it.get("gold")),
+            "n_neg": sum(1 for it in items if not it.get("gold"))}
+
+
 class AuthReq(BaseModel):
     email: str
     password: str
@@ -329,13 +399,31 @@ def login(req: AuthReq, resp: Response):
 @app.post("/api/auth/logout")
 def logout(resp: Response):
     resp.delete_cookie(auth.COOKIE)
+    resp.delete_cookie(auth.GUEST_COOKIE)
     return {"ok": True}
+
+
+@app.post("/api/auth/guest")
+def guest(request: Request, resp: Response):
+    """Demo mode: try the sample library without an account (small daily question limit)."""
+    if not auth.enabled():
+        return {"guest": False}
+    tok = request.cookies.get(auth.GUEST_COOKIE)
+    if not auth.guest_from_token(tok):
+        tok = auth.make_guest_token()
+    resp.set_cookie(auth.GUEST_COOKIE, tok, max_age=7 * 86400, httponly=True, samesite="lax",
+                    secure=os.getenv("COOKIE_SECURE", "0") == "1")
+    return {"guest": True, "limit": auth.guest_limit()}
 
 
 @app.get("/api/auth/me")
 def me(request: Request):
     u = request.state.user
-    return {"auth": auth.enabled(), "user": u, "limit": auth.daily_limit(),
+    gid = None if u else auth.guest_from_token(request.cookies.get(auth.GUEST_COOKIE))
+    if gid:
+        return {"auth": auth.enabled(), "user": None, "guest": True, "limit": auth.guest_limit(),
+                "used": auth.guest_used(gid), "app_password": False}
+    return {"auth": auth.enabled(), "user": u, "guest": False, "limit": auth.daily_limit(),
             "used": auth.used_today(u["id"]) if u else 0,
             "app_password": bool(os.getenv("APP_PASSWORD")) and not auth.enabled()}
 
@@ -348,6 +436,16 @@ def history(request: Request):
 
 class NoteReq(BaseModel):
     content: dict
+
+
+@app.get("/api/notes")
+def list_notes(request: Request):
+    u = request.state.user
+    if not u:
+        return {"items": []}
+    titles = {m["video_id"]: m for m in rag.list_library()}
+    return {"items": [{**n, "title": titles.get(n["video_id"], {}).get("title", n["video_id"]),
+                       "kind": titles.get(n["video_id"], {}).get("kind", "youtube")} for n in auth.list_notes(u["id"])]}
 
 
 @app.get("/api/notes/{vid}")
