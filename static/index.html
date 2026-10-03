@@ -6,9 +6,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261001">
-<script src="/static/i18n.js?v=20261001"></script>
-<script src="/static/icons.js?v=20261001"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261003">
+<script src="/static/i18n.js?v=20261003"></script>
+<script src="/static/icons.js?v=20261003"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -697,7 +697,7 @@ async function loadHist(){
   $("hOut").innerHTML='<div class="shimmer"></div>';
   try{const d=await api("/api/history");
     $("hOut").innerHTML=d.items.length?d.items.map(h=>'<div class="hi" data-v="'+esc(h.video_id)+'" data-q="'+esc(h.question)+'"><b>'+esc(h.question)+"</b> "+(h.found?'<span class="badge ok">'+ic("check",12)+'</span>':'<span class="badge bad">'+ic("x",12)+'</span>')+'<div class="muted">'+esc(h.title||h.video_id)+" · "+new Date(h.created*1000).toLocaleString(LANG==="bn"?"bn-BD":"en")+"</div></div>").join(""):'<div class="empty">'+t("histEmpty")+"</div>";
-    document.querySelectorAll(".hi").forEach(el=>el.onclick=async()=>{await openVid(el.dataset.v);$("q").value=el.dataset.q;$("q").focus()});
+    document.querySelectorAll(".hi").forEach(el=>el.onclick=async()=>{if(el.dataset.v==="course"){view("course");$("cq").value=el.dataset.q;$("cq").focus();return}await openVid(el.dataset.v);$("q").value=el.dataset.q;$("q").focus()});
   }catch(e){$("hOut").innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}
 }
 
@@ -705,6 +705,7 @@ async function loadHist(){
 function watchNow(v){
   if(!v||!v.id)return;
   if(lib.some(x=>x.video_id===v.id)){openVid(v.id);return}
+  if(me.guest){$("aErr").textContent=t("guestNeed");setAuthMode(true);showAuth();return}
   show({video_id:v.id,title:v.title||"YouTube",duration:v.duration||0,kind:"youtube",n_chunks:0,source:"youtube",has_video:false,pending:true});
   bgIndex(v.id);
 }
@@ -728,14 +729,14 @@ function metaBadges(m){
   if(m.pending==="fail")return '<span class="badge warn">'+ic("alert",12)+" "+t("aiFail")+"</span>";
   return '<span class="badge">'+fmt(m.duration)+'</span><span class="badge">'+m.n_chunks+" "+t("chunks")+'</span><span class="badge">'+esc(m.source)+"</span>"}
 function show(meta){
-  cur=meta;heat=null;lastSegs=[];chatHist=[];view("work");
+  cur=meta;heat=null;chaps=null;lastSegs=[];chatHist=[];view("work");
   $("vtitle").textContent=meta.title; $("vmeta").innerHTML=metaBadges(meta);
   $("clipLbl").classList.toggle("hide",!meta.has_video); $("clip").checked=!!meta.has_video;
   $("tlEnd").textContent=fmt(meta.duration); $("tlHint").textContent=""; drawTL();
   $("chat").innerHTML='<div class="empty fade"><div style="color:var(--brand)">'+ic("chat",34)+'</div><b style="color:var(--text)">'+t("askEmptyT")+'</b><div class="muted">'+t("askEmptyD")+"</div></div>";
   suggest();player=null;
   if(meta.kind==="upload")$("playerBox").innerHTML=meta.media_url?'<video id="vid" controls src="'+esc(meta.media_url)+'"></video>':'<div class="empty">'+t("transcriptOnly")+'</div>';
-  else{$("playerBox").innerHTML='<div id="player"></div>';const mk=()=>{if(!ytReady){setTimeout(mk,250);return}player=new YT.Player("player",{videoId:meta.video_id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:meta.pending?1:0},events:{onReady:e=>{if(cur!==meta)return;try{if(!cur.duration){cur.duration=e.target.getDuration()||0;$("tlEnd").textContent=fmt(cur.duration)}const vd=e.target.getVideoData&&e.target.getVideoData();if(cur.pending&&vd&&vd.title&&(!cur.title||cur.title==="YouTube")){cur.title=vd.title;$("vtitle").textContent=vd.title}}catch(_){}}}})};mk()}
+  else{$("playerBox").innerHTML='<div id="player"></div>';const mk=()=>{if(cur!==meta)return;if(!ytReady){setTimeout(mk,250);return}player=new YT.Player("player",{videoId:meta.video_id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:meta.pending?1:0},events:{onReady:e=>{if(cur!==meta)return;try{if(!cur.duration){cur.duration=e.target.getDuration()||0;$("tlEnd").textContent=fmt(cur.duration)}const vd=e.target.getVideoData&&e.target.getVideoData();if(cur.pending&&vd&&vd.title&&(!cur.title||cur.title==="YouTube")){cur.title=vd.title;$("vtitle").textContent=vd.title}}catch(_){}}}})};mk()}
   if(meta.pending){trChunks=[];$("tr").innerHTML='<div class="muted">'+esc(t("trPrep"))+"</div>"}else loadTranscript();
   setTab("ask");loadChapters();
   $("qYt").classList.toggle("hide",meta.kind==="upload");$("qYt").href="https://www.youtube.com/watch?v="+encodeURIComponent(meta.video_id);
@@ -750,12 +751,13 @@ function seek(s,vid){
 /* transcript */
 async function loadTranscript(){
   $("tr").innerHTML='<div class="shimmer"></div><div class="shimmer" style="width:80%"></div>';
-  try{trChunks=(await api("/api/transcript/"+cur.video_id)).chunks;drawTr()}catch(e){$("tr").innerHTML='<div class="muted">'+esc(e.message)+"</div>"}
+  const vid=cur.video_id;trChunks=[];
+  try{const r=await api("/api/transcript/"+vid);if(!cur||cur.video_id!==vid)return;trChunks=r.chunks;drawTr()}catch(e){if(cur&&cur.video_id===vid)$("tr").innerHTML='<div class="muted">'+esc(e.message)+"</div>"}
 }
 const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
 function drawTr(){
   const q=$("trq").value.trim(),rx=q?new RegExp(reEsc(q),"i"):null,L=rx?trChunks.filter(c=>rx.test(c.text)):trChunks;
-  $("tr").innerHTML=L.map(c=>'<div class="tc" id="tc'+c.i+'" data-s="'+c.start+'"><span class="ts">'+fmt(c.start)+"</span><span>"+(q?esc(c.text).replace(new RegExp(reEsc(esc(q)),"gi"),m=>"<mark>"+m+"</mark>"):esc(c.text))+"</span></div>").join("")||'<div class="muted">'+t("nothing")+"</div>";
+  $("tr").innerHTML=L.map(c=>'<div class="tc" id="tc'+c.i+'" data-s="'+c.start+'"><span class="ts">'+fmt(c.start)+"</span><span>"+(q?c.text.split(new RegExp("("+reEsc(q)+")","gi")).map((p,i)=>i%2?"<mark>"+esc(p)+"</mark>":esc(p)).join(""):esc(c.text))+"</span></div>").join("")||'<div class="muted">'+t("nothing")+"</div>";
   document.querySelectorAll(".tc").forEach(el=>el.onclick=()=>seek(+el.dataset.s));
 }
 $("trq").oninput=drawTr;
@@ -822,7 +824,8 @@ async function ask(){
     box.lastChild.innerHTML=h;drawTL();
     const idx=chatHist.length-1;
     box.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{const {q,d}=chatHist[idx];
-      if(b.dataset.a==="copy"){navigator.clipboard.writeText(toMd(q,d));toast(t("copied"))}
+      if(b.dataset.a==="copy"){const md=toMd(q,d);const fb=()=>{const ta=document.createElement("textarea");ta.value=md;document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(_){}ta.remove()};
+        try{navigator.clipboard.writeText(md).then(()=>toast(t("copied")),()=>{fb();toast(t("copied"))})}catch(_){fb();toast(t("copied"))}}
       if(b.dataset.a==="md"){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([toMd(q,d)],{type:"text/markdown"}));a.download="notes.md";a.click()}
       if(b.dataset.a==="trace")box.querySelector("pre").classList.toggle("hide");if(b.dataset.a==="note")window.answerToNotes(q,d)});
   }catch(e){box.lastChild.innerHTML='<div class="ans" style="border-color:var(--bad)"><span class="badge bad">'+t("error")+"</span> "+esc(tMsg(e.message))+"</div>"}
@@ -913,7 +916,7 @@ async function loadNotesList(){const g=$("notesGrid");
     g.querySelectorAll(".yt").forEach(el=>el.onclick=async()=>{await openVid(el.dataset.id);window.openNotes()})}catch(e){g.innerHTML='<span class="badge bad">'+esc(e.message)+"</span>"}}
 
 /* ---------- open a video at a moment (used by course answers) ---------- */
-window.openAt=async(v,s)=>{if(!cur||cur.video_id!==v)await openVid(v);let n=0;const go=()=>{try{if(player&&player.seekTo&&player.getPlayerState){player.seekTo(s,true);player.playVideo();return}}catch(e){}if(++n<40)setTimeout(go,250)};go()};
+window.openAt=async(v,s)=>{if(!cur||cur.video_id!==v)await openVid(v);let n=0;const go=()=>{if(cur&&cur.kind==="upload"){seek(s);return}try{if(player&&player.seekTo&&player.getPlayerState){player.seekTo(s,true);player.playVideo();return}}catch(e){}if(++n<40)setTimeout(go,250)};go()};
 
 /* ---------- ask across all videos ---------- */
 let cSel=null;
@@ -924,7 +927,8 @@ function drawCourse(){
   $("cTry").innerHTML=t("courseTry").map(x=>"<button>"+esc(x)+"</button>").join("");
   $("cTry").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("cq").value=b.textContent;courseAsk()})}
 $("cAll").onclick=()=>{cSel=new Set(cSel&&cSel.size===lib.length?[]:lib.map(v=>v.video_id));drawCourse()};
-const vchip=r=>'<span class="vchip" title="'+esc(r.title+" — "+(r.preview||""))+'" onclick="openAt(\''+esc(r.video_id)+"',"+r.start+')"><img src="'+thumb(r.video_id)+'" alt=""><span>'+esc(r.title)+"</span><em>"+fmt(r.start)+"</em></span>";
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goat]");if(g)openAt(g.dataset.goat,+g.dataset.s||0)});
+const vchip=r=>'<span class="vchip" title="'+esc(r.title+" — "+(r.preview||""))+'" data-goat="'+esc(r.video_id)+'" data-s="'+(+r.start||0)+'"><img src="'+thumb(r.video_id)+'" alt=""><span>'+esc(r.title)+"</span><em>"+fmt(r.start)+"</em></span>";
 async function courseAsk(){
   const q=$("cq").value.trim();if(!q)return;if(!lib.length){toast(t("courseEmpty"));return}
   $("cOut").innerHTML='<div class="ans"><div class="row" style="gap:10px"><span class="spin"></span><b>'+t("thinking")+'</b><span class="muted">'+t("courseSearched",{n:(cSel?cSel.size:lib.length)})+'</span></div><div class="shimmer" style="margin-top:14px"></div><div class="shimmer" style="width:70%"></div></div>';$("cBtn").disabled=true;
@@ -936,7 +940,7 @@ async function courseAsk(){
     if(d.answer){h+="<h3>"+esc(d.answer.title)+'</h3><p class="sum">'+esc(d.answer.summary)+"</p>";
       (d.answer.sections||[]).forEach(sc=>{h+=(sc.heading?"<h4>"+esc(sc.heading)+"</h4>":"")+"<ul>"+(sc.points||[]).map(pt=>"<li>"+esc(pt.text)+" "+(pt.cites||[]).map(n=>{const r=refs.find(x=>x.n===n);return r?vchip(r):""}).join(" ")+"</li>").join("")+"</ul>"})}
     h+='<div class="muted" style="margin-top:10px;font:12px var(--mono)">'+Object.entries(tm).map(([k,v])=>k+" "+(v/1000).toFixed(1)+"s").join(" · ")+"</div></div>";
-    h+='<div class="card fade" style="margin-top:14px"><div class="h" style="margin:0">'+ic("map",13)+" "+t("courseWhere")+"</div>"+(d.coverage||[]).map(c=>'<div class="cov"><img src="'+thumb(c.video_id)+'" alt="" onclick="openAt(\''+esc(c.video_id)+"',"+(c.moments[0]||0)+')"><div style="flex:1;min-width:0"><b style="font-size:14px">'+esc(c.title)+'</b><div class="covbar"><i style="width:'+(100*c.hits/mx)+'%"></i></div><div class="row" style="gap:6px"><span class="muted" style="font-size:12px">'+t("courseHits",{n:c.hits})+"</span>"+c.moments.map(m=>'<span class="chip" onclick="openAt(\''+esc(c.video_id)+"',"+m+')">'+ic("play",10)+" "+fmt(m)+"</span>").join("")+"</div></div></div>").join("")+"</div>";
+    h+='<div class="card fade" style="margin-top:14px"><div class="h" style="margin:0">'+ic("map",13)+" "+t("courseWhere")+"</div>"+(d.coverage||[]).map(c=>'<div class="cov"><img src="'+thumb(c.video_id)+'" alt="" data-goat="'+esc(c.video_id)+'" data-s="'+(+c.moments[0]||0)+'"><div style="flex:1;min-width:0"><b style="font-size:14px">'+esc(c.title)+'</b><div class="covbar"><i style="width:'+(100*c.hits/mx)+'%"></i></div><div class="row" style="gap:6px"><span class="muted" style="font-size:12px">'+t("courseHits",{n:c.hits})+"</span>"+c.moments.map(m=>'<span class="chip" data-goat="'+esc(c.video_id)+'" data-s="'+(+m||0)+'">'+ic("play",10)+" "+fmt(m)+"</span>").join("")+"</div></div></div>").join("")+"</div>";
     $("cOut").innerHTML=h}catch(e){$("cOut").innerHTML='<div class="card" style="border-color:var(--bad)"><span class="badge bad">'+t("error")+"</span> "+esc(tMsg(e.message))+"</div>"}
   finally{$("cBtn").disabled=false}}
 $("cBtn").onclick=courseAsk;$("cq").onkeydown=e=>{if(e.key==="Enter")courseAsk()};
@@ -1005,6 +1009,6 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261001"></script>
+<script src="/static/notebook.js?v=20261003"></script>
 </body>
 </html>

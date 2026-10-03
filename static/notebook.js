@@ -32,7 +32,7 @@
     if (it.type === "ts") el.innerHTML = bar + '<a class="tsn" data-t="' + it.t + '">' + ic("play", 10) + " " + fmt(it.t) + "</a>" + (it.label ? ' <span class="nb-lbl">' + esc(it.label) + "</span>" : "");
     PAGE.appendChild(el); place(el, it); wire(el, it); return el;
   }
-  function renderAll() { PAGE.querySelectorAll(".nb-it").forEach(e => e.remove()); items.forEach(build); layout(); }
+  function renderAll() { PAGE.querySelectorAll(".nb-it").forEach(e => { try { e.remove(); } catch (_) {} }); items.forEach(build); layout(); }
 
   /* ---------- item interactions: select, drag, resize, edit, delete ---------- */
   function select(el) { PAGE.querySelectorAll(".nb-it.sel").forEach(x => x.classList.remove("sel")); sel = el; if (el) el.classList.add("sel"); explainState(); }
@@ -54,8 +54,9 @@
         else { it.w = Math.max(80, Math.min(1000 - it.x, ow + dx)); }
         place(el, it); grow(it, el);
       };
-      const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); saveSoon(); };
-      addEventListener("pointermove", mv); addEventListener("pointerup", up);
+      const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); removeEventListener("blur", up); saveSoon(); };
+      addEventListener("pointermove", mv); addEventListener("pointerup", up); addEventListener("pointercancel", up); addEventListener("blur", up);
+      try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
     };
     el.querySelector(".nb-grip").addEventListener("pointerdown", e => startDrag(e, "move"));
     if (it.type !== "text") el.addEventListener("pointerdown", e => { if (!e.target.closest(".nb-rs,.nb-del,.tsn")) startDrag(e, "move"); });
@@ -232,17 +233,24 @@
     toast(t("nbExplainHint"));
   };
   /* ---------- save / load (account when logged in, else this browser) ---------- */
-  function saveSoon() { $("nSave").textContent = t("saving"); clearTimeout(saveT); saveT = setTimeout(save, 900); }
-  async function save() {
-    if (!cur) return; inkImg = INK.width > 2 ? inkNow() : inkImg;
-    const content = { v: 2, H, items, ink: inkImg, title: cur.title };
-    if (me.user) { try { await api("/api/notes/" + cur.video_id, undefined, { method: "PUT", body: { content } }); $("nSave").innerHTML = ic("check", 12) + " " + t("saved"); } catch (e) { $("nSave").textContent = e.message; } }
-    else { try { localStorage.setItem("notes_" + cur.video_id, JSON.stringify(content)); $("nSave").innerHTML = ic("check", 12) + " " + t("savedLocal"); } catch (e) { $("nSave").textContent = t("tooBig"); } }
+  /* the notebook owns the id of the video it belongs to: a pending save always goes to THAT video,
+     and switching videos first flushes it (no more wiping another video's notes) */
+  let nbVid = null, nbTitle = "", loadGen = 0;
+  function saveSoon() { $("nSave").textContent = t("saving"); clearTimeout(saveT); const v = nbVid; saveT = setTimeout(() => { saveT = null; save(v); }, 900); }
+  async function save(vid) {
+    vid = vid || nbVid; if (!vid || vid !== nbVid) return; inkImg = INK.width > 2 ? inkNow() : inkImg;
+    const content = { v: 2, H, items: items.slice(), ink: inkImg, title: nbTitle };
+    if (me.user) { try { await api("/api/notes/" + vid, undefined, { method: "PUT", body: { content } }); if (vid === nbVid) $("nSave").innerHTML = ic("check", 12) + " " + t("saved"); } catch (e) { if (vid === nbVid) $("nSave").textContent = e.message; } }
+    else { try { localStorage.setItem("notes_" + vid, JSON.stringify(content)); if (vid === nbVid) $("nSave").innerHTML = ic("check", 12) + " " + t("savedLocal"); } catch (e) { $("nSave").textContent = t("tooBig"); } }
   }
   window.loadNotes = async function () {
+    if (saveT) { clearTimeout(saveT); saveT = null; save(nbVid); }          // flush the previous video's last edit
+    const vid = cur.video_id, gen = ++loadGen; nbVid = vid; nbTitle = cur.title || "";
     items = []; H = 1600; inkImg = null; inkHist = []; lastClick = null; $("nSave").textContent = ""; let c = null;
-    if (me.user) { try { c = (await api("/api/notes/" + cur.video_id)).content; } catch (e) {} }
-    else { try { c = JSON.parse(localStorage.getItem("notes_" + cur.video_id) || "null"); } catch (e) {} }
+    renderAll(); paintInk(null);
+    if (me.user) { try { c = (await api("/api/notes/" + vid)).content; } catch (e) {} }
+    else { try { c = JSON.parse(localStorage.getItem("notes_" + vid) || "null"); } catch (e) {} }
+    if (gen !== loadGen) return;                                              // another video was opened meanwhile
     if (c && c.v === 2) { items = c.items || []; H = c.H || 1600; inkImg = c.ink || null; items = liftFigures(items); }
     else if (c) {                                   // migrate old notes (html editor + separate board)
       if (c.html) {

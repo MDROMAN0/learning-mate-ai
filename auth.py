@@ -71,10 +71,17 @@ class _PG:
         self.c.close()
 
 
+_SCHEMA_DONE = set()
+
+
 def _conn():
     if os.getenv("DATABASE_URL", "").startswith("postgres"):   # anything else (empty, "none") = use SQLite
-        c = _PG(os.environ["DATABASE_URL"])
-        c.executescript(_SCHEMA)
+        url = os.environ["DATABASE_URL"]
+        c = _PG(url)
+        if url not in _SCHEMA_DONE:        # DDL once per process, not on every request (Neon latency)
+            c.executescript(_SCHEMA)
+            c.c.commit()
+            _SCHEMA_DONE.add(url)
         return c
     p = _db_path()
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -143,15 +150,26 @@ def make_token(uid):
     return msg + "." + hmac.new(_secret(), msg.encode(), hashlib.sha256).hexdigest()
 
 
+_UCACHE = {}   # token -> (expires_at, user): every /api call checks the session; skip the DB round trip for 60 s
+
+
 def user_from_token(tok):
     try:
         uid, exp, sig = (tok or "").split(".")
         good = hmac.new(_secret(), f"{uid}.{exp}".encode(), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(sig, good) or int(exp) < time.time():
             return None
+        hit = _UCACHE.get(tok)
+        if hit and hit[0] > time.time():
+            return dict(hit[1])
         with _LOCK, _conn() as c:
             r = c.execute("SELECT id,email,name FROM users WHERE id=?", (int(uid),)).fetchone()
-        return dict(r) if r else None
+        u = dict(r) if r else None
+        if u:
+            if len(_UCACHE) > 5000:
+                _UCACHE.clear()
+            _UCACHE[tok] = (time.time() + 60, u)
+        return u
     except Exception:
         return None
 
@@ -235,6 +253,19 @@ def guest_from_token(tok):
         return gid if hmac.compare_digest(sig, good) else None
     except Exception:
         return None
+
+
+_GUEST_MINT = {}         # (ip, day) -> new demo sessions created; stops cookie-clearing scripts
+
+
+def guest_mint_ok(ip):
+    day = _today()
+    with _LOCK:
+        n = _GUEST_MINT.get((ip, day), 0)
+        if ip and n >= 5:
+            return False
+        _GUEST_MINT[(ip, day)] = n + 1
+    return True
 
 
 def guest_used(gid):

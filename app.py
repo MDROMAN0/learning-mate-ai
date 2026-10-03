@@ -30,7 +30,9 @@ GUEST_OK = ("/api/library", "/api/job/", "/api/transcript/", "/api/chapters/", "
 
 
 def _ip(request: Request):
-    return (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
+    """Client IP. Only the LAST X-Forwarded-For hop is added by the host's proxy; earlier hops are client-controlled."""
+    xff = request.headers.get("x-forwarded-for", "")
+    return xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "")
 
 
 @app.middleware("http")
@@ -159,14 +161,20 @@ class ExplainReq(BaseModel):
     style: str = "simple"  # simple | analogy | steps | other_video
 
 
+_JLOCK = threading.Lock()
+
+
 def _job(key, fn, *args):
+    with _JLOCK:
+        if JOBS.get(key, {}).get("status") == "running":     # two clicks at once -> one build
+            return
+        JOBS[key] = {"status": "running", "msg": "starting..."}
     def run():
         try:
             meta = fn(*args, lambda m: JOBS[key].update(msg=m))
             JOBS[key] = {"status": "done", "msg": "ready", "meta": meta}
         except Exception as e:
             JOBS[key] = {"status": "error", "msg": str(e)}
-    JOBS[key] = {"status": "running", "msg": "starting..."}
     threading.Thread(target=run, daemon=True).start()
 
 
@@ -204,19 +212,21 @@ def index_video(req: IndexReq, request: Request):
 
 
 @app.post("/api/index_transcript")
-def index_transcript(req: TranscriptReq):
+def index_transcript(req: TranscriptReq, request: Request):
     vid = rag.extract_video_id(req.video_id)
     if rag.index_exists(vid):
         return {"video_id": vid, "status": "done", "meta": _safe(rag.load_index, vid).meta}
     segs = [s.model_dump() for s in req.segments]
     if JOBS.get(vid, {}).get("status") != "running":
+        _charge(request)
         _job(vid, lambda t, sg, p: rag.build_index_from_segments(vid, t or vid, sg, "extension", None, "youtube", p),
              req.title, segs)
     return {"video_id": vid, **JOBS[vid]}
 
 
 @app.post("/api/upload")
-def upload(file: UploadFile = File(...), title: str = Form(""), youtube_url: str = Form("")):
+def upload(request: Request, file: UploadFile = File(...), title: str = Form(""), youtube_url: str = Form("")):
+    _charge(request)
     ext = Path(file.filename or "").suffix.lower()
     if ext not in rag.SUB_EXT | rag.AUDIO_EXT | {".mp4", ".mkv", ".webm", ".mov", ".avi"}:
         raise HTTPException(400, "unsupported file type")
@@ -287,6 +297,9 @@ def lab_eval(req: EvalReq, request: Request):
         rag.set_lang(request.headers.get("x-lang", ""))
     if not req.items or len(req.items) > 40 or (req.full and len(req.items) > 15):
         raise HTTPException(400, "items: 1..40 (1..15 with full=true)")
+    if any(not isinstance(it, dict) or not it.get("video") or not (it.get("gold") is None or (
+            isinstance(it.get("gold"), list) and len(it["gold"]) == 2)) for it in req.items):
+        raise HTTPException(400, 'each item needs {"video": id, "question": text, "gold": [start, end] or null}')
     if request.state.guest and (req.full or len(req.items) > 12):
         raise HTTPException(400, "demo mode: retrieval eval only, up to 12 questions - log in for the full run")
     def run():
@@ -299,8 +312,10 @@ def lab_eval(req: EvalReq, request: Request):
 
 @app.post("/api/alternatives")
 def alternatives(req: AltReq, request: Request):
+    if request.state.guest and req.mode == "discover":
+        raise HTTPException(401, "log in to search new YouTube videos")
     _charge(request)
-    return _safe(features.alternatives, req.question, req.video_id, req.mode, req.n, req.level)
+    return _safe(features.alternatives, req.question, req.video_id, req.mode, max(1, min(req.n, 4)), req.level)
 
 
 @app.post("/api/plan/start")
@@ -318,7 +333,7 @@ def plan_finish(req: PlanFinishReq, request: Request):
 @app.post("/api/quiz")
 def quiz(req: QuizReq, request: Request):
     _charge(request)
-    return {"questions": _safe(features.quiz, req.video_id, req.n, req.topic, req.current_time)}
+    return {"questions": _safe(features.quiz, req.video_id, max(1, min(req.n, 10)), req.topic, req.current_time)}
 
 
 @app.post("/api/explain")
@@ -419,6 +434,8 @@ def guest(request: Request, resp: Response):
         return {"guest": False}
     tok = request.cookies.get(auth.GUEST_COOKIE)
     if not auth.guest_from_token(tok):
+        if not auth.guest_mint_ok(_ip(request)):
+            raise HTTPException(429, "too many demo sessions from this network today - create a free account")
         tok = auth.make_guest_token()
     resp.set_cookie(auth.GUEST_COOKIE, tok, max_age=7 * 86400, httponly=True, samesite="lax",
                     secure=os.getenv("COOKIE_SECURE", "0") == "1")

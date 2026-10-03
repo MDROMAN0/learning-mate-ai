@@ -6,9 +6,9 @@
 <title>RAG Lab — Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261001">
-<script src="/static/i18n.js?v=20261001"></script>
-<script src="/static/icons.js?v=20261001"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261003">
+<script src="/static/i18n.js?v=20261003"></script>
+<script src="/static/icons.js?v=20261003"></script>
 <style>
   .wrap{max-width:1280px;margin:0 auto;padding:22px 20px 60px}
   .ctl{display:grid;grid-template-columns:minmax(220px,1.1fr) 2fr auto;gap:10px;align-items:center}
@@ -156,7 +156,7 @@ const busy=k=>{$("out").innerHTML='<div class="card"><div class="row"><span clas
 const fail=e=>{$("out").innerHTML='<div class="card" style="border-color:var(--bad)"><span class="badge bad">'+t("error")+"</span> "+esc(e.message)+"</div>"};
 let libVideos=[];
 async function loadLib(){try{libVideos=(await get("/api/library")).videos}catch(e){$("lib").innerHTML='<option value="">'+esc(t("noKey"))+"</option>";return}
-  const keep=$("lib").value;$("lib").innerHTML=libVideos.map(v=>'<option value="'+esc(v.video_id)+'">'+esc(v.title)+" ("+fmt(v.duration)+")</option>").join("");if(keep)$("lib").value=keep;
+  const keep=$("lib").value;$("lib").innerHTML=libVideos.map(v=>'<option value="'+esc(v.video_id)+'">'+esc(v.title)+" ("+fmt(v.duration)+")</option>").join("");if(keep)$("lib").value=keep;else{const pref=libVideos.find(v=>v.video_id==="6GQIgagnVn4");if(pref)$("lib").value=pref.video_id}
   if(libVideos.length)$("evalset").placeholder='[{"video":"'+libVideos[0].video_id+'","question":"...","gold":[120,240]}, {"video":"'+libVideos[0].video_id+'","question":"topic NOT in the video","gold":null}]'}
 loadLib();
 const lit=ks=>document.querySelectorAll("#arch .node").forEach(n=>n.classList.toggle("lit",ks.includes(n.dataset.k)));

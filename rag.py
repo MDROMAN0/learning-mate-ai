@@ -122,15 +122,25 @@ def tokenize(text):
     return re.findall(r'[^\s.,;:!?"\'()\[\]{}।|\-–—/]+', text.lower())
 
 
+def _as_obj(d):
+    """Callers expect a dict. Small models sometimes answer with a bare list ("[2, 0, 1]") -> expose it under the
+    keys our list-style prompts ask for; anything else that is not a dict -> None (callers already handle None)."""
+    if isinstance(d, dict):
+        return d
+    if isinstance(d, list):
+        return {k: d for k in ("order", "relevant", "results", "questions", "queries")}
+    return None
+
+
 def parse_json(txt):
     txt = re.sub(r"^```(?:json)?|```$", "", (txt or "").strip(), flags=re.M).strip()
     try:
-        return json.loads(txt)
+        return _as_obj(json.loads(txt))
     except Exception:
         m = re.search(r"\{.*\}", txt, re.S)
         if m:
             try:
-                return json.loads(m.group(0))
+                return _as_obj(json.loads(m.group(0)))
             except Exception:
                 pass
     return None
@@ -514,6 +524,7 @@ def save_index(vid, meta, chunks, E, extra=None):
 
 
 def load_index(vid):
+    vid = extract_video_id(vid)          # also blocks path tricks like "../../x" in file names below
     if vid in _cache:
         return _cache[vid]
     p = DATA / "index" / f"{vid}.json"
@@ -948,7 +959,7 @@ def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use
              "preview": c["text"][:160]} for i, c in enumerate(ev)]
     segments = []
     t0 = time.perf_counter()
-    limit = min(current_time, ix.meta["duration"]) if current_time else ix.meta.get("duration")
+    limit = min(current_time, ix.meta.get("duration") or current_time) if current_time is not None else ix.meta.get("duration")
     for r in merge_ranges(rel, max_time=limit)[:3]:
         seg = {"start": r["start"], "end": r["end"], "url": yt_link(vid, r["start"]), "clip": None}
         if make_clip and ix.meta.get("has_video"):
