@@ -395,7 +395,9 @@ def gemini_transcribe(vid, progress=lambda m: None):
     if not key or "generativelanguage" not in base:
         return None
     import httpx
-    models = [m for m in [env("TRANSCRIBE_MODEL"), "gemini-2.5-flash", env("LLM_MODEL")] if m]
+    fb = [m.strip() for m in env("LLM_FALLBACK_MODELS").split(",") if m.strip().startswith("gemini")]
+    models = [m for m in [env("TRANSCRIBE_MODEL"), "gemini-2.5-flash", env("LLM_MODEL"), "gemini-2.5-flash-lite",
+                          "gemini-flash-latest", "gemini-flash-lite-latest", *fb] if m]
     prompt = ("Transcribe the speech in this video with timestamps. Keep the original spoken language "
               "(Bangla in Bangla script, English in English; keep English technical terms). Split into segments of "
               "about 10-20 seconds. Return ONLY JSON: {\"segments\": [{\"t\": \"MM:SS\" or \"H:MM:SS\" start time, "
@@ -404,14 +406,23 @@ def gemini_transcribe(vid, progress=lambda m: None):
                                     {"text": prompt}]}],
             "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 60000,
                                  "mediaResolution": "MEDIA_RESOLUTION_LOW", "temperature": 0}}
-    last = None
-    for m in dict.fromkeys(models):
+    errs = []
+    for m in [x for x in dict.fromkeys(models)] * 2:          # second pass = retry after busy (503/429)
+        if errs and all(e.startswith(m + ":") and "HTTP 4" in e and "429" not in e for e in errs if e.startswith(m + ":")) \
+                and any(e.startswith(m + ":") for e in errs):
+            continue                                           # permanent error for this model: don't retry
         progress(f"Reading the video with AI ({m})...")
         try:
             r = httpx.post(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent",
                            params={"key": key}, json=body, timeout=600)
             if r.status_code != 200:
-                last = f"{m}: HTTP {r.status_code} {r.text[:160]}"
+                try:
+                    msg = r.json()["error"]["message"][:90]
+                except Exception:
+                    msg = r.text[:90]
+                errs.append(f"{m}: HTTP {r.status_code} {msg}")
+                if r.status_code in (429, 503):
+                    time.sleep(2)
                 continue
             parts = r.json()["candidates"][0]["content"]["parts"]
             out = parse_json("".join(p.get("text", "") for p in parts)) or {}
@@ -425,10 +436,10 @@ def gemini_transcribe(vid, progress=lambda m: None):
                 a2["end"] = max(a2["start"] + 1, b2["start"] if b2 else a2["start"] + 15)
             if len(segs) >= 2:
                 return segs
-            last = f"{m}: empty transcript"
+            errs.append(f"{m}: empty transcript")
         except Exception as e:
-            last = f"{m}: {e}"
-    raise RuntimeError("AI could not read this video (" + str(last)[:200] + ")")
+            errs.append(f"{m}: {str(e)[:90]}")
+    raise RuntimeError("AI could not read this video - " + " | ".join(dict.fromkeys(errs))[:600])
 
 
 def transcribe(video_path):
