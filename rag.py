@@ -363,7 +363,11 @@ def fetch_captions(vid, langs=("bn", "en", "hi")):
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
         try:  # v1.x
-            tr = YouTubeTranscriptApi().fetch(vid, languages=list(langs))
+            api = YouTubeTranscriptApi()
+            try:
+                tr = api.fetch(vid, languages=list(langs))
+            except Exception:
+                tr = next(iter(api.list(vid))).fetch()        # any language the video has
             return [{"start": s.start, "end": s.start + s.duration, "text": s.text} for s in tr]
         except AttributeError:  # v0.6.x
             tr = YouTubeTranscriptApi.get_transcript(vid, languages=list(langs))
@@ -371,6 +375,60 @@ def fetch_captions(vid, langs=("bn", "en", "hi")):
                     for t in tr]
     except Exception:
         return None
+
+
+def _ts(x):
+    """'1:02:03' / '02:03' / 123 -> seconds."""
+    if isinstance(x, (int, float)):
+        return float(x)
+    parts = [float(p) for p in re.findall(r"\d+(?:\.\d+)?", str(x))][-3:]
+    sec = 0.0
+    for p in parts:
+        sec = sec * 60 + p
+    return sec
+
+
+def gemini_transcribe(vid, progress=lambda m: None):
+    """Fallback when YouTube blocks caption downloads from this server (cloud IPs): Gemini reads the public
+    YouTube video itself (Google fetches it, not us) and returns a timestamped transcript."""
+    key, base = env("LLM_API_KEY"), env("LLM_BASE_URL")
+    if not key or "generativelanguage" not in base:
+        return None
+    import httpx
+    models = [m for m in [env("TRANSCRIBE_MODEL"), "gemini-2.5-flash", env("LLM_MODEL")] if m]
+    prompt = ("Transcribe the speech in this video with timestamps. Keep the original spoken language "
+              "(Bangla in Bangla script, English in English; keep English technical terms). Split into segments of "
+              "about 10-20 seconds. Return ONLY JSON: {\"segments\": [{\"t\": \"MM:SS\" or \"H:MM:SS\" start time, "
+              "\"text\": what is said}]}. Cover the whole video in order.")
+    body = {"contents": [{"parts": [{"file_data": {"file_uri": f"https://www.youtube.com/watch?v={vid}"}},
+                                    {"text": prompt}]}],
+            "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 60000,
+                                 "mediaResolution": "MEDIA_RESOLUTION_LOW", "temperature": 0}}
+    last = None
+    for m in dict.fromkeys(models):
+        progress(f"Reading the video with AI ({m})...")
+        try:
+            r = httpx.post(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent",
+                           params={"key": key}, json=body, timeout=600)
+            if r.status_code != 200:
+                last = f"{m}: HTTP {r.status_code} {r.text[:160]}"
+                continue
+            parts = r.json()["candidates"][0]["content"]["parts"]
+            out = parse_json("".join(p.get("text", "") for p in parts)) or {}
+            raw = out.get("segments") or out.get("results") or []
+            segs = []
+            for x in raw:
+                if isinstance(x, dict) and str(x.get("text", "")).strip():
+                    segs.append({"start": _ts(x.get("t", x.get("start", 0))), "text": str(x["text"]).strip()})
+            segs.sort(key=lambda z: z["start"])
+            for a2, b2 in zip(segs, segs[1:] + [None]):
+                a2["end"] = max(a2["start"] + 1, b2["start"] if b2 else a2["start"] + 15)
+            if len(segs) >= 2:
+                return segs
+            last = f"{m}: empty transcript"
+        except Exception as e:
+            last = f"{m}: {e}"
+    raise RuntimeError("AI could not read this video (" + str(last)[:200] + ")")
 
 
 def transcribe(video_path):
@@ -587,6 +645,9 @@ def build_index(url, force_asr=False, progress=lambda m: None):
     progress("Fetching captions...")
     segs = None if force_asr else fetch_captions(vid)
     source = "captions"
+    if not segs and path is None and env("GEMINI_TRANSCRIBE", "1") == "1":
+        segs = gemini_transcribe(vid, progress)
+        source = "gemini-video"
     if not segs:
         if path is None:
             if env("YT_DOWNLOAD", "0") != "1":
