@@ -11,6 +11,7 @@ import re
 import json
 import time
 import shutil
+import tempfile
 import subprocess
 import uuid
 from pathlib import Path
@@ -148,25 +149,108 @@ def parse_json(txt):
 
 # ---------------------------------------------------------------------- LLM
 _client = None
+_clients = {}
 
 
-def llm(system, user, temperature=0.1, max_tokens=1500):
-    """Any OpenAI-compatible API (OpenAI, Gemini, Groq, OpenRouter...) via env vars."""
+_REMOTE = {"t": 0.0, "v": None}
+
+
+def _remote_provider():
+    """Online host (Render): if the owner's PC is serving Ollama (pc_server.py heartbeat in the shared
+    Postgres), use it first. PC off / no heartbeat for 90 s -> None, so Gemini is used directly (no waiting)."""
+    url = env("DATABASE_URL")
+    if env("LLM_REMOTE", "1") != "1" or not url.startswith("postgres") or "localhost" in env("LLM_BASE_URL"):
+        return None
+    if time.time() - _REMOTE["t"] < 30:
+        return _REMOTE["v"]
+    v = None
+    try:
+        import psycopg
+        with psycopg.connect(url, connect_timeout=5) as c:
+            r = c.execute("select url, key, model, fast_model, extract(epoch from now() - updated) "
+                          "from pc_llm where id = 1").fetchone()
+        if r and r[4] is not None and float(r[4]) < 90:
+            v = ("PC_", r[0].rstrip("/") + "/v1", r[1], r[2], r[3] or "")
+    except Exception:
+        v = None
+    _REMOTE.update(t=time.time(), v=v)
+    return v
+
+
+def _providers():
+    """(tag, base_url, key, model, fast_model) in order: owner's PC (if online) -> LLM_* -> LLM_BACKUP_*."""
+    out = []
+    pc = _remote_provider()
+    if pc:
+        out.append(pc)
+    out.append(("", env("LLM_BASE_URL"), env("LLM_API_KEY"), env("LLM_MODEL", "gpt-4o-mini"), env("LLM_FAST_MODEL")))
+    if env("LLM_BACKUP_MODEL") or env("LLM_BACKUP_BASE_URL"):
+        out.append(("BACKUP_", env("LLM_BACKUP_BASE_URL"), env("LLM_BACKUP_API_KEY"),
+                    env("LLM_BACKUP_MODEL", "gemini-3.5-flash-lite"), ""))
+    return out
+
+
+def llm_fast(system, user, temperature=0.1, max_tokens=1500):
+    """Short judge-style tasks (rewrite, rerank, grade, verify, enrich): use the provider's fast model if set."""
+    tok = _FAST.set(True)
+    try:
+        return llm(system, user, temperature, max_tokens)
+    finally:
+        _FAST.reset(tok)
+
+
+import contextvars as _cv
+_FAST = _cv.ContextVar("llm_fast", default=False)
+
+
+def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
+    """Any OpenAI-compatible API (Ollama, Groq, Gemini, OpenAI...) via env vars.
+    Tries providers in order; if one is down, unreachable or out of quota, the next one answers."""
     global _client
-    if _client is None:
-        from openai import OpenAI
-        _client = OpenAI(api_key=os.environ["LLM_API_KEY"],
-                         base_url=os.getenv("LLM_BASE_URL") or None, max_retries=1, timeout=90)
     msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-    gem = "generativelanguage" in env("LLM_BASE_URL")
-    models = [os.getenv("LLM_MODEL", "gpt-4o-mini")]
+    provs = _providers()
+    for pi, (tag, base, key, model, fastm) in enumerate(provs):
+        if (fast or _FAST.get()) and fastm:
+            model = fastm
+        try:
+            if tag == "" and _client is not None:
+                cl = _client                      # (tests may inject a fake client)
+            else:
+                ck = (tag, base, key)
+                if ck not in _clients:
+                    from openai import OpenAI
+                    # Ollama ignores the key but the client needs a non-empty one
+                    _clients[ck] = OpenAI(api_key=key or "ollama", base_url=base or None,
+                                          max_retries=0 if tag == "PC_" else 1,
+                                          timeout=float(env("LLM_TIMEOUT", "120")))
+                cl = _clients[ck]
+                if tag == "":
+                    _client = cl
+            out = _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, len(provs) > 1)
+            if tag == "PC_":
+                _stat("llm_pc_calls")
+            return out
+        except Exception as e:
+            if tag == "PC_":                      # PC went offline: stop trying it for a minute
+                _REMOTE.update(t=time.time() + 30, v=None)
+            if pi == len(provs) - 1:
+                raise
+            _stat("llm_backup_used")
+            __import__("logging").getLogger("rag").warning(
+                "LLM provider %s failed (%s); using next", base or "default", str(e)[:120])
+
+
+def _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, has_next=False):
+    gem = "generativelanguage" in (base or "")
+    models = [model]
     # Free-tier quotas are per model (e.g. 15 requests/min each), so on 429/503 rotate through a pool.
-    fbs = os.getenv("LLM_FALLBACK_MODELS", DEFAULT_GEMINI_FALLBACKS if gem else "")
+    fbs = os.getenv("LLM_%sFALLBACK_MODELS" % tag, DEFAULT_GEMINI_FALLBACKS if gem else "")
     models += [m.strip() for m in fbs.split(",") if m.strip() and m.strip() not in models]
-    rounds = int(env("LLM_BUSY_ROUNDS", "4"))
+    # with a backup configured, don't sit waiting out a rate-limit window on the primary
+    rounds = 1 if has_next else int(env("LLM_BUSY_ROUNDS", "4"))
     for rnd in range(rounds):
         try:
-            return _llm_try(models, msgs, temperature, max_tokens, gem)
+            return _llm_try(cl, models, msgs, temperature, max_tokens, gem)
         except _AllBusy as e:
             if rnd == rounds - 1:
                 raise e.last
@@ -186,7 +270,7 @@ class _AllBusy(Exception):
 _COOL = {}  # model -> time until which it is rate-limited (skip it instead of wasting a round-trip)
 
 
-def _llm_try(models, msgs, temperature, max_tokens, gem):
+def _llm_try(cl, models, msgs, temperature, max_tokens, gem):
     wait = None
     t = time.time()
     ready = [m for m in models if _COOL.get(m, 0) <= t]
@@ -205,15 +289,15 @@ def _llm_try(models, msgs, temperature, max_tokens, gem):
                 kw["max_tokens"] = max_tokens + 2048
         try:
             try:
-                r = _client.chat.completions.create(**kw)
+                r = cl.chat.completions.create(**kw)
             except Exception as e:
                 if getattr(e, "status_code", None) != 400 or "reasoning_effort" not in kw:
                     raise
                 kw.pop("reasoning_effort"); kw["max_tokens"] = max_tokens + 2048
-                r = _client.chat.completions.create(**kw)
+                r = cl.chat.completions.create(**kw)
             if not (r.choices[0].message.content or "").strip() and r.choices[0].finish_reason == "length":
                 kw.pop("reasoning_effort", None); kw["max_tokens"] = kw["max_tokens"] + 2048
-                r = _client.chat.completions.create(**kw)   # thinking ate the budget: once more, bigger
+                r = cl.chat.completions.create(**kw)   # thinking ate the budget: once more, bigger
             break
         except Exception as e:
             code = getattr(e, "status_code", None)
@@ -319,7 +403,7 @@ def rerank_scores(query, texts):
 def rerank_llm(question, texts):
     """RERANK_PROVIDER=llm (default): listwise rerank with the LLM, no local model needed."""
     ev = "\n\n".join(f"[{i}] {t[:500]}" for i, t in enumerate(texts))
-    out = parse_json(llm("You rank transcript passages by how directly they explain the topic.",
+    out = parse_json(llm_fast("You rank transcript passages by how directly they explain the topic.",
                          f"Topic: {question}\n\n{ev}\n\nReturn JSON: {{\"order\": [passage indices, "
                          "most relevant first]}}", max_tokens=200))
     order = [i for i in (out or {}).get("order", []) if isinstance(i, int) and 0 <= i < len(texts)]
@@ -346,6 +430,37 @@ def download_video(vid):
     if not out.exists():
         raise RuntimeError("yt-dlp finished but mp4 not found (ffmpeg installed?)")
     return out, info.get("title", vid)
+
+
+def audio_transcribe(vid, progress=lambda m: None):
+    """Caption-less video, fully open-source: download ONLY the audio to a temp folder,
+    transcribe with local Whisper (asr.py), then delete the audio. Returns segments or None."""
+    try:
+        import importlib.util
+        if env("ASR_PROVIDER", "local") == "local" and importlib.util.find_spec("faster_whisper") is None:
+            return None                     # Whisper not installed here (e.g. small cloud host): skip
+        import yt_dlp
+    except Exception:
+        return None
+    tmp = Path(tempfile.mkdtemp(prefix="ytaudio_"))
+    try:
+        progress("No captions: downloading audio only (temporary)...")
+        opts = {"format": "bestaudio[abr<=96]/bestaudio/worstaudio", "outtmpl": str(tmp / "a.%(ext)s"),
+                "quiet": True, "noprogress": True}
+        if env("YT_COOKIES_FROM_BROWSER"):
+            opts["cookiesfrombrowser"] = (env("YT_COOKIES_FROM_BROWSER"),)
+        with yt_dlp.YoutubeDL(opts) as y:
+            y.extract_info(f"https://www.youtube.com/watch?v={vid}", download=True)
+        files = [f for f in tmp.iterdir() if f.is_file()]
+        if not files:
+            return None
+        progress("Transcribing audio with Whisper (local)...")
+        return transcribe(files[0]) or None
+    except Exception as e:
+        progress(f"Audio transcription failed ({str(e)[:80]})")
+        return None
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)   # audio is never kept
 
 
 def fetch_title(vid):
@@ -556,7 +671,7 @@ def enrich(chunks, title):
     """Contextual enrichment: 1-line 'what is this passage about' prepended for indexing."""
     for c in chunks:
         try:
-            c["ctx"] = llm("You label transcript passages.",
+            c["ctx"] = llm_fast("You label transcript passages.",
                            f"Video title: {title}\nPassage: {c['text'][:1200]}\n"
                            "Write ONE short line (max 25 words) saying what topic this passage "
                            "covers inside the video. Same language as the passage.",
@@ -656,6 +771,9 @@ def build_index(url, force_asr=False, progress=lambda m: None):
     progress("Fetching captions...")
     segs = None if force_asr else fetch_captions(vid)
     source = "captions"
+    if not segs and path is None and env("ASR_AUDIO", "1") == "1":
+        segs = audio_transcribe(vid, progress)
+        source = "whisper-audio"
     if not segs and path is None and env("GEMINI_TRANSCRIBE", "1") == "1":
         segs = gemini_transcribe(vid, progress)
         source = "gemini-video"
@@ -777,7 +895,7 @@ def rewrite_query(question, title, broader=False):
     qs = [question]
     try:
         extra = " Use broader, related terms and synonyms." if broader else ""
-        out = parse_json(llm(
+        out = parse_json(llm_fast(
             "You rewrite search queries for transcript retrieval.",
             f"Video title: {title}\nUser question (Bangla, English or Banglish = Bangla typed in "
             f"Latin letters): {question}\nReturn JSON: {{\"queries\": [3 short search queries: one "
@@ -807,7 +925,7 @@ def grade_chunks(question, cands):
         return [], True
     ev = "\n\n".join(f"[{i}] ({fmt(c['start'])}-{fmt(c['end'])}) {c['text'][:800]}"
                      for i, c in enumerate(cands))
-    out = parse_json(llm(
+    out = parse_json(llm_fast(
         "You are a strict relevance judge. A passage is relevant if it directly discusses or "
         "explains the asked topic OR a part the answer needs (e.g. for 'difference between A and B', "
         "a passage explaining A or B alone is relevant). Keyword overlap or a passing mention is NOT relevant. "
@@ -920,7 +1038,7 @@ def verify_answer(ans, ev):
         blocks = "\n\n".join(
             f"Claim {j}: {t}\nEvidence: " + " ".join(ev[c - 1]["text"] for c in cites)
             for j, (_, _, t, cites) in enumerate(checkable))
-        out = parse_json(llm(
+        out = parse_json(llm_fast(
             "You are a strict fact verifier. A claim is supported only if the evidence states it "
             "or directly implies it. The evidence is a noisy auto-generated caption transcript (often "
             "Bangla, English terms may be written in Bangla script or misspelled) and the claim may be a "

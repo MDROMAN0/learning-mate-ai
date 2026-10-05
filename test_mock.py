@@ -366,11 +366,11 @@ def _create(**kw):
     return _resp("ok")
 rag._client = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_create)))
 os.environ.update(LLM_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/", LLM_MODEL="m-main", LLM_FALLBACK_MODELS="gemini-x-lite")
-assert rag._llm_try([ "m-main", "gemini-x-lite"], [{"role": "user", "content": "x"}], 0.1, 5, True) == "ok"
+assert rag._llm_try(rag._client, [ "m-main", "gemini-x-lite"], [{"role": "user", "content": "x"}], 0.1, 5, True) == "ok"
 assert calls[0][:2] == ("m-main", "none") and calls[1] == ("gemini-x-lite", None, 5), calls
 calls.clear(); os.environ["LLM_MODEL"] = "m-main"; os.environ["LLM_FALLBACK_MODELS"] = "m-main"
 try:
-    rag._llm_try(["m-main"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should be busy")
+    rag._llm_try(rag._client, ["m-main"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should be busy")
 except rag._AllBusy as e:
     assert e.wait == 1.0
 rag._COOL.clear()
@@ -378,13 +378,36 @@ def _create2(**kw):
     if kw["model"] == "day-gone": raise _Err(429, "quota GenerateRequestsPerDayPerProjectPerModel-FreeTier retryDelay': '50s'")
     return _resp("<thought>hmm</thought>fine")
 rag._client = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_create2)))
-t0 = time.time(); assert rag._llm_try(["day-gone", "backup"], [{"role": "user", "content": "x"}], 0.1, 5, True) == "fine" and time.time() - t0 < 1
+t0 = time.time(); assert rag._llm_try(rag._client, ["day-gone", "backup"], [{"role": "user", "content": "x"}], 0.1, 5, True) == "fine" and time.time() - t0 < 1
 assert rag._COOL["day-gone"] > time.time() + 3000                                  # daily-exhausted model skipped for an hour
-try: rag._llm_try(["day-gone"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should raise")
+try: rag._llm_try(rag._client, ["day-gone"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should raise")
 except rag._AllBusy: raise SystemExit("must not wait for a daily quota")
 except _Err: pass
 rag._COOL.clear()
 for k in ("LLM_BASE_URL", "LLM_MODEL", "LLM_FALLBACK_MODELS"): os.environ.pop(k, None)
+# primary provider (e.g. Ollama) down -> backup provider (e.g. Gemini) answers
+class _Down(Exception): pass
+def _dead(**kw): raise _Down("connection refused")
+def _alive(**kw): return _resp("from-backup")
+ns["_client"] = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_dead)))
+ns["_clients"][("BACKUP_", "", "")] = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_alive)))
+os.environ.update(LLM_BASE_URL="http://localhost:11434/v1", LLM_MODEL="llama3.2:3b", LLM_BACKUP_MODEL="gemini-x")
+assert real_llm_fn("s", "u") == "from-backup"
+os.environ.pop("LLM_BACKUP_MODEL")
+try: real_llm_fn("s", "u"); raise SystemExit("no backup -> must raise")
+except _Down: pass
+for k in ("LLM_BASE_URL", "LLM_MODEL"): os.environ.pop(k, None)
+ns["_clients"].clear()
+# owner's PC online (heartbeat) -> PC Ollama first; PC call fails -> next provider, PC skipped for a while
+ns["_REMOTE"].update(t=time.time(), v=("PC_", "https://pc.example/v1", "k", "big", "small"))
+def _pc(**kw): calls.append(kw["model"]); return _resp("from-pc")
+ns["_clients"][("PC_", "https://pc.example/v1", "k")] = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_pc)))
+ns["_client"] = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_alive)))
+os.environ["LLM_MODEL"] = "gem"; os.environ["DATABASE_URL"] = "postgresql://test"; calls.clear()
+assert real_llm_fn("s", "u") == "from-pc" and ns["llm_fast"]("s", "u") == "from-pc" and calls == ["big", "small"], calls
+ns["_clients"][("PC_", "https://pc.example/v1", "k")] = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_dead)))
+assert real_llm_fn("s", "u") == "from-backup" and ns["_REMOTE"]["v"] is None
+ns["_REMOTE"].update(t=0.0, v=None); ns["_clients"].clear(); os.environ.pop("LLM_MODEL"); os.environ.pop("DATABASE_URL")
 ans = {"sections": [{"heading": "h", "points": ["bare string point", {"text": "p", "cites": ["2", 1, "x"]}]}, "loose section"]}
 rag.llm = lambda *a, **k: json.dumps(ans)
 g = rag.generate_answer("q", [{"start": 0, "end": 1, "text": "t"}] * 3)
