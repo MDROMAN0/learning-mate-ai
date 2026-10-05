@@ -490,3 +490,15 @@ assert "items" in lc.get("/api/lab/evalset").json() and lc.get("/api/notes").jso
 print("guest demo / chapters / ask-all / evalset OK")
 print("accounts / daily limit / history / youtube browse / heat / transcript / ui-language OK")
 print("ALL TESTS PASSED")
+# "outside the video" toggle: only when the video doesn't cover it, clearly separate field
+_orig_ask, _orig_llm = rag._ask, rag.llm
+rag._ask = lambda *a, **k: {"found": False, "video_id": "x", "trace": {}}
+rag.llm = lambda *a, **k: "general reply"
+
+_li = rag.load_index; rag.load_index = lambda v: __import__("types").SimpleNamespace(meta={"title": "T"})
+assert rag.ask("x", "q", general=True)["general"] == "general reply"
+assert "general" not in rag.ask("x", "q")
+rag._ask = lambda *a, **k: {"found": True, "video_id": "x", "trace": {}}
+assert "general" not in rag.ask("x", "q", general=True)
+rag._ask, rag.llm, rag.load_index = _orig_ask, _orig_llm, _li
+print("general-knowledge toggle OK")

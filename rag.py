@@ -1109,12 +1109,28 @@ def verify_answer(ans, ev):
 
 
 # --------------------------------------------------------------------- ask
+def general_answer(question, title=""):
+    """'Outside the video' mode: answer from the model's own knowledge. Clearly labelled, never mixed with
+    video citations, and only used when the user turned the toggle on AND the video doesn't cover it."""
+    lang = "English" if _LANG.get() == "en" else "Bangla (English technical terms kept)"
+    return llm("You are a helpful study tutor. Answer from general knowledge, clearly and correctly. "
+               "If you are not sure, say so instead of guessing. Keep it short: 3-6 sentences or bullet points.",
+               f"Student is studying a video titled: {title}\nQuestion: {question}\nAnswer in {lang}.",
+               temperature=0.2, max_tokens=700).strip()
+
+
 def ask(video, question, current_time=None, make_clip=True, mode="hybrid+rerank",
-        use_rewrite=True, level="simple", use_grade=True, use_verify=True, debug=False):
-    """Full pipeline. use_* flags exist for ablation; debug=True adds every intermediate stage to trace."""
+        use_rewrite=True, level="simple", use_grade=True, use_verify=True, debug=False, general=False):
+    """Full pipeline. use_* flags exist for ablation; debug=True adds every intermediate stage to trace.
+    general=True: if the video does not cover the question, add a labelled general-knowledge answer."""
     tok = _S.set({})
     try:
         out = _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use_grade, use_verify, debug)
+        if general and not out.get("found"):
+            try:
+                out["general"] = general_answer(question, (load_index(out["video_id"]).meta or {}).get("title", ""))
+            except Exception as e:
+                out["general_error"] = str(e)[:200]
         out["trace"]["usage"] = dict(_S.get() or {})
         return out
     finally:

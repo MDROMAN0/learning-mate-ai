@@ -111,6 +111,7 @@ class AskReq(BaseModel):
     use_grade: bool = True
     use_verify: bool = True
     debug: bool = False  # RAG Lab: return every pipeline stage in trace["debug"]
+    general: bool = False  # toggle: also answer from general knowledge when the video doesn't cover it
 
 
 class CompareReq(BaseModel):
@@ -271,7 +272,7 @@ def ask(req: AskReq, request: Request):
         raise HTTPException(400, "empty question")
     _charge(request)
     out = _safe(rag.ask, req.video_id, req.question, req.current_time, req.clip, req.mode,
-                req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug)
+                req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug, req.general)
     u = request.state.user
     if u:
         try:

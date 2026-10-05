@@ -507,7 +507,7 @@
           </div>
           <div class="row" style="margin-top:8px;justify-content:space-between">
             <div class="seg" id="level"><button data-v="simple" class="on" data-t="simple"></button><button data-v="exam" data-t="exam"></button><button data-v="expert" data-t="expert"></button></div>
-            <div class="row"><label class="tog" data-tt="spoilerT"><input type="checkbox" id="spoiler"><span data-t="spoiler"></span></label><label class="tog hide" id="clipLbl"><input type="checkbox" id="clip"><span data-t="clip"></span></label></div>
+            <div class="row"><label class="tog" data-tt="spoilerT"><input type="checkbox" id="spoiler"><span data-t="spoiler"></span></label><label class="tog" data-tt="generalT"><input type="checkbox" id="general"><span data-t="general"></span></label><label class="tog hide" id="clipLbl"><input type="checkbox" id="clip"><span data-t="clip"></span></label></div>
           </div>
         </div>
         <div class="pane hide" id="p_alt">
@@ -575,6 +575,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=x=>{x=Math.max(0,Math.floor(x||0));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s).padStart(2,"0")};
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+try{addEventListener("DOMContentLoaded",()=>{const g=document.getElementById("general");if(!g)return;try{g.checked=localStorage.getItem("lm_general")==="1"}catch(e){}g.onchange=()=>{try{localStorage.setItem("lm_general",g.checked?"1":"0")}catch(e){}}})}catch(e){}
 let player=null,ytReady=false,cur=null,lib=[],trChunks=[],heat=null,lastSegs=[],lastQuiz=[],quizScore={ok:0,n:0},level="simple",amode="library",chatHist=[],me={auth:false,user:null},signupMode=false,lastQ="";
 window.onYouTubeIframeAPIReady=()=>{ytReady=true};
 function toast(m){const d=document.createElement("div");d.className="toast fade";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
@@ -812,9 +813,9 @@ async function ask(){
   $("chat").appendChild(box);$("p_ask").scrollTop=1e9;$("askBtn").disabled=true;
   api("/api/heat",{video_id:cur.video_id,question:q}).then(h=>{heat=h;drawTL()}).catch(()=>{});
   try{
-    const d=await api("/api/ask",{video_id:cur.video_id,question:q,current_time:$("spoiler").checked?now():null,clip:$("clip").checked,level});
+    const d=await api("/api/ask",{video_id:cur.video_id,question:q,current_time:$("spoiler").checked?now():null,clip:$("clip").checked,level,general:$("general").checked});
     chatHist.push({q,d});const tr=d.trace||{};let h;
-    if(!d.found){lastSegs=[];h='<div class="ans" style="border-color:var(--bad)"><div class="meta"><span class="badge bad">'+ic("x",12)+' '+t("notFound")+"</span></div><b>"+esc($("spoiler").checked?t("notFoundUpTo",{t:fmt(now())}):t("notFoundMsg"))+'</b><p class="muted" style="margin:6px 0 0">'+t("notFoundD")+"</p>"+pipeHtml(tr)+"</div>"}
+    if(!d.found){lastSegs=[];h='<div class="ans" style="border-color:var(--bad)"><div class="meta"><span class="badge bad">'+ic("x",12)+' '+t("notFound")+"</span></div><b>"+esc($("spoiler").checked?t("notFoundUpTo",{t:fmt(now())}):t("notFoundMsg"))+'</b><p class="muted" style="margin:6px 0 0">'+t("notFoundD")+"</p>"+pipeHtml(tr)+"</div>";if(d.general)h+='<div class="ans" style="border-color:var(--warn,#d89b00)"><div class="meta"><span class="badge warn">'+ic("brain",12)+' '+t("generalBadge")+'</span></div><div style="white-space:pre-wrap">'+esc(d.general)+'</div><p class="muted" style="margin:6px 0 0">'+t("generalNote")+"</p></div>"}
     else{
       lastSegs=d.segments||[];const tot=tr.claims_total||0,sup=tr.claims_supported||0;
       const vb=tr.verify==="ok"?'<span class="badge ok">'+ic("check",12)+' '+sup+"/"+tot+" "+t("verified")+"</span>":'<span class="badge warn">'+ic("alert",12)+' '+t("unverified")+"</span>";
