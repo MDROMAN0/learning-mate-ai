@@ -485,6 +485,8 @@ def audio_transcribe(vid, progress=lambda m: None):
             return None
         progress("Transcribing audio with Whisper (local)...")
         return transcribe(files[0]) or None
+    except JobCancelled:
+        raise
     except Exception as e:
         progress(f"Audio transcription failed ({str(e)[:80]})")
         return None
@@ -586,9 +588,16 @@ def gemini_transcribe(vid, progress=lambda m: None):
     raise RuntimeError("AI could not read this video - " + " | ".join(dict.fromkeys(errs))[:600])
 
 
+class JobCancelled(Exception):
+    pass
+
+
+CANCEL = contextvars.ContextVar("cancel", default=lambda: False)   # set by the job runner
+
+
 def transcribe(video_path):
     import asr
-    return asr.transcribe_media(video_path)
+    return asr.transcribe_media(video_path, should_stop=CANCEL.get())
 
 
 _SUB_T = re.compile(r"(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s*-->\s*(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})")
@@ -768,6 +777,8 @@ def build_index_from_segments(vid, title, segs, source, media=None, kind="youtub
     if env("ENRICH", "0") == "1":
         progress("Contextual enrichment (LLM)...")
         enrich(chunks, title)
+    if CANCEL.get()():
+        raise JobCancelled()
     progress("Embedding...")
     E = embed([index_text(c) for c in chunks], "passage")
     meta = {"video_id": vid, "title": title, "source": source, "kind": kind,
@@ -803,6 +814,8 @@ def build_index(url, force_asr=False, progress=lambda m: None):
     if not segs and path is None and env("ASR_AUDIO", "1") == "1":
         segs = audio_transcribe(vid, progress)
         source = "whisper-audio"
+    if CANCEL.get()():
+        raise JobCancelled()
     if not segs and path is None and env("GEMINI_TRANSCRIBE", "1") == "1":
         segs = gemini_transcribe(vid, progress)
         source = "gemini-video"

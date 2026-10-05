@@ -638,7 +638,10 @@ async function refreshMe(){
 async function logout(){await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()}
 
 /* views */
-function view(v){document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes")loadNotesList();if(v==="home"&&lib.length&&!demoStarted)startDemo();
+/* leaving a video that is still being prepared -> stop the server-side transcription/indexing (saves GPU) */
+function cancelPrep(nextId){if(cur&&cur.pending===true&&cur.video_id&&cur.video_id!==nextId){try{fetch("/api/job/"+encodeURIComponent(cur.video_id)+"/cancel",{method:"POST",headers:hdr(),credentials:"same-origin",keepalive:true})}catch(e){}cur.pending="fail"}}
+addEventListener("pagehide",()=>cancelPrep(null));
+function view(v){if(v!=="work")cancelPrep(null);document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes")loadNotesList();if(v==="home"&&lib.length&&!demoStarted)startDemo();
   document.querySelectorAll(".navl button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); if(v==="hist")loadHist(); drawLib()}
 document.querySelectorAll(".navl button").forEach(b=>b.onclick=()=>view(b.dataset.v));
 
@@ -717,6 +720,7 @@ async function bgPoll(id){
   try{const d=await api("/api/job/"+id);
     if(d.status==="done"){await loadLib();if(cur&&cur.video_id===id&&cur.pending){const dur=cur.duration;Object.assign(cur,d.meta,{pending:false});if(!cur.duration)cur.duration=dur;$("vtitle").textContent=cur.title;$("vmeta").innerHTML=metaBadges(cur);$("tlEnd").textContent=fmt(cur.duration);drawTL();loadTranscript();loadChapters();toast(t("aiReady"))}}
     else if(d.status==="error")aiFailed(id);
+    else if(d.status==="cancelled")return;
     else if(cur&&cur.video_id===id)setTimeout(()=>bgPoll(id),2000);
   }catch(e){aiFailed(id)}
 }
@@ -731,6 +735,7 @@ function metaBadges(m){
   if(m.pending==="fail")return '<span class="badge warn">'+ic("alert",12)+" "+t("aiFail")+"</span>";
   return '<span class="badge">'+fmt(m.duration)+'</span><span class="badge">'+m.n_chunks+" "+t("chunks")+'</span><span class="badge">'+esc(m.source)+"</span>"+engBadge()}
 function show(meta){
+  cancelPrep(meta&&meta.video_id);
   cur=meta;heat=null;chaps=null;lastSegs=[];chatHist=[];view("work");
   $("vtitle").textContent=meta.title; $("vmeta").innerHTML=metaBadges(meta);
   $("clipLbl").classList.toggle("hide",!meta.has_video); $("clip").checked=!!meta.has_video;

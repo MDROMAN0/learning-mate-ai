@@ -172,12 +172,22 @@ def _job(key, fn, *args):
         if JOBS.get(key, {}).get("status") == "running":     # two clicks at once -> one build
             return
         JOBS[key] = {"status": "running", "msg": "starting..."}
+    def progress(m):
+        if JOBS.get(key, {}).get("cancel"):             # viewer left the video -> stop the heavy work
+            raise rag.JobCancelled()
+        JOBS[key].update(msg=m)
+
     def run():
+        tok = rag.CANCEL.set(lambda: bool(JOBS.get(key, {}).get("cancel")))
         try:
-            meta = fn(*args, lambda m: JOBS[key].update(msg=m))
+            meta = fn(*args, progress)
             JOBS[key] = {"status": "done", "msg": "ready", "meta": meta}
+        except rag.JobCancelled:
+            JOBS[key] = {"status": "cancelled", "msg": "stopped (viewer left)"}
         except Exception as e:
             JOBS[key] = {"status": "error", "msg": str(e)}
+        finally:
+            rag.CANCEL.reset(tok)
     threading.Thread(target=run, daemon=True).start()
 
 
@@ -254,6 +264,16 @@ def upload(request: Request, file: UploadFile = File(...), title: str = Form("")
         youtube_url = None
     _job(key, lambda p, t, y, pr: rag.build_index_from_upload(p, t, pr, y), tmp, title or file.filename, youtube_url)
     return {"video_id": key, **JOBS[key]}
+
+
+@app.post("/api/job/{vid}/cancel")
+def job_cancel(vid: str):
+    """Viewer left the video while it was still being prepared: stop transcription/indexing (saves GPU)."""
+    j = JOBS.get(vid)
+    if j and j.get("status") == "running":
+        j["cancel"] = True
+        return {"video_id": vid, "status": "cancelling"}
+    return {"video_id": vid, "status": (j or {}).get("status", "unknown")}
 
 
 @app.get("/api/job/{vid}")

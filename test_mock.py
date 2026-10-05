@@ -502,3 +502,26 @@ rag._ask = lambda *a, **k: {"found": True, "video_id": "x", "trace": {}}
 assert "general" not in rag.ask("x", "q", general=True)
 rag._ask, rag.llm, rag.load_index = _orig_ask, _orig_llm, _li
 print("general-knowledge toggle OK")
+# leaving a video while it is being prepared stops the work (Whisper loop + before embedding)
+import asr as _asr
+class _Seg:
+    def __init__(s, i): s.start, s.end, s.text = i, i + 1, "x"
+calls_seen = []
+def _gen():
+    for i in range(100):
+        calls_seen.append(i); yield _Seg(i)
+import types as _ty
+_fw = _ty.ModuleType("faster_whisper")
+class _WM:
+    def __init__(s, *a, **k): pass
+    def transcribe(s, *a, **k): return _gen(), None
+_fw.WhisperModel = _WM; __import__("sys").modules["faster_whisper"] = _fw
+flag = {"stop": False}
+def _stop():
+    return flag["stop"] or len(calls_seen) >= 5
+try:
+    _asr.transcribe_media("x.mp3", "local", should_stop=_stop); raise SystemExit("should cancel")
+except rag.JobCancelled:
+    pass
+assert len(calls_seen) <= 6, calls_seen
+print("cancel-on-leave OK")

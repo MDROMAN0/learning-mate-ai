@@ -6,14 +6,14 @@ import tempfile
 import time
 
 
-def transcribe_media(path, provider=None):
+def transcribe_media(path, provider=None, should_stop=None):
     provider = provider or os.getenv("ASR_PROVIDER", "local")
     if provider == "sarvam":
         return _sarvam(path)
-    return _local(path)
+    return _local(path, should_stop)
 
 
-def _local(path):
+def _local(path, should_stop=None):
     from faster_whisper import WhisperModel
     model = WhisperModel(os.getenv("WHISPER_MODEL", "small"), device="auto", compute_type="auto")
     lang = os.getenv("ASR_LANG") or None
@@ -22,7 +22,13 @@ def _local(path):
     if lang == "unknown":
         lang = None
     segs, _ = model.transcribe(str(path), language=lang, vad_filter=True, beam_size=5)
-    return [{"start": s.start, "end": s.end, "text": s.text.strip()} for s in segs]
+    out = []
+    for s in segs:                       # segments are decoded lazily: stop the GPU work as soon as asked
+        if should_stop and should_stop():
+            import rag
+            raise rag.JobCancelled()
+        out.append({"start": s.start, "end": s.end, "text": s.text.strip()})
+    return out
 
 
 def _sarvam(path, chunk=None):
