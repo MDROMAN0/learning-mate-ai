@@ -1,0 +1,81 @@
+[
+ {
+  "video": "6GQIgagnVn4",
+  "question": "normalization ki?",
+  "gold": [
+   0,
+   41
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "data redundancy kivabe hoy? example dao",
+  "gold": [
+   39,
+   121
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "network kake bole?",
+  "gold": [
+   22,
+   70
+  ]
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "What does a switch do in a network?",
+  "gold": [
+   138,
+   181
+  ]
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "binary tree er definition ki?",
+  "gold": [
+   65,
+   139
+  ]
+ },
+ {
+  "video": "_VpYk2FaXUk",
+  "question": "full binary tree ki?",
+  "gold": [
+   178,
+   297
+  ]
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "python diye ki ki kora jay?",
+  "gold": [
+   109,
+   164
+  ]
+ },
+ {
+  "video": "BLFT_YN2cN0",
+  "question": "python keno eto popular?",
+  "gold": [
+   81,
+   110
+  ]
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "3NF er rule ki?",
+  "gold": null
+ },
+ {
+  "video": "6GQIgagnVn4",
+  "question": "SQL join kivabe kaj kore?",
+  "gold": null
+ },
+ {
+  "video": "rPAly4e8afM",
+  "question": "OSI model er 7 ta layer ki ki?",
+  "gold": null
+ }
+]

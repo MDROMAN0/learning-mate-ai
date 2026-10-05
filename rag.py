@@ -177,6 +177,21 @@ def _remote_provider():
     return v
 
 
+def local_ai_active():
+    """True when answers come from a self-hosted open-source model (this PC's Ollama, or the owner's PC online)."""
+    return ":11434" in env("LLM_BASE_URL") or _remote_provider() is not None
+
+
+def engine_info():
+    """Which model answers right now, for the UI badge: {name, where}."""
+    pc = _remote_provider()
+    if pc:
+        return {"name": pc[3], "where": "pc"}
+    if ":11434" in env("LLM_BASE_URL"):
+        return {"name": env("LLM_MODEL"), "where": "local"}
+    return {"name": env("LLM_MODEL"), "where": "cloud"}
+
+
 def _providers():
     """(tag, base_url, key, model, fast_model) in order: owner's PC (if online) -> LLM_* -> LLM_BACKUP_*."""
     out = []
@@ -250,7 +265,7 @@ def _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, has_next=
     rounds = 1 if has_next else int(env("LLM_BUSY_ROUNDS", "4"))
     for rnd in range(rounds):
         try:
-            return _llm_try(cl, models, msgs, temperature, max_tokens, gem)
+            return _llm_try(cl, models, msgs, temperature, max_tokens, gem, _is_local(base, tag))
         except _AllBusy as e:
             if rnd == rounds - 1:
                 raise e.last
@@ -270,13 +285,27 @@ class _AllBusy(Exception):
 _COOL = {}  # model -> time until which it is rate-limited (skip it instead of wasting a round-trip)
 
 
-def _llm_try(cl, models, msgs, temperature, max_tokens, gem):
+def _is_local(base, tag):
+    """Self-hosted open-source model (Ollama on this PC or the owner's PC behind the gate)."""
+    return tag == "PC_" or ":11434" in (base or "") or "trycloudflare.com" in (base or "")
+
+
+def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
     wait = None
+    if local:
+        # open-source models: force valid JSON when the prompt asks for JSON (Ollama "format: json"),
+        # and turn off Qwen3-style "thinking" so answers stay fast
+        wants_json = "json" in (msgs[0]["content"] + msgs[-1]["content"][-400:]).lower()
+        msgs = [dict(x) for x in msgs]
+        if any(m.lower().startswith("qwen3") for m in models):
+            msgs[0]["content"] += " /no_think"
     t = time.time()
     ready = [m for m in models if _COOL.get(m, 0) <= t]
     models = ready + [m for m in models if m not in ready]   # cooling models last, as a final resort
     for i, m in enumerate(models):
         kw = dict(model=m, messages=msgs, temperature=temperature, max_tokens=max_tokens)
+        if local and wants_json:
+            kw["response_format"] = {"type": "json_object"}
         # Gemini 3.x "thinks" by default and thinking tokens eat max_tokens -> empty replies.
         # Measured (Sep 2026, free tier): flash + reasoning_effort=none -> ~2s and a real answer;
         # flash-lite rejects "none" (400) but doesn't need it. LLM_REASONING=low|medium for harder answers.
@@ -1043,13 +1072,17 @@ def verify_answer(ans, ev):
             "or directly implies it. The evidence is a noisy auto-generated caption transcript (often "
             "Bangla, English terms may be written in Bangla script or misspelled) and the claim may be a "
             "translation or paraphrase of it: judge meaning, not wording. Outside knowledge does not count.",
-            f"{blocks}\n\nThere are exactly {len(checkable)} claims. Return JSON: {{\"results\": "
-            f"[{len(checkable)} booleans true/false, one per claim, in order]}}",
+            f"{blocks}\n\nThere are exactly {len(checkable)} claims. For each claim answer \"yes\" (supported), "
+            f"\"partly\" (mostly supported / reasonable paraphrase) or \"no\" (contradicted or not in the evidence). "
+            f"Return JSON: {{\"results\": [{len(checkable)} strings, one per claim, in order]}}",
             max_tokens=400))
         res = out.get("results") if out else None
         if isinstance(res, list):
             res = [(r.get("supported", r.get("verdict", r.get("result"))) if isinstance(r, dict) else r) for r in res]
-            res = [(str(r).strip().lower() in ("true", "yes", "supported", "1")) if not isinstance(r, bool) else r for r in res]
+            keep = ("true", "yes", "supported", "1", "partly", "partial", "partially")
+            if env("VERIFY_STRICT", "0") == "1":
+                keep = ("true", "yes", "supported", "1")
+            res = [(str(r).strip().lower() in keep) if not isinstance(r, bool) else r for r in res]
         if isinstance(res, list) and len(res) == len(checkable):
             for (si, pi, _, _), ok in zip(checkable, res):
                 verdict[(si, pi)] = bool(ok)

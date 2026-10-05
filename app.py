@@ -73,6 +73,8 @@ async def revalidate_static(request: Request, call_next):
 def _charge(request: Request):
     """Per-user daily quota for LLM-heavy calls (protects the free LLM key). Also applies the UI language."""
     rag.set_lang(request.headers.get("x-lang", ""))
+    if rag.local_ai_active():          # own open-source model (Ollama): no API quota to protect -> unlimited
+        return
     g = getattr(request.state, "guest", None)
     if g and not auth.guest_charge(g, _ip(request)):
         raise HTTPException(429, f"demo limit reached ({auth.guest_limit()} questions) - create a free account to continue")
@@ -448,9 +450,11 @@ def me(request: Request):
     gid = None if u else auth.guest_from_token(request.cookies.get(auth.GUEST_COOKIE))
     if gid:
         return {"auth": auth.enabled(), "user": None, "guest": True, "limit": auth.guest_limit(),
-                "used": auth.guest_used(gid), "app_password": False}
+                "used": auth.guest_used(gid), "app_password": False, "unlimited": rag.local_ai_active(),
+                "engine": rag.engine_info()}
     return {"auth": auth.enabled(), "user": u, "guest": False, "limit": auth.daily_limit(),
-            "used": auth.used_today(u["id"]) if u else 0,
+            "used": auth.used_today(u["id"]) if u else 0, "unlimited": rag.local_ai_active(),
+            "engine": rag.engine_info(),
             "app_password": bool(os.getenv("APP_PASSWORD")) and not auth.enabled()}
 
 

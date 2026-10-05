@@ -6,9 +6,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261003">
-<script src="/static/i18n.js?v=20261003"></script>
-<script src="/static/icons.js?v=20261003"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261005">
+<script src="/static/i18n.js?v=20261005"></script>
+<script src="/static/icons.js?v=20261005"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -627,12 +627,12 @@ async function refreshMe(){
   if(me.app_password&&!$("appkey").value)$("keyBlk").classList.remove("hide");
   $("aClose").classList.toggle("hide",!me.guest);document.body.classList.toggle("guest",!!me.guest);
   if(me.guest){$("meBox").classList.remove("hide");$("meAv").textContent="D";$("meName").textContent=t("guestBadge");
-    $("meUse").textContent=t("guestUse",{u:me.used,l:me.limit});$("meBar").style.width=Math.min(100,100*me.used/Math.max(1,me.limit))+"%";
+    $("meUse").textContent=me.unlimited?t("unlimited"):t("guestUse",{u:me.used,l:me.limit});$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%";
     $("logoutBtn").textContent=t("guestCta");$("logoutBtn").onclick=()=>{setAuthMode(true);showAuth()};return}
   $("logoutBtn").textContent=t("logout");$("logoutBtn").onclick=logout;
   if(me.auth&&!me.user){showAuth();return}
   if(me.user){$("meBox").classList.remove("hide");$("histNav").classList.remove("hide");$("notesNav").classList.remove("hide");$("meAv").textContent=(me.user.name||me.user.email)[0].toUpperCase();$("meName").textContent=me.user.name||me.user.email;
-    $("meUse").textContent=t("usage")+": "+me.used+" / "+me.limit;$("meBar").style.width=Math.min(100,100*me.used/Math.max(1,me.limit))+"%"}
+    $("meUse").textContent=me.unlimited?t("unlimited"):t("usage")+": "+me.used+" / "+me.limit;$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%"}
 }
 async function logout(){await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()}
 
@@ -724,10 +724,11 @@ function aiFailed(id){if(cur&&cur.video_id===id){cur.pending="fail";$("vmeta").i
 /* open a video */
 async function openVid(id){try{const d=await api("/api/job/"+id);if(d.status==="done")show(d.meta)}catch(e){toast(tMsg(e.message))}}
 function suggest(){$("sugg").innerHTML=t("sugg").map(s=>"<button>"+esc(s)+"</button>").join("");document.querySelectorAll("#sugg button").forEach(b=>b.onclick=()=>{$("q").value=b.textContent;ask()})}
+function engBadge(){const e=me&&me.engine;if(!e||!e.name)return "";return '<span class="badge" title="'+esc(t("engTip"))+'">'+ic("brain",12)+" "+esc(e.name)+" · "+t(e.where==="cloud"?"engCloud":"engOwn")+"</span>"}
 function metaBadges(m){
-  if(m.pending===true)return '<span class="badge"><span class="spin" style="width:11px;height:11px"></span> '+t("aiPrep")+"</span>";
+  if(m.pending===true)return '<span class="badge"><span class="spin" style="width:11px;height:11px"></span> '+t("aiPrep")+"</span>"+engBadge();
   if(m.pending==="fail")return '<span class="badge warn">'+ic("alert",12)+" "+t("aiFail")+"</span>";
-  return '<span class="badge">'+fmt(m.duration)+'</span><span class="badge">'+m.n_chunks+" "+t("chunks")+'</span><span class="badge">'+esc(m.source)+"</span>"}
+  return '<span class="badge">'+fmt(m.duration)+'</span><span class="badge">'+m.n_chunks+" "+t("chunks")+'</span><span class="badge">'+esc(m.source)+"</span>"+engBadge()}
 function show(meta){
   cur=meta;heat=null;chaps=null;lastSegs=[];chatHist=[];view("work");
   $("vtitle").textContent=meta.title; $("vmeta").innerHTML=metaBadges(meta);
@@ -1009,6 +1010,6 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261003"></script>
+<script src="/static/notebook.js?v=20261005"></script>
 </body>
 </html>
