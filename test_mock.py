@@ -525,3 +525,87 @@ except rag.JobCancelled:
     pass
 assert len(calls_seen) <= 6, calls_seen
 print("cancel-on-leave OK")
+# live progress events (streaming) + follow-up questions that depend on the chat history
+def _llm_follow(system, user, temperature=0.1, max_tokens=1500):
+    if "rewrite search queries" in system:
+        SEEN["rewrite_user"] = user
+        d = {"queries": ["git branch merge"], "sub_questions": [], "hypothetical": "we merge the branch"}
+        if "Earlier questions" in user:
+            d["standalone"] = "how does git merge work with an example"
+        return json.dumps(d)
+    return fake_llm(system, user, temperature, max_tokens)
+rag.llm = _llm_follow
+evs = []
+out = rag.ask(V1, "git merge", make_clip=False, on_event=evs.append)
+names = [e.get("name") or e["ev"] for e in evs]
+assert names == ["rewrite", "retrieve", "grade", "evidence", "generate", "draft", "verify"], names
+assert evs[3]["refs"] == out["refs"] and evs[5]["answer"]["sections"] and "standalone" not in out["trace"]
+assert rag._EV.get() is None                                   # the hook never leaks into the next request
+fu = rag.ask(V1, "give an example of it", make_clip=False, history=[{"q": "what is git merge"}])
+assert "what is git merge" in SEEN["rewrite_user"]
+assert fu["found"] and fu["trace"]["standalone"] == "how does git merge work with an example"
+assert fu["trace"]["asked"] == "give an example of it"
+assert "standalone" not in rag.ask(V1, "git merge", make_clip=False, history=[])["trace"]
+def _boom(ev): raise RuntimeError("listener bug")
+assert rag.ask(V1, "git merge", make_clip=False, on_event=_boom)["found"]      # a broken listener can't break RAG
+for _k in ("AUTH", "APP_PASSWORD"):
+    os.environ.pop(_k, None)
+sc = TestClient(appmod.app)
+r = sc.post("/api/ask_stream", json={"video_id": V1, "question": "git merge", "clip": False,
+                                     "history": [{"q": "what is git"}, {"x": 1}]})
+assert r.status_code == 200 and r.headers["content-type"].startswith("text/event-stream"), r.text
+lines = [json.loads(l[6:]) for l in r.text.split("\n") if l.startswith("data: ")]
+assert [l["ev"] for l in lines][-1] == "done" and lines[-1]["data"]["found"] and lines[0]["ev"] == "stage"
+assert lines[-1]["data"]["trace"]["standalone"]
+r = sc.post("/api/ask_stream", json={"video_id": "nope_nope_x", "question": "q"})
+assert json.loads([l for l in r.text.split("\n") if l.startswith("data: ")][-1][6:])["ev"] == "error"
+assert sc.post("/api/ask_stream", json={"video_id": V1, "question": "  "}).status_code == 400
+assert sc.post("/api/auth/token", json={"email": "a@b.c", "password": "x"}).json() == {"token": "", "user": None}
+g = sc.get("/", headers={"accept-encoding": "gzip"})
+assert g.headers.get("content-encoding") == "gzip"
+rag.llm = _orig_llm
+print("streaming events / follow-up memory / extension token / gzip OK")
+# PDF / PowerPoint upload: pages become "minutes", so citations point at a page
+from pptx import Presentation as _Prs
+_page = lambda words, n: " ".join(f"{words} sentence number {k}." for k in range(n))
+def _pdf(path, pages):
+    from reportlab.pdfgen import canvas
+    cv = canvas.Canvas(str(path))
+    for txt in pages:
+        y = 800
+        for k in range(0, len(txt), 80):
+            cv.drawString(40, y, txt[k:k + 80]); y -= 14
+        cv.showPage()
+    cv.save()
+_d = rag.DATA / "doc_test.pdf"
+_pdf(_d, [_page("gradient descent loss learning rate", 12), "", _page("git commit branch merge repository", 12)])
+segs_d = rag.document_segments(rag.read_document(_d))
+assert segs_d[0]["start"] == 0 and all(120 <= s["start"] < 180 for s in segs_d if "git" in s["text"]), segs_d[:2]
+assert not any(60 <= s["start"] < 120 for s in segs_d)                       # the empty page gives nothing
+rag.llm = fake_llm
+r = sc.post("/api/upload", files={"file": ("notes.pdf", _d.read_bytes(), "application/pdf")}, data={"title": "My notes"})
+assert r.status_code == 200, r.text
+j = wait(r.json()["video_id"]); dm = j["meta"]
+assert dm["doc"] == "pdf" and dm["pages"] == 3 and dm["duration"] == 180 and dm["kind"] == "upload" and not dm["has_video"]
+assert dm["media_url"].endswith(".pdf") and (rag.DATA / "videos" / dm["media_url"].split("/")[-1]).exists()
+da = rag.ask(dm["video_id"], "git merge", make_clip=False)
+assert da["found"] and all(120 <= x["start"] < 180 for x in da["refs"]), da["refs"]     # cites page 3 only
+assert all(x["start"] >= 120 and x["end"] <= 180 for x in da["segments"]), da["segments"]   # no padding into page 2
+assert rag.ask(dm["video_id"], "git merge", make_clip=False, current_time=120)["found"] is False   # read up to page 2
+_p = rag.DATA / "deck.pptx"; prs = _Prs()
+for txt in ("onion garlic pan oil fry", "git commit branch merge repository push"):
+    sl = prs.slides.add_slide(prs.slide_layouts[1]); sl.shapes.title.text = txt; sl.placeholders[1].text = _page(txt, 6)
+    sl.notes_slide.notes_text_frame.text = "speaker note about " + txt
+prs.save(str(_p))
+pp = rag.read_document(_p); assert len(pp) == 2 and "speaker note" in pp[1]
+r = sc.post("/api/upload", files={"file": ("deck.pptx", _p.read_bytes(), "application/octet-stream")}, data={"title": "Deck"})
+pm = wait(r.json()["video_id"])["meta"]; assert pm["doc"] == "pptx" and pm["pages"] == 2
+(rag.DATA / "blank.pdf").write_bytes(b""); _pdf(rag.DATA / "blank.pdf", ["", ""])
+r = sc.post("/api/upload", files={"file": ("blank.pdf", (rag.DATA / "blank.pdf").read_bytes(), "application/pdf")})
+assert "No text found" in wait(r.json()["video_id"])["msg"]
+r = sc.post("/api/upload", files={"file": ("bad.pdf", b"not a pdf at all", "application/pdf")})
+assert "could not read" in wait(r.json()["video_id"])["msg"]
+assert not list(rag.DATA.glob("tmp*.pdf")), list(rag.DATA.glob("tmp*"))          # failed uploads leave no temp file
+assert sc.post("/api/upload", files={"file": ("x.exe", b"x", "application/octet-stream")}).status_code == 400
+rag.llm = _orig_llm
+print("PDF / PowerPoint upload OK")

@@ -1,4 +1,7 @@
+import contextvars
+import json
 import os
+import queue
 import tempfile
 import threading
 from pathlib import Path
@@ -6,7 +9,8 @@ from typing import List, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -16,6 +20,7 @@ import features
 import rag
 
 app = FastAPI(title="YouTube Topic RAG")
+app.add_middleware(GZipMiddleware, minimum_size=1024)   # ~100 KB of HTML/JS -> ~25 KB on the wire
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/clips", StaticFiles(directory=str(rag.DATA / "clips")), name="clips")
 app.mount("/media", StaticFiles(directory=str(rag.DATA / "videos")), name="media")
@@ -112,6 +117,12 @@ class AskReq(BaseModel):
     use_verify: bool = True
     debug: bool = False  # RAG Lab: return every pipeline stage in trace["debug"]
     general: bool = False  # toggle: also answer from general knowledge when the video doesn't cover it
+    history: Optional[List[dict]] = None  # earlier questions of this chat [{"q": ...}] -> follow-up questions work
+
+
+def _hist(req):
+    """Last 3 earlier questions, clamped (they go into an LLM prompt)."""
+    return [{"q": str(h.get("q", ""))[:300]} for h in (req.history or [])[-3:] if isinstance(h, dict) and h.get("q")]
 
 
 class CompareReq(BaseModel):
@@ -241,7 +252,7 @@ def index_transcript(req: TranscriptReq, request: Request):
 def upload(request: Request, file: UploadFile = File(...), title: str = Form(""), youtube_url: str = Form("")):
     _charge(request)
     ext = Path(file.filename or "").suffix.lower()
-    if ext not in rag.SUB_EXT | rag.AUDIO_EXT | {".mp4", ".mkv", ".webm", ".mov", ".avi"}:
+    if ext not in rag.SUB_EXT | rag.AUDIO_EXT | rag.DOC_EXT | {".mp4", ".mkv", ".webm", ".mov", ".avi"}:
         raise HTTPException(400, "unsupported file type")
     fd, tmp = tempfile.mkstemp(suffix=ext, dir=str(rag.DATA))
     size = 0
@@ -292,7 +303,7 @@ def ask(req: AskReq, request: Request):
         raise HTTPException(400, "empty question")
     _charge(request)
     out = _safe(rag.ask, req.video_id, req.question, req.current_time, req.clip, req.mode,
-                req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug, req.general)
+                req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug, req.general, _hist(req))
     u = request.state.user
     if u:
         try:
@@ -300,6 +311,49 @@ def ask(req: AskReq, request: Request):
         except Exception:
             pass
     return out
+
+
+@app.post("/api/ask_stream")
+def ask_stream(req: AskReq, request: Request):
+    """Same as /api/ask but streams progress (Server-Sent Events): each pipeline stage as it finishes, the
+    evidence moments, the draft answer before verification, then the final result."""
+    if not req.question.strip():
+        raise HTTPException(400, "empty question")
+    _charge(request)
+    q, u = queue.Queue(), request.state.user
+
+    def work():
+        try:
+            out = rag.ask(req.video_id, req.question, req.current_time, req.clip, req.mode, req.use_rewrite,
+                          req.level, req.use_grade, req.use_verify, req.debug, req.general, _hist(req), q.put)
+            if u:
+                try:
+                    auth.add_history(u["id"], out.get("video_id"), out.get("title"), req.question, out)
+                except Exception:
+                    pass
+            q.put({"ev": "done", "data": out})
+        except (FileNotFoundError, ValueError) as e:
+            q.put({"ev": "error", "detail": str(e)})
+        except Exception as e:
+            q.put({"ev": "error", "detail": f"{type(e).__name__}: {e}"})
+        q.put(None)
+
+    # copy_context: the worker thread keeps this request's language setting
+    threading.Thread(target=contextvars.copy_context().run, args=(work,), daemon=True).start()
+
+    def gen():
+        while True:
+            try:
+                item = q.get(timeout=15)
+            except queue.Empty:
+                yield ": keep-alive\n\n"          # proxies close silent connections
+                continue
+            if item is None:
+                break
+            yield "data: " + json.dumps(item, ensure_ascii=False) + "\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/api/lab/compare")
@@ -441,6 +495,18 @@ def login(req: AuthReq, resp: Response):
         return _session(resp, auth.login(req.email, req.password))
     except PermissionError as e:
         raise HTTPException(401, str(e))
+
+
+@app.post("/api/auth/token")
+def auth_token(req: AuthReq):
+    """Login for the Chrome extension: it cannot use the site cookie, so it gets a bearer token instead."""
+    if not auth.enabled():
+        return {"token": "", "user": None}
+    try:
+        user = auth.login(req.email, req.password)
+    except PermissionError as e:
+        raise HTTPException(401, str(e))
+    return {"token": auth.make_token(user["id"]), "user": user}
 
 
 @app.post("/api/auth/logout")

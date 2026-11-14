@@ -74,3 +74,7 @@ kbd{font:600 11px var(--mono);padding:1px 6px;border-radius:5px;border:1px solid
 .ico{flex:none;vertical-align:-3px}
 .fi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--brandSoft);color:var(--brand);margin-bottom:6px}
 .btn .ico{margin:-2px 0}
+
+/* keyboard users can always see where they are */
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+.in:focus-visible{outline:none}

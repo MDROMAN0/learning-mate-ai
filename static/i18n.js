@@ -8,7 +8,7 @@ window.I18N = {
     study: "Study", lab: "RAG Lab", online: "online", offline: "offline", langBtn: "বাংলা",
     home: "Home", browse: "Browse YouTube", library: "My library", historyT: "History",
     appKey: "App key", appKeyPh: "APP_PASSWORD (only if the host set one)", needKey: "Enter the app key",
-    addVideo: "Add a video", pasteLink: "Paste a YouTube link", index: "Add", upload: "Upload file", uploadHint: "video · audio · .srt · .vtt",
+    addVideo: "Add a video", pasteLink: "Paste a YouTube link", index: "Add", upload: "Upload file", uploadHint: "video · audio · .srt · .vtt · PDF · slides (.pptx)", pageL: "Page", slidesOnly: "Slides: read the text below, citations jump to the slide",
     searchLib: "Search your library", libEmpty: "Your library is empty — browse YouTube or paste a link", noMatch: "No match", chunksShort: "parts",
     heroBadge: "RAG · Hybrid retrieval · Verified answers",
     heroTitle: "Jump straight to the part of a long video you actually need.",
@@ -41,6 +41,7 @@ window.I18N = {
     simple: "Simple", exam: "Exam", expert: "Expert", spoiler: "spoiler-free", spoilerT: "Only use what I have watched so far", clip: "clip",
     thinking: "Searching…", pipeline: "rewrite → hybrid search → relevance check → grounded answer → verification",
     pRewrite: "Rewrite", pRetrieve: "Search", pGrade: "Check", pGenerate: "Answer", pVerify: "Verify",
+    checking: "checking against the video…", understoodAs: "Understood as", sourcesFound: "Source moments found", connLost: "Connection lost — try again",
     notFound: "Not in this video", notFoundMsg: "This topic is not in this video.", notFoundUpTo: "Not found in the part you have watched (up to {t}).",
     notFoundD: "Searched twice (with a broader query) and found nothing relevant, so no answer was invented.",
     verified: "claims verified", unverified: "not verified", evidence: "evidence passages", segment: "segment", clipFile: "Show clip file",
@@ -111,7 +112,7 @@ window.I18N = {
     study: "পড়া", lab: "RAG Lab", online: "চালু", offline: "বন্ধ", langBtn: "English",
     home: "হোম", browse: "YouTube খুঁজুন", library: "আমার লাইব্রেরি", historyT: "ইতিহাস",
     appKey: "অ্যাপ key", appKeyPh: "APP_PASSWORD (সার্ভারে দেওয়া থাকলে)", needKey: "অ্যাপ key দাও",
-    addVideo: "নতুন ভিডিও", pasteLink: "YouTube লিংক দাও", index: "যোগ করো", upload: "ফাইল আপলোড", uploadHint: "ভিডিও · অডিও · .srt · .vtt",
+    addVideo: "নতুন ভিডিও", pasteLink: "YouTube লিংক দাও", index: "যোগ করো", upload: "ফাইল আপলোড", uploadHint: "ভিডিও · অডিও · .srt · .vtt · PDF · স্লাইড (.pptx)", pageL: "পৃষ্ঠা", slidesOnly: "স্লাইড: নিচে লেখা পড়ো, উৎসে ক্লিক করলে ওই স্লাইডে যাবে",
     searchLib: "লাইব্রেরিতে খোঁজো", libEmpty: "লাইব্রেরি খালি — YouTube খুঁজে বা লিংক দিয়ে ভিডিও যোগ করো", noMatch: "কিছু মেলেনি", chunksShort: "অংশ",
     heroBadge: "RAG · হাইব্রিড সার্চ · যাচাই করা উত্তর",
     heroTitle: "লম্বা ভিডিওর ঠিক যে অংশটা দরকার, সেটাই।",
@@ -144,6 +145,7 @@ window.I18N = {
     simple: "সহজ", exam: "পরীক্ষা", expert: "বিস্তারিত", spoiler: "স্পয়লার ছাড়া", spoilerT: "শুধু এখন পর্যন্ত দেখা অংশ থেকে", clip: "ক্লিপ",
     thinking: "খুঁজছি…", pipeline: "প্রশ্ন বোঝা → হাইব্রিড খোঁজা → প্রাসঙ্গিকতা যাচাই → উত্তর → মিলিয়ে দেখা",
     pRewrite: "প্রশ্ন বোঝা", pRetrieve: "খোঁজা", pGrade: "যাচাই", pGenerate: "উত্তর", pVerify: "মিলিয়ে দেখা",
+    checking: "ভিডিওর সাথে মিলিয়ে দেখছি…", understoodAs: "যেভাবে বুঝেছি", sourcesFound: "উৎসের জায়গা পাওয়া গেছে", connLost: "সংযোগ কেটে গেছে — আবার চেষ্টা করো",
     notFound: "এই ভিডিওতে নেই", notFoundMsg: "এই বিষয়টা এই ভিডিওতে পাওয়া যায়নি।", notFoundUpTo: "তোমার দেখা অংশে ({t} পর্যন্ত) এটা পাওয়া যায়নি।",
     notFoundD: "দুইবার (আরও বড় পরিসরে) খুঁজেও প্রাসঙ্গিক অংশ পাওয়া যায়নি, তাই বানিয়ে উত্তর দেওয়া হয়নি।",
     verified: "তথ্য যাচাই হয়েছে", unverified: "যাচাই হয়নি", evidence: "টি প্রমাণ-অংশ", segment: "অংশ", clipFile: "ক্লিপ ফাইল দেখো",
@@ -224,5 +226,8 @@ window.applyLang = () => {
   document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
   document.querySelectorAll("[data-tp]").forEach(el => el.placeholder = t(el.dataset.tp));
   document.querySelectorAll("[data-tt]").forEach(el => el.title = t(el.dataset.tt));
+  // screen readers: a field or icon button with no visible text gets its placeholder / tooltip as its name
+  document.querySelectorAll("[data-tp]").forEach(el => el.setAttribute("aria-label", el.placeholder));
+  document.querySelectorAll("[data-tt]").forEach(el => el.setAttribute("aria-label", el.title));
 };
 window.toggleLang = () => { window.LANG = window.LANG === "bn" ? "en" : "bn"; try { localStorage.setItem("lang", window.LANG); } catch (e) {} window.applyLang(); if (window.onLang) window.onLang(); };

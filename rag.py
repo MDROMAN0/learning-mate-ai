@@ -57,6 +57,10 @@ for _d in ("videos", "index", "clips"):
     (DATA / _d).mkdir(parents=True, exist_ok=True)
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".opus"}
 SUB_EXT = {".srt", ".vtt"}
+DOC_EXT = {".pdf", ".pptx"}
+# A document has no clock. Every page/slide counts as one "minute", so the same chunking, timeline,
+# spoiler-free limit and [n] citations work unchanged; the UI shows "p.3" instead of "2:00".
+PAGE_SEC = 60.0
 
 
 def env(k, d=""):
@@ -65,6 +69,19 @@ def env(k, d=""):
 
 MODES = ("dense", "bm25", "hybrid", "hybrid+rerank")
 _S = contextvars.ContextVar("rag_stats", default=None)
+_EV = contextvars.ContextVar("events", default=None)    # per-request callback for live progress (streaming)
+
+
+def _emit(ev, **data):
+    """Send a live progress event to the caller (used by /api/ask_stream). Never breaks the pipeline."""
+    cb = _EV.get()
+    if cb:
+        try:
+            cb({"ev": ev, **data})
+        except Exception:
+            pass
+
+
 _LANG = contextvars.ContextVar("out_lang", default="")  # "bn" | "en" | "" (follow the question) - set per request
 
 
@@ -394,11 +411,12 @@ def embed(texts, kind="passage", batch=32):
     if _embc is None:
         from openai import OpenAI
         _embc = OpenAI(api_key=env("EMB_API_KEY") or os.environ["LLM_API_KEY"],
-                       base_url=env("EMB_BASE_URL") or env("LLM_BASE_URL") or None)
+                       base_url=env("EMB_BASE_URL") or env("LLM_BASE_URL") or None,
+                       timeout=float(env("EMB_TIMEOUT", "20")), max_retries=0)   # fail fast -> BM25 fallback
     todo = [t for t in dict.fromkeys(texts) if not (kind == "query" and (emb_model(), t) in _QCACHE)]
     got = {}
     for i in range(0, len(todo), batch):
-        for attempt in range(5):
+        for attempt in range(1 if kind == "query" else 5):   # a question must not wait on retries
             try:
                 r = _embc.embeddings.create(model=emb_model(), input=todo[i:i + batch])
                 got.update({t: d.embedding for t, d in zip(todo[i:i + batch], r.data)})
@@ -767,13 +785,20 @@ YT_BLOCK_MSG = ("YouTube blocked this server (cloud IPs are blocked) or has no c
 
 
 def build_index_from_segments(vid, title, segs, source, media=None, kind="youtube",
-                              progress=lambda m: None, media_url=None):
+                              progress=lambda m: None, media_url=None, extra_meta=None):
     segs = clean_segments(segs)
     if not segs:
         raise RuntimeError("Empty transcript")
     progress("Chunking...")
     cinfo = {}
-    chunks = semantic_chunks(segs, info=cinfo)
+    if (extra_meta or {}).get("doc"):
+        # a document chunk never crosses a page, so every citation points at exactly one page
+        by_page = {}
+        for sg in segs:
+            by_page.setdefault(int(sg["start"] // PAGE_SEC), []).append(sg)
+        chunks = [c for p in sorted(by_page) for c in semantic_chunks(by_page[p], max_dur=PAGE_SEC)]
+    else:
+        chunks = semantic_chunks(segs, info=cinfo)
     if env("ENRICH", "0") == "1":
         progress("Contextual enrichment (LLM)...")
         enrich(chunks, title)
@@ -784,6 +809,7 @@ def build_index_from_segments(vid, title, segs, source, media=None, kind="youtub
     meta = {"video_id": vid, "title": title, "source": source, "kind": kind,
             "n_chunks": len(chunks), "has_video": media is not None, "media_url": media_url,
             "duration": segs[-1]["end"], "emb_id": emb_id()}
+    meta.update(extra_meta or {})
     save_index(vid, meta, chunks, E, {"chunking": cinfo})
     return meta
 
@@ -842,11 +868,74 @@ def build_index_from_upload(path, title, progress=lambda m: None, youtube_url=No
                                          "youtube" if youtube_url else "upload", progress)
     vid = "up_" + uuid.uuid4().hex[:8]
     final = DATA / "videos" / f"{vid}{ext}"
+    if ext in DOC_EXT:                                   # PDF / slides: text comes from the pages, no ASR
+        progress("Reading pages...")
+        try:
+            pages = read_document(path)
+        except Exception as e:
+            path.unlink(missing_ok=True)
+            raise e if isinstance(e, RuntimeError) else RuntimeError(
+                f"could not read this {ext[1:].upper()} file ({type(e).__name__})")
+        segs = document_segments(pages)
+        if not segs:
+            path.unlink(missing_ok=True)
+            raise RuntimeError("No text found in this file (a scanned PDF has only images - it needs OCR first)")
+        shutil.move(str(path), final)
+        return build_index_from_segments(vid, title, segs, ext[1:], None, "upload", progress, "/media/" + final.name,
+                                         {"doc": ext[1:], "pages": len(pages), "duration": len(pages) * PAGE_SEC})
     shutil.move(str(path), final)
     progress("Transcribing (ASR)...")
     segs = transcribe(final)
     return build_index_from_segments(vid, title, segs, env("ASR_PROVIDER", "local"), final,
                                      "upload", progress, "/media/" + final.name)
+
+
+def read_document(path):
+    """PDF or PowerPoint -> list of texts, one per page/slide (slide notes included)."""
+    path = Path(path)
+    if path.suffix.lower() == ".pdf":
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            raise RuntimeError("PDF support needs:  pip install pypdf")
+        return [(pg.extract_text() or "") for pg in PdfReader(str(path)).pages]
+    try:
+        from pptx import Presentation
+    except ImportError:
+        raise RuntimeError("PowerPoint support needs:  pip install python-pptx")
+    pages = []
+    for slide in Presentation(str(path)).slides:
+        parts = [sh.text_frame.text for sh in slide.shapes if sh.has_text_frame]
+        if slide.has_notes_slide and slide.notes_slide.notes_text_frame is not None:
+            parts.append(slide.notes_slide.notes_text_frame.text)
+        pages.append("\n".join(p for p in parts if p.strip()))
+    return pages
+
+
+def document_segments(pages):
+    """Page texts -> transcript-like segments: page i owns the time range [i*60, (i+1)*60) and its
+    sentences share that range evenly, so a chunk's start time tells which page it came from."""
+    segs = []
+    for i, text in enumerate(pages):
+        text = re.sub(r"[ \t]+", " ", text or "").strip()
+        if not text:
+            continue
+        pieces, buf = [], ""
+        for part in re.split(r"(?<=[.!?।])\s+|\n+", text):     # sentences, joined up to ~200 characters
+            part = part.strip()
+            if not part:
+                continue
+            if buf and len(buf) + len(part) > 200:
+                pieces.append(buf)
+                buf = part
+            else:
+                buf = (buf + " " + part).strip()
+        if buf:
+            pieces.append(buf)
+        step = PAGE_SEC / len(pieces)
+        for j, p in enumerate(pieces):
+            segs.append({"start": i * PAGE_SEC + j * step, "end": i * PAGE_SEC + (j + 1) * step, "text": p})
+    return segs
 
 
 def list_library():
@@ -933,10 +1022,19 @@ def retrieve(ix, queries, question, k=8, max_time=None, mode="hybrid+rerank", po
 
 
 # ------------------------------------------------- query rewrite / grading
-def rewrite_query(question, title, broader=False):
+def rewrite_query(question, title, broader=False, history=None, info=None):
+    """history: earlier questions of this chat. If the new question depends on them ("explain it more"),
+    the same LLM call also returns a standalone version, stored in info["standalone"] (no extra call)."""
     qs = [question]
     try:
         extra = " Use broader, related terms and synonyms." if broader else ""
+        prev = [str(h.get("q", ""))[:300] for h in (history or []) if isinstance(h, dict) and h.get("q")][-3:]
+        if prev:
+            extra += (" Earlier questions in this chat (oldest first): " + json.dumps(prev, ensure_ascii=False) +
+                      ". If the new question depends on them (words like it/this/that/eta/oita, or \"more\", "
+                      "\"example\"), also return \"standalone\": the full question rewritten so it is clear on "
+                      "its own; if it does not depend on them return \"standalone\": \"\". Write the queries "
+                      "for the standalone question.")
         out = parse_json(llm_fast(
             "You rewrite search queries for transcript retrieval.",
             f"Video title: {title}\nUser question (Bangla, English or Banglish = Bangla typed in "
@@ -946,6 +1044,10 @@ def rewrite_query(question, title, broader=False):
             f"\"1-2 sentence passage that would answer it, as a speaker would say it\"}}.{extra}",
             max_tokens=500))
         if out:
+            sa = out.get("standalone")
+            if prev and isinstance(sa, str) and 3 < len(sa.strip()) < 400 and info is not None:
+                info["standalone"] = sa.strip()
+                qs.insert(0, sa.strip())
             qs += [q for q in out.get("queries", []) if isinstance(q, str)][:3]
             qs += [q for q in out.get("sub_questions", []) if isinstance(q, str)][:3]
             h = out.get("hypothetical")
@@ -1133,13 +1235,16 @@ def general_answer(question, title=""):
 
 
 def ask(video, question, current_time=None, make_clip=True, mode="hybrid+rerank",
-        use_rewrite=True, level="simple", use_grade=True, use_verify=True, debug=False, general=False):
+        use_rewrite=True, level="simple", use_grade=True, use_verify=True, debug=False, general=False,
+        history=None, on_event=None):
     """Full pipeline. use_* flags exist for ablation; debug=True adds every intermediate stage to trace.
     general=True: if the video does not cover the question, add a labelled general-knowledge answer."""
-    tok = _S.set({})
+    tok, etok = _S.set({}), _EV.set(on_event)
     try:
-        out = _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use_grade, use_verify, debug)
+        out = _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use_grade, use_verify, debug,
+                   history)
         if general and not out.get("found"):
+            _emit("stage", name="general", ms=None)
             try:
                 out["general"] = general_answer(question, (load_index(out["video_id"]).meta or {}).get("title", ""))
             except Exception as e:
@@ -1148,13 +1253,15 @@ def ask(video, question, current_time=None, make_clip=True, mode="hybrid+rerank"
         return out
     finally:
         _S.reset(tok)
+        _EV.reset(etok)
 
 
 def _ms(t0):
     return round((time.perf_counter() - t0) * 1000)
 
 
-def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use_grade, use_verify, debug):
+def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use_grade, use_verify, debug,
+         history=None):
     vid = extract_video_id(video)
     ix = load_index(vid)
     title = ix.meta.get("title", vid)
@@ -1164,18 +1271,25 @@ def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use
     rel = []
     for attempt, (k, pool) in enumerate([(8, 20), (16, 40)]):
         t0 = time.perf_counter()
-        queries = rewrite_query(question, title, broader=attempt > 0) if use_rewrite else [question]
+        info = {}
+        queries = rewrite_query(question, title, attempt > 0, history, info) if use_rewrite else [question]
+        if info.get("standalone"):          # follow-up question: search and answer the standalone version
+            trace["asked"], question = trace.get("asked", question), info["standalone"]
+            trace["standalone"] = question
         tm["rewrite"] = tm.get("rewrite", 0) + _ms(t0)
+        _emit("stage", name="rewrite", ms=tm["rewrite"], standalone=trace.get("standalone"))
         d = {} if debug else None
         t0 = time.perf_counter()
         cands = retrieve(ix, queries, question, k=k, max_time=current_time, mode=mode, pool=pool, dbg=d)
         tm["retrieve"] = tm.get("retrieve", 0) + _ms(t0)
+        _emit("stage", name="retrieve", ms=tm["retrieve"], candidates=len(cands))
         t0 = time.perf_counter()
         if use_grade:
             rel, graded_ok = grade_chunks(question, cands)
         else:
             rel, graded_ok = cands[:5], True
         tm["grade"] = tm.get("grade", 0) + _ms(t0)
+        _emit("stage", name="grade", ms=tm["grade"], relevant=len(rel))
         trace["attempts"].append({"queries": queries, "candidates": len(cands),
                                   "relevant": len(rel), "grader_ok": graded_ok})
         if debug:
@@ -1195,9 +1309,15 @@ def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use
                 "message": (f"This topic is not in this video{where}." if _LANG.get() == "en"
                             else f"এই topic এই video-তে পাওয়া যায়নি{where}.")}
     ev = sorted(rel, key=lambda c: c["start"])[:8]
+    refs = [{"n": i + 1, "start": c["start"], "end": c["end"], "url": yt_link(vid, c["start"]),
+             "preview": c["text"][:160]} for i, c in enumerate(ev)]
+    _emit("evidence", refs=refs)                      # the UI can show the source moments before the answer
     t0 = time.perf_counter()
     ans = generate_answer(question, ev, level)
     tm["generate"] = _ms(t0)
+    _emit("stage", name="generate", ms=tm["generate"])
+    if use_verify and ans["sections"]:
+        _emit("draft", answer=copy.deepcopy(ans))                   # shown at once, marked "checking" until verify finishes
     raw = copy.deepcopy(ans) if debug else None
     t0 = time.perf_counter()
     if use_verify:
@@ -1206,13 +1326,13 @@ def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use
         n = sum(len(s.get("points", [])) for s in ans["sections"])
         stats = {"claims_total": n, "claims_supported": n, "verify": "skipped", "claims": []}
     tm["verify"] = _ms(t0)
+    _emit("stage", name="verify", ms=tm["verify"])
     trace.update(stats)
-    refs = [{"n": i + 1, "start": c["start"], "end": c["end"], "url": yt_link(vid, c["start"]),
-             "preview": c["text"][:160]} for i, c in enumerate(ev)]
     segments = []
     t0 = time.perf_counter()
     limit = min(current_time, ix.meta.get("duration") or current_time) if current_time is not None else ix.meta.get("duration")
-    for r in merge_ranges(rel, max_time=limit)[:3]:
+    pad = {"pad_before": 0.0, "pad_after": 0.0} if ix.meta.get("doc") else {}    # pages need no lead-in seconds
+    for r in merge_ranges(rel, max_time=limit, **pad)[:3]:
         seg = {"start": r["start"], "end": r["end"], "url": yt_link(vid, r["start"]), "clip": None}
         if make_clip and ix.meta.get("has_video"):
             try:

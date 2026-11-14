@@ -6,9 +6,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261005">
-<script src="/static/i18n.js?v=20261005"></script>
-<script src="/static/icons.js?v=20261005"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261114">
+<script src="/static/i18n.js?v=20261114"></script>
+<script src="/static/icons.js?v=20261114"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -64,6 +64,8 @@
   .pipe{display:flex;margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .pipe div{flex:1;padding:6px 8px;background:var(--panel2);border-right:1px solid var(--line);text-align:center} .pipe div:last-child{border-right:0}
   .pipe b{display:block;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)} .pipe span{font:600 12px var(--mono);color:var(--text)}
+  .pipe div.done{animation:none!important;background:color-mix(in srgb,var(--ok) 12%,var(--panel2))} .pipe div.done b{color:var(--ok)}
+  .lvx{margin-top:12px} .lvx .lbl{font-size:12px;color:var(--muted);margin-bottom:4px}
   .pipe.run div{animation:pl 1.2s infinite} .pipe.run div:nth-child(2){animation-delay:.2s}.pipe.run div:nth-child(3){animation-delay:.4s}.pipe.run div:nth-child(4){animation-delay:.6s}.pipe.run div:nth-child(5){animation-delay:.8s}
   @keyframes pl{50%{background:var(--brandSoft)}}
   .acts{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
@@ -318,12 +320,12 @@
 <body>
 <div class="auth hide" id="authBox">
   <div class="box fade">
-    <button class="btn icon ghost aclose hide" id="aClose"><i data-i="x" data-s="16"></i></button>
+    <button class="btn icon ghost aclose hide" id="aClose" aria-label="Close"><i data-i="x" data-s="16"></i></button>
     <div class="logo"><i>L</i><span data-t="brand"></span></div>
     <h2 data-t="authTitle"></h2><p data-t="authSub"></p>
-    <div id="nameRow" class="hide"><label data-t="name"></label><input class="in" id="aName" autocomplete="name"></div>
-    <label data-t="email"></label><input class="in" id="aEmail" type="email" autocomplete="email">
-    <label data-t="password"></label><input class="in" id="aPass" type="password" autocomplete="current-password">
+    <div id="nameRow" class="hide"><label data-t="name"></label><input class="in" id="aName" aria-label="Name" autocomplete="name"></div>
+    <label data-t="email"></label><input class="in" id="aEmail" aria-label="Email" type="email" autocomplete="email">
+    <label data-t="password"></label><input class="in" id="aPass" aria-label="Password" type="password" autocomplete="current-password">
     <div id="aErr" class="muted" style="color:var(--bad);margin-top:8px"></div>
     <button class="btn pri" id="aBtn" data-t="login"></button>
     <div class="gdiv"><span data-t="guestOr"></span></div>
@@ -340,7 +342,7 @@
   <div class="sp"></div>
   <span class="pill" id="health"><span class="dot"></span>…</span>
   <button class="btn sm" onclick="toggleLang()"><i data-i="globe" data-s="14"></i><span data-t="langBtn"></span></button>
-  <button class="btn icon ghost" id="themeBtn" title="Theme"><i data-i="theme"></i></button>
+  <button class="btn icon ghost" id="themeBtn" title="Theme" aria-label="Dark / light theme"><i data-i="theme"></i></button>
 </header>
 
 <div class="app">
@@ -378,7 +380,7 @@
         <span class="badge"><i data-i="sparkles" data-s="13"></i> <span data-t="heroBadge"></span></span>
         <h1 data-t="heroTitle"></h1>
         <p data-t="heroSub"></p>
-        <div class="bigin"><span class="bi"><i data-i="search" data-s="18"></i></span><input class="in" id="heroQ"><button class="btn pri" id="heroBtn"><span data-t="go"></span> <i data-i="arrow" data-s="15"></i></button></div>
+        <div class="bigin"><span class="bi"><i data-i="search" data-s="18"></i></span><input class="in" id="heroQ" aria-label="Question"><button class="btn pri" id="heroBtn"><span data-t="go"></span> <i data-i="arrow" data-s="15"></i></button></div>
         <div class="try" id="tryChips"></div>
         <div class="stats" id="stats">
           <div><b data-n="0" id="stV">0</b><span data-t="stVideos"></span></div>
@@ -436,7 +438,7 @@
       <div class="h" data-t="libAdd"></div>
       <div class="row" style="flex-wrap:nowrap"><input class="in" id="url" data-tp="pasteLink"><button class="btn pri" id="idxBtn" data-t="index"></button></div>
       <div class="row" style="margin-top:8px;justify-content:space-between">
-        <label class="btn sm ghost" style="cursor:pointer"><i data-i="upload" data-s="14"></i> <span data-t="upload"></span><input id="file" type="file" class="hide" accept="video/*,audio/*,.srt,.vtt"></label>
+        <label class="btn sm ghost" style="cursor:pointer"><i data-i="upload" data-s="14"></i> <span data-t="upload"></span><input id="file" type="file" class="hide" accept="video/*,audio/*,.srt,.vtt,.pdf,.pptx"></label>
         <span class="muted" data-t="uploadHint"></span>
       </div>
       <div id="status" class="muted" style="margin-top:8px"></div>
@@ -503,7 +505,7 @@
           <div class="sugg" id="sugg"></div>
           <div class="row" style="align-items:flex-end;flex-wrap:nowrap">
             <textarea class="in" id="q" rows="1" data-tp="qPh"></textarea>
-            <button class="btn pri" id="askBtn" style="height:46px"><i data-i="send"></i></button>
+            <button class="btn pri" id="askBtn" aria-label="Send" style="height:46px"><i data-i="send"></i></button>
           </div>
           <div class="row" style="margin-top:8px;justify-content:space-between">
             <div class="seg" id="level"><button data-v="simple" class="on" data-t="simple"></button><button data-v="exam" data-t="exam"></button><button data-v="expert" data-t="expert"></button></div>
@@ -538,7 +540,7 @@
               <button data-tool="eraser" data-tt="eraser"><i data-i="eraser" data-s="15"></i></button>
               <span class="sep"></span>
               <span class="sw" data-col="#f2f4f8" style="background:#f2f4f8"></span><span class="sw on" data-col="#7c5cff" style="background:#7c5cff"></span><span class="sw" data-col="#22d3ee" style="background:#22d3ee"></span><span class="sw" data-col="#f43f5e" style="background:#f43f5e"></span><span class="sw" data-col="#22c55e" style="background:#22c55e"></span><span class="sw" data-col="#111827" style="background:#111827"></span>
-              <input type="range" id="nbSize" min="1" max="20" value="3" style="width:70px">
+              <input type="range" id="nbSize" aria-label="Pen size" min="1" max="20" value="3" style="width:70px">
               <span class="sep"></span>
               <button data-fmt="bold" title="Bold"><b>B</b></button><button data-fmt="italic" title="Italic"><i style="font-style:italic;font-family:serif">I</i></button><button data-fmt="h" title="Heading"><b>H</b></button><button data-fmt="list" title="List"><i data-i="list" data-s="15"></i></button><button data-fmt="hl" title="Highlight"><span style="background:rgba(250,204,21,.5);padding:0 5px;border-radius:3px;font-weight:700">A</span></button>
               <span class="sep"></span>
@@ -555,7 +557,7 @@
           <div class="nb-ask">
             <button class="btn sm" id="nbExplain" disabled><i data-i="sparkles" data-s="14"></i> <span data-t="nbExplain"></span></button>
             <input class="in" id="nbQ" data-tp="nbAskPh">
-            <button class="btn pri" id="nbAskBtn"><i data-i="send" data-s="15"></i></button>
+            <button class="btn pri" id="nbAskBtn" aria-label="Send"><i data-i="send" data-s="15"></i></button>
           </div>
         </div>
         <div class="pane hide" id="p_exp">
@@ -573,7 +575,11 @@
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const fmt=x=>{x=Math.max(0,Math.floor(x||0));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s).padStart(2,"0")};
+const fmtT=x=>{x=Math.max(0,Math.floor(x||0));const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=x%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s).padStart(2,"0")};
+/* a PDF / slide deck has pages, not minutes: the server stores page N as minute N, the UI shows "p.N" */
+const fmt=x=>cur&&cur.doc?"p."+(Math.floor((x||0)/60)+1):fmtT(x);
+const fmtE=x=>cur&&cur.doc?"p."+Math.max(1,Math.ceil((x||0)/60)):fmtT(x);      // end of a range
+const durOf=v=>v.doc?(v.pages||0)+" p":fmtT(v.duration);
 const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 try{addEventListener("DOMContentLoaded",()=>{const g=document.getElementById("general");if(!g)return;try{g.checked=localStorage.getItem("lm_general")==="1"}catch(e){}g.onchange=()=>{try{localStorage.setItem("lm_general",g.checked?"1":"0")}catch(e){}}})}catch(e){}
 let player=null,ytReady=false,cur=null,lib=[],trChunks=[],heat=null,lastSegs=[],lastQuiz=[],quizScore={ok:0,n:0},level="simple",amode="library",chatHist=[],me={auth:false,user:null},signupMode=false,lastQ="";
@@ -650,7 +656,7 @@ const thumb=id=>"https://i.ytimg.com/vi/"+encodeURIComponent(id)+"/mqdefault.jpg
 function drawLib(){
   const q=$("libq").value.toLowerCase(),L=lib.filter(v=>(v.title||"").toLowerCase().includes(q)),onWork=!$("v_work").classList.contains("hide");
   $("libN").textContent="· "+lib.length;
-  $("lib").innerHTML=L.length?L.map(v=>'<div class="vc'+(onWork&&cur&&cur.video_id===v.video_id?" on":"")+'" data-id="'+esc(v.video_id)+'">'+(v.kind==="youtube"?'<img loading="lazy" src="'+thumb(v.video_id)+'" alt="">':'<img alt="">')+'<div style="min-width:0"><div class="tt">'+esc(v.title)+'</div><div class="mm"><span>'+fmt(v.duration)+"</span><span>·</span><span>"+v.n_chunks+" "+t("chunksShort")+"</span></div></div></div>").join("")
+  $("lib").innerHTML=L.length?L.map(v=>'<div class="vc'+(onWork&&cur&&cur.video_id===v.video_id?" on":"")+'" data-id="'+esc(v.video_id)+'">'+(v.kind==="youtube"?'<img loading="lazy" src="'+thumb(v.video_id)+'" alt="">':'<img alt="">')+'<div style="min-width:0"><div class="tt">'+esc(v.title)+'</div><div class="mm"><span>'+durOf(v)+"</span><span>·</span><span>"+v.n_chunks+" "+t("chunksShort")+"</span></div></div></div>").join("")
     :'<div class="empty" style="padding:20px 8px">'+esc(lib.length?t("noMatch"):t("libEmpty"))+"</div>";
   document.querySelectorAll(".vc").forEach(el=>el.onclick=()=>openVid(el.dataset.id));
 }
@@ -689,7 +695,7 @@ async function browse(){
   try{const d=await api("/api/search?q="+encodeURIComponent(q));
     if(!d.results.length){$("bOut").innerHTML='<div class="empty">'+t("nothing")+"</div>";return}
     const nf=new Intl.NumberFormat(LANG==="bn"?"bn-BD":"en",{notation:"compact"});
-    $("bOut").innerHTML='<div class="grid">'+d.results.map(v=>'<div class="yt fade" data-id="'+esc(v.id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.id)+'" alt="">'+(v.duration?'<span class="dur">'+fmt(v.duration)+"</span>":"")+(v.indexed?'<span class="ix badge ok">'+ic("check",12)+' '+t("indexed")+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+esc(v.channel||"")+(v.views?" · "+nf.format(v.views)+" "+t("views"):"")+'</div><button class="btn pri sm go">'+ic("play",12)+" "+(v.indexed?t("open"):t("watch"))+"</button></div></div>").join("")+"</div>";
+    $("bOut").innerHTML='<div class="grid">'+d.results.map(v=>'<div class="yt fade" data-id="'+esc(v.id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.id)+'" alt="">'+(v.duration?'<span class="dur">'+durOf(v)+"</span>":"")+(v.indexed?'<span class="ix badge ok">'+ic("check",12)+' '+t("indexed")+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+esc(v.channel||"")+(v.views?" · "+nf.format(v.views)+" "+t("views"):"")+'</div><button class="btn pri sm go">'+ic("play",12)+" "+(v.indexed?t("open"):t("watch"))+"</button></div></div>").join("")+"</div>";
     const byId={};d.results.forEach(v=>byId[v.id]=v);
     $("bOut").querySelectorAll(".yt[data-id]").forEach(el=>el.onclick=()=>watchNow(byId[el.dataset.id]||{id:el.dataset.id}));
   }catch(e){$("bOut").innerHTML='<div class="card" style="margin-top:14px"><span class="badge warn">'+ic("alert",12)+'</span> '+esc(t("browseErr"))+'<div class="muted" style="margin-top:6px">'+esc(e.message)+"</div></div>"}
@@ -733,26 +739,31 @@ function engBadge(){const e=me&&me.engine;if(!e||!e.name)return "";return '<span
 function metaBadges(m){
   if(m.pending===true)return '<span class="badge"><span class="spin" style="width:11px;height:11px"></span> '+t("aiPrep")+"</span>"+engBadge();
   if(m.pending==="fail")return '<span class="badge warn">'+ic("alert",12)+" "+t("aiFail")+"</span>";
-  return '<span class="badge">'+fmt(m.duration)+'</span><span class="badge">'+m.n_chunks+" "+t("chunks")+'</span><span class="badge">'+esc(m.source)+"</span>"+engBadge()}
+  return '<span class="badge">'+durOf(m)+'</span><span class="badge">'+m.n_chunks+" "+t("chunks")+'</span><span class="badge">'+esc(m.source)+"</span>"+engBadge()}
 function show(meta){
   cancelPrep(meta&&meta.video_id);
   cur=meta;heat=null;chaps=null;lastSegs=[];chatHist=[];view("work");
   $("vtitle").textContent=meta.title; $("vmeta").innerHTML=metaBadges(meta);
   $("clipLbl").classList.toggle("hide",!meta.has_video); $("clip").checked=!!meta.has_video;
-  $("tlEnd").textContent=fmt(meta.duration); $("tlHint").textContent=""; drawTL();
+  $("tlEnd").textContent=fmtE(meta.duration);$("tlEnd").previousElementSibling.textContent=fmt(0); $("tlHint").textContent=""; drawTL();
   $("chat").innerHTML='<div class="empty fade"><div style="color:var(--brand)">'+ic("chat",34)+'</div><b style="color:var(--text)">'+t("askEmptyT")+'</b><div class="muted">'+t("askEmptyD")+"</div></div>";
   suggest();player=null;
-  if(meta.kind==="upload")$("playerBox").innerHTML=meta.media_url?'<video id="vid" controls src="'+esc(meta.media_url)+'"></video>':'<div class="empty">'+t("transcriptOnly")+'</div>';
+  if(meta.doc)$("playerBox").innerHTML=meta.doc==="pdf"?'<iframe id="doc" title="PDF" src="'+esc(meta.media_url)+'#page=1"></iframe>':'<div class="empty">'+t("slidesOnly")+'</div>';
+  else if(meta.kind==="upload")$("playerBox").innerHTML=meta.media_url?'<video id="vid" controls src="'+esc(meta.media_url)+'"></video>':'<div class="empty">'+t("transcriptOnly")+'</div>';
   else{$("playerBox").innerHTML='<div id="player"></div>';const mk=()=>{if(cur!==meta)return;if(!ytReady){setTimeout(mk,250);return}player=new YT.Player("player",{videoId:meta.video_id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:meta.pending?1:0},events:{onReady:e=>{if(cur!==meta)return;try{if(!cur.duration){cur.duration=e.target.getDuration()||0;$("tlEnd").textContent=fmt(cur.duration)}const vd=e.target.getVideoData&&e.target.getVideoData();if(cur.pending&&vd&&vd.title&&(!cur.title||cur.title==="YouTube")){cur.title=vd.title;$("vtitle").textContent=vd.title}}catch(_){}}}})};mk()}
   if(meta.pending){trChunks=[];$("tr").innerHTML='<div class="muted">'+esc(t("trPrep"))+"</div>"}else loadTranscript();
   setTab("ask");loadChapters();
   $("qYt").classList.toggle("hide",meta.kind==="upload");$("qYt").href="https://www.youtube.com/watch?v="+encodeURIComponent(meta.video_id);
   loadNotes();
 }
-const now=()=>{if(!cur)return 0;if(cur.kind==="upload"){const v=$("vid");return v?v.currentTime:0}return player&&player.getCurrentTime?player.getCurrentTime():0};
+const now=()=>{if(!cur)return 0;if(cur.doc)return cur.duration;if(cur.kind==="upload"){const v=$("vid");return v?v.currentTime:0}return player&&player.getCurrentTime?player.getCurrentTime():0};
 function seek(s,vid){
   if(vid&&cur&&vid!==cur.video_id){window.open("https://www.youtube.com/watch?v="+vid+"&t="+Math.floor(s)+"s","_blank");return}
-  if(!cur)return;if(cur.kind==="upload"){const v=$("vid");if(v){v.currentTime=s;v.play()}}else if(player&&player.seekTo){player.seekTo(s,true);player.playVideo()}
+  if(!cur)return;
+  if(cur.doc){const pg=Math.floor(s/60)+1,row=[...document.querySelectorAll(".tc")].find(el=>Math.floor(+el.dataset.s/60)+1===pg);
+    if(cur.doc==="pdf")$("playerBox").innerHTML='<iframe id="doc" title="PDF" src="'+esc(cur.media_url)+"#page="+pg+'"></iframe>';   // a new iframe: changing only #page does not move the viewer
+    if(row&&cur.doc!=="pdf")row.scrollIntoView({block:"center",behavior:"smooth"});toast(t("pageL")+" "+pg);return}
+  if(cur.kind==="upload"){const v=$("vid");if(v){v.currentTime=s;v.play()}}else if(player&&player.seekTo){player.seekTo(s,true);player.playVideo()}
 }
 
 /* transcript */
@@ -806,26 +817,44 @@ const chips=(cites,refs,vid)=>(cites||[]).map(n=>{const rf=(refs||[]).find(x=>x.
 function answerHtml(a,refs,vid){let h="<h3>"+esc(a.title)+'</h3><p class="sum">'+esc(a.summary)+"</p>";
   (a.sections||[]).forEach(s=>{h+=(s.heading?"<h4>"+esc(s.heading)+"</h4>":"")+"<ul>";(s.points||[]).forEach(p=>{h+="<li>"+esc(p.text)+" "+chips(p.cites,refs,vid)+"</li>"});h+="</ul>"});return h}
 function pipeHtml(tr,run){const tm=(tr&&tr.timings_ms)||{},u=(tr&&tr.usage)||{},st=[["rewrite",t("pRewrite")],["retrieve",t("pRetrieve")],["grade",t("pGrade")],["generate",t("pGenerate")],["verify",t("pVerify")]];
-  return '<div class="pipe'+(run?" run":"")+'">'+st.map(([k,l])=>"<div><b>"+l+"</b><span>"+(run?"…":(tm[k]!=null?(tm[k]/1000).toFixed(1)+"s":"—"))+"</span></div>").join("")+"</div>"+(run?"":'<div class="muted" style="margin-top:6px">'+(u.llm_calls||0)+" "+t("llmCalls")+" · "+(u.embed_calls||0)+" "+t("embCalls")+(u.llm_fallbacks?" · "+u.llm_fallbacks+" "+t("fallback"):"")+"</div>")}
+  return '<div class="pipe'+(run?" run":"")+'">'+st.map(([k,l])=>'<div data-k="'+k+'"><b>'+l+"</b><span>"+(run?"…":(tm[k]!=null?(tm[k]/1000).toFixed(1)+"s":"—"))+"</span></div>").join("")+"</div>"+(run?"":'<div class="muted" style="margin-top:6px">'+(u.llm_calls||0)+" "+t("llmCalls")+" · "+(u.embed_calls||0)+" "+t("embCalls")+(u.llm_fallbacks?" · "+u.llm_fallbacks+" "+t("fallback"):"")+"</div>")}
 function toMd(q,d){let m="# "+(d.answer?d.answer.title:q)+"\n\n> "+q+"\n\n"+(d.answer?d.answer.summary+"\n\n":"");
   if(d.answer)d.answer.sections.forEach(s=>{m+="## "+s.heading+"\n";s.points.forEach(p=>{m+="- "+p.text+" "+(p.cites||[]).map(n=>{const r=d.refs.find(x=>x.n===n);return r?"["+fmt(r.start)+"]("+r.url+")":""}).join(" ")+"\n"});m+="\n"});
   return m+"\nSource: "+(cur.title||"")+"\n"}
+/* streaming: the server sends each pipeline stage as it finishes, so the answer shows up before verification ends */
+async function askStream(body,onEv){
+  const r=await fetch("/api/ask_stream",{method:"POST",headers:hdr(),credentials:"same-origin",body:JSON.stringify(body)});
+  if(!r.ok||!r.body)return api("/api/ask",body);            // api() shows the usual login / quota messages
+  const rd=r.body.getReader(),dec=new TextDecoder();let buf="",out=null;
+  for(;;){const {value,done}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
+    let i;while((i=buf.indexOf("\n\n"))>=0){const ln=buf.slice(0,i);buf=buf.slice(i+2);if(!ln.startsWith("data: "))continue;
+      const ev=JSON.parse(ln.slice(6));if(ev.ev==="done")out=ev.data;else if(ev.ev==="error")throw new Error(ev.detail);else{try{onEv(ev)}catch(_){}}}}
+  if(!out)throw new Error(t("connLost"));
+  if(me.user||me.guest)refreshMe();return out}
+function liveEv(box,ev){const a=box.lastChild.querySelector(".ans"),lv=a&&a.querySelector(".lvx");if(!lv)return;
+  if(ev.ev==="stage"){const el=a.querySelector('.pipe [data-k="'+ev.name+'"]');if(el){el.classList.add("done");el.querySelector("span").textContent=ev.ms!=null?(ev.ms/1000).toFixed(1)+"s":"✓"}
+    if(ev.standalone)lv.insertAdjacentHTML("afterbegin",'<div class="muted" style="margin-bottom:8px">'+t("understoodAs")+": <b>"+esc(ev.standalone)+"</b></div>")}
+  if(ev.ev==="evidence"){box._refs=ev.refs;lv.insertAdjacentHTML("beforeend",'<div class="lbl">'+t("sourcesFound")+'</div><div class="lrefs">'+ev.refs.map(r=>refChip(r)).join(" ")+"</div>")}
+  if(ev.ev==="draft"){a.querySelectorAll(".shimmer").forEach(x=>x.remove());const lr=lv.querySelector(".lrefs");if(lr){lr.previousElementSibling.remove();lr.remove()}
+    lv.insertAdjacentHTML("beforeend",'<div class="meta"><span class="badge warn"><span class="spin" style="width:10px;height:10px;border-width:2px"></span> '+t("checking")+"</span></div>"+answerHtml(ev.answer,box._refs||[]))}
+  $("p_ask").scrollTop=1e9}
 async function ask(){
   const q=$("q").value.trim();if(!cur||!q)return;if(cur.pending){toast(t(cur.pending==="fail"?"aiFail":"aiWait"));return}$("q").value="";$("q").style.height="auto";lastQ=q;
   if(!chatHist.length)$("chat").innerHTML="";
   const box=document.createElement("div");
-  box.innerHTML='<div class="msg mine fade"><div class="bub">'+esc(q)+'</div></div><div class="msg fade"><div class="ans"><div class="row" style="gap:10px"><span class="spin"></span><b>'+t("thinking")+'</b><span class="muted">'+t("pipeline")+"</span></div>"+pipeHtml(null,true)+'<div class="shimmer" style="margin-top:14px"></div><div class="shimmer" style="width:70%"></div></div></div>';
+  box.innerHTML='<div class="msg mine fade"><div class="bub">'+esc(q)+'</div></div><div class="msg fade"><div class="ans"><div class="row" style="gap:10px"><span class="spin"></span><b>'+t("thinking")+'</b><span class="muted">'+t("pipeline")+"</span></div>"+pipeHtml(null,true)+'<div class="lvx" aria-live="polite"></div><div class="shimmer" style="margin-top:14px"></div><div class="shimmer" style="width:70%"></div></div></div>';
   $("chat").appendChild(box);$("p_ask").scrollTop=1e9;$("askBtn").disabled=true;
   api("/api/heat",{video_id:cur.video_id,question:q}).then(h=>{heat=h;drawTL()}).catch(()=>{});
   try{
-    const d=await api("/api/ask",{video_id:cur.video_id,question:q,current_time:$("spoiler").checked?now():null,clip:$("clip").checked,level,general:$("general").checked});
+    const d=await askStream({video_id:cur.video_id,question:q,current_time:$("spoiler").checked?now():null,clip:$("clip").checked,level,general:$("general").checked,
+      history:chatHist.slice(-3).map(x=>({q:(x.d.trace&&x.d.trace.standalone)||x.q}))},ev=>liveEv(box,ev));
     chatHist.push({q,d});const tr=d.trace||{};let h;
     if(!d.found){lastSegs=[];h='<div class="ans" style="border-color:var(--bad)"><div class="meta"><span class="badge bad">'+ic("x",12)+' '+t("notFound")+"</span></div><b>"+esc($("spoiler").checked?t("notFoundUpTo",{t:fmt(now())}):t("notFoundMsg"))+'</b><p class="muted" style="margin:6px 0 0">'+t("notFoundD")+"</p>"+pipeHtml(tr)+"</div>";if(d.general)h+='<div class="ans" style="border-color:var(--warn,#d89b00)"><div class="meta"><span class="badge warn">'+ic("brain",12)+' '+t("generalBadge")+'</span></div><div style="white-space:pre-wrap">'+esc(d.general)+'</div><p class="muted" style="margin:6px 0 0">'+t("generalNote")+"</p></div>"}
     else{
       lastSegs=d.segments||[];const tot=tr.claims_total||0,sup=tr.claims_supported||0;
       const vb=tr.verify==="ok"?'<span class="badge ok">'+ic("check",12)+' '+sup+"/"+tot+" "+t("verified")+"</span>":'<span class="badge warn">'+ic("alert",12)+' '+t("unverified")+"</span>";
-      h='<div class="ans"><div class="meta">'+vb+'<span class="badge">'+(d.refs||[]).length+" "+t("evidence")+'</span><span class="badge">'+esc(t(level))+"</span></div>"+(d.answer?answerHtml(d.answer,d.refs):"<p><b>"+esc(d.note)+"</b></p>");
-      h+='<div class="segs">'+lastSegs.map(s=>'<div class="sgi"><button class="play" onclick="seek('+s.start+')">'+ic("play",13)+'</button><div style="flex:1;min-width:0"><b style="font-family:var(--mono);font-size:13px">'+fmt(s.start)+" – "+fmt(s.end)+'</b> <span class="muted">· '+Math.round(s.end-s.start)+"s "+t("segment")+"</span>"+(s.clip?"<details><summary>"+t("clipFile")+"</summary>"+(s.clip.endsWith(".m4a")?'<audio controls preload="none" src="'+esc(s.clip)+'"></audio>':'<video controls preload="metadata" src="'+esc(s.clip)+'"></video>')+"</details>":"")+'</div><a class="btn sm ghost" target="_blank" href="'+esc(s.url)+'">YouTube '+ic("external",12)+'</a></div>').join("")+"</div>";
+      h='<div class="ans"><div class="meta">'+vb+'<span class="badge">'+(d.refs||[]).length+" "+t("evidence")+'</span><span class="badge">'+esc(t(level))+"</span></div>"+(tr.standalone?'<div class="muted" style="margin-bottom:6px">'+t("understoodAs")+": <b>"+esc(tr.standalone)+"</b></div>":"")+(d.answer?answerHtml(d.answer,d.refs):"<p><b>"+esc(d.note)+"</b></p>");
+      h+='<div class="segs">'+lastSegs.map(s=>'<div class="sgi"><button class="play" onclick="seek('+s.start+')">'+ic("play",13)+'</button><div style="flex:1;min-width:0"><b style="font-family:var(--mono);font-size:13px">'+fmt(s.start)+(cur.doc&&fmt(s.start)===fmtE(s.end)?"":" – "+fmtE(s.end))+'</b>'+(cur.doc?"":' <span class="muted">· '+Math.round(s.end-s.start)+"s "+t("segment")+"</span>")+(s.clip?"<details><summary>"+t("clipFile")+"</summary>"+(s.clip.endsWith(".m4a")?'<audio controls preload="none" src="'+esc(s.clip)+'"></audio>':'<video controls preload="metadata" src="'+esc(s.clip)+'"></video>')+"</details>":"")+'</div>'+(cur.kind==="upload"?"":'<a class="btn sm ghost" target="_blank" href="'+esc(s.url)+'">YouTube '+ic("external",12)+'</a>')+'</div>').join("")+"</div>";
       h+=pipeHtml(tr)+'<div class="acts"><button class="btn sm" data-a="copy">'+ic("copy",13)+' '+t("copy")+'</button><button class="btn sm" data-a="md">'+ic("download",13)+' '+t("notes")+'</button><button class="btn sm" data-a="note">'+ic("book",13)+' '+t("addToNotes")+'</button><button class="btn sm" data-a="trace">'+ic("code",13)+' '+t("trace")+'</button></div><pre class="code hide">'+esc(JSON.stringify(tr,null,2))+"</pre></div>";
     }
     box.lastChild.innerHTML=h;drawTL();
@@ -906,7 +935,7 @@ document.querySelectorAll("#p_exp [data-s]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------- library page ---------- */
-function vcard(v,sub){return '<div class="yt fade" data-id="'+esc(v.video_id)+'"><div class="th">'+(v.kind==="youtube"?'<img loading="lazy" src="'+thumb(v.video_id)+'" alt="">':"")+(v.duration?'<span class="dur">'+fmt(v.duration)+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+(sub||"")+"</div></div></div>"}
+function vcard(v,sub){return '<div class="yt fade" data-id="'+esc(v.video_id)+'"><div class="th">'+(v.kind==="youtube"?'<img loading="lazy" src="'+thumb(v.video_id)+'" alt="">':"")+(v.duration?'<span class="dur">'+durOf(v)+"</span>":"")+'</div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+(sub||"")+"</div></div></div>"}
 function drawLibGrid(){const g=$("libGrid");g.querySelectorAll(".yt,.empty").forEach(x=>x.remove());
   $("libCount").textContent=t("libCount",{n:lib.length.toLocaleString(LANG==="bn"?"bn-BD":"en")});
   $("addCard").classList.toggle("hide",!!me.guest);
@@ -978,7 +1007,7 @@ function placeCont(){const ret=!!(me.user&&lib.length);const box=$("contBox");
   if(ret&&box.parentNode.id!=="retSlot")$("retSlot").appendChild(box);if(!ret&&box.parentNode.id==="retSlot")document.querySelector(".hero2:not(#retSlot)").appendChild(box)}
 function homeStats(){placeCont();countUp($("stL"),3);countUp($("stV"),lib.length);countUp($("stM"),Math.round(lib.reduce((a,v)=>a+(v.duration||0),0)/60));countUp($("stC"),lib.reduce((a,v)=>a+(v.n_chunks||0),0));
   const yt=lib.filter(v=>v.kind==="youtube");$("contBox").classList.toggle("hide",!yt.length);
-  $("rail").innerHTML=yt.map(v=>'<div class="yt" data-id="'+esc(v.video_id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.video_id)+'" alt=""><span class="dur">'+fmt(v.duration)+'</span></div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+v.n_chunks+" "+t("chunks")+"</div></div></div>").join("");
+  $("rail").innerHTML=yt.map(v=>'<div class="yt" data-id="'+esc(v.video_id)+'"><div class="th"><img loading="lazy" src="'+thumb(v.video_id)+'" alt=""><span class="dur">'+durOf(v)+'</span></div><div class="bd"><div class="tt">'+esc(v.title)+'</div><div class="ch">'+v.n_chunks+" "+t("chunks")+"</div></div></div>").join("");
   document.querySelectorAll("#rail .yt").forEach(el=>el.onclick=()=>openVid(el.dataset.id));
   if(yt.length&&!demoStarted)startDemo()}
 $("tryChips").innerHTML="";
@@ -995,7 +1024,7 @@ function startDemo(){
   const run=async()=>{try{
     if(gen!==demoGen)return;
     const yt=lib.filter(v=>v.kind==="youtube");if(!yt.length)return;const ex=t("demoQs")[k%t("demoQs").length];const v=yt.find(x=>new RegExp(ex.key,"i").test(x.title))||yt[k%yt.length];k++;
-    $("dVid").style.backgroundImage="url(https://i.ytimg.com/vi/"+encodeURIComponent(v.video_id)+"/hqdefault.jpg)";$("dCap").textContent=v.title;$("dEnd").textContent=fmt(v.duration);
+    $("dVid").style.backgroundImage="url(https://i.ytimg.com/vi/"+encodeURIComponent(v.video_id)+"/hqdefault.jpg)";$("dCap").textContent=v.title;$("dEnd").textContent=durOf(v);
     const n=24;$("dTl").innerHTML=Array.from({length:n},(_,i)=>'<i style="left:'+(100*i/n)+"%;width:"+(100/n+.2)+'%"></i>').join("")+'<div class="nd" style="left:0"></div>';
     $("dAns").innerHTML="";document.querySelectorAll("#dSteps span").forEach(x=>x.classList.remove("on"));
     const q=ex.q;$("dQ").innerHTML='<span class="typed"></span><span class="cur"></span><span class="rest"></span>';const ty=$("dQ").firstChild,rs=$("dQ").lastChild;
@@ -1016,6 +1045,6 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261005"></script>
+<script src="/static/notebook.js?v=20261114"></script>
 </body>
 </html>

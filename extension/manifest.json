@@ -1,27 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Learning Mate AI",
-  "version": "1.1",
-  "description": "Ask topic questions about the YouTube video you are watching (spoiler-free, timestamped).",
-  "permissions": [
-    "sidePanel",
-    "activeTab",
-    "scripting",
-    "storage"
-  ],
+  "version": "2.0",
+  "description": "Study any YouTube lecture from a side panel: ask questions, get timestamped answers checked against the video, summary and quiz.",
+  "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://www.youtube.com/*",
-    "http://localhost:8000/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
     "https://*.onrender.com/*",
     "https://*.trycloudflare.com/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "side_panel": {
-    "default_path": "sidepanel.html"
-  },
-  "action": {
-    "default_title": "Topic RAG"
-  }
+  "background": { "service_worker": "background.js" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Learning Mate AI", "default_icon": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" } },
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
 }
