@@ -48,6 +48,15 @@ footer{border-top:1px solid var(--line);padding:10px 12px;background:var(--panel
 .row{display:flex;gap:6px;align-items:center}
 .tog{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);margin-top:6px}
 [hidden]{display:none!important}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:8px}
+.tabs button{font-size:13px;padding:9px 2px}
+.note{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 30px 8px 10px;margin-bottom:8px}
+.note .txt{outline:none;min-height:22px;white-space:pre-wrap;word-break:break-word}
+.note .txt:empty::before{content:attr(data-ph);color:var(--muted)}
+.note img{display:block;width:100%;border-radius:6px;margin-top:4px}
+.note .del{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px}
+.note .del:hover{color:var(--bad)}
+.addn{margin-top:6px}
 </style></head><body>
 <header>
   <div class="logo" aria-hidden="true">L</div><b>Learning Mate AI</b>
@@ -78,12 +87,23 @@ footer{border-top:1px solid var(--line);padding:10px 12px;background:var(--panel
   <button role="tab" id="t_chat" aria-selected="true" data-tab="chat" data-t="chat"></button>
   <button role="tab" id="t_sum" aria-selected="false" data-tab="sum" data-t="summary"></button>
   <button role="tab" id="t_quiz" aria-selected="false" data-tab="quiz" data-t="quiz"></button>
+  <button role="tab" id="t_notes" aria-selected="false" data-tab="notes" data-t="notes"></button>
 </div>
 
 <main>
   <div id="p_chat" aria-live="polite"></div>
   <div id="p_sum" hidden></div>
   <div id="p_quiz" hidden></div>
+  <div id="p_notes" hidden>
+    <div class="row" style="flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn ghost sm" type="button" id="nText" data-t="nText"></button>
+      <button class="btn ghost sm" type="button" id="nTs" data-t="nTs"></button>
+      <button class="btn ghost sm" type="button" id="nShot" data-t="nShot"></button>
+      <span class="muted" id="nSave" role="status" style="margin-left:auto"></span>
+    </div>
+    <div id="nList"></div>
+    <p class="muted" id="nEmpty" data-t="nEmpty"></p>
+  </div>
 </main>
 
 <footer id="composer">

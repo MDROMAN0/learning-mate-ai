@@ -18,7 +18,10 @@ const TXT = {
     understood: "Understood as", steps: ["Rewrite", "Search", "Check", "Answer", "Verify"], makeSum: "Make summary",
     makeQuiz: "Make a quiz (5 questions)", working: "Working…", needLogin: "Log in first (⚙ settings)", loggedIn: "Logged in",
     noLogin: "This server does not need a login", hint: "Ask anything about the video. Click a time to jump there.",
-    general: "From general knowledge (not from the video)", lost: "Connection lost, try again", lang: "বাংলা" },
+    general: "From general knowledge (not from the video)", lost: "Connection lost, try again", lang: "বাংলা",
+    notes: "Notes", nText: "+ Text", nTs: "+ Timestamp", nShot: "📷 Screenshot", nEmpty: "Write notes, save the current time or a screenshot of the video. Answers can be added with “Add to notes”.",
+    nPh: "Write here…", saving: "saving…", savedCloud: "✓ saved to your account", savedLocal: "✓ saved in this browser (log in to sync with the website)",
+    toNotes: "+ Add to notes", added: "Added to notes", shotFail: "Could not capture the video frame" },
   bn: { server: "সার্ভারের ঠিকানা", email: "ইমেইল", password: "পাসওয়ার্ড", login: "লগইন", logout: "লগআউট", prepare: "ভিডিও প্রস্তুত করো",
     chat: "চ্যাট", summary: "সারাংশ", quiz: "কুইজ", ask: "পাঠাও", spoiler: "স্পয়লার ছাড়া: শুধু যতটুকু দেখেছি",
     qPh: "এই ভিডিও নিয়ে প্রশ্ন করো…", openYt: "শুরু করতে একটা YouTube ভিডিও খোলো", ready: "প্রস্তুত", notReady: "এখনো প্রস্তুত না",
@@ -27,7 +30,10 @@ const TXT = {
     understood: "যেভাবে বুঝেছি", steps: ["প্রশ্ন বোঝা", "খোঁজা", "যাচাই", "উত্তর", "মিলানো"], makeSum: "সারাংশ বানাও",
     makeQuiz: "কুইজ বানাও (৫টা প্রশ্ন)", working: "কাজ চলছে…", needLogin: "আগে লগইন করো (⚙ সেটিংস)", loggedIn: "লগইন আছে",
     noLogin: "এই সার্ভারে লগইন লাগে না", hint: "ভিডিও নিয়ে যেকোনো প্রশ্ন করো। সময়ে ক্লিক করলে ভিডিও ওখানে যাবে।",
-    general: "সাধারণ জ্ঞান থেকে (ভিডিও থেকে না)", lost: "সংযোগ কেটে গেছে, আবার চেষ্টা করো", lang: "English" },
+    general: "সাধারণ জ্ঞান থেকে (ভিডিও থেকে না)", lost: "সংযোগ কেটে গেছে, আবার চেষ্টা করো", lang: "English",
+    notes: "নোট", nText: "+ লেখা", nTs: "+ সময়", nShot: "📷 স্ক্রিনশট", nEmpty: "নোট লেখো, ভিডিওর এখনকার সময় বা স্ক্রিনশট রাখো। উত্তরের নিচে “নোটে রাখো” চাপলে উত্তরও নোটে যাবে।",
+    nPh: "এখানে লেখো…", saving: "সেভ হচ্ছে…", savedCloud: "✓ তোমার অ্যাকাউন্টে সেভ হয়েছে", savedLocal: "✓ এই ব্রাউজারে সেভ হয়েছে (লগইন করলে ওয়েবসাইটের সাথে মিলবে)",
+    toNotes: "+ নোটে রাখো", added: "নোটে রাখা হয়েছে", shotFail: "ভিডিওর ছবি নেওয়া গেল না" },
 };
 const STAGES = ["rewrite", "retrieve", "grade", "generate", "verify"];
 let cfg = { backend: DEFAULT_SERVER, token: "", user: "", lang: "en", theme: "dark" };
@@ -129,6 +135,15 @@ function pageTranscriptPanel() {       // fallback: read YouTube's own "Show tra
     return segs.length ? { segs, title: document.title.replace(/^\(\d+\)\s*/, "").replace(/ - YouTube$/, "") } : { error: "empty transcript" };
   })().catch(e => ({ error: String(e) }));
 }
+function pageShot() {                   // current video frame as a small JPEG
+  const v = document.querySelector("video");
+  if (!v || !v.videoWidth) return { error: "no video" };
+  try {
+    const W = Math.min(960, v.videoWidth), H = Math.round(v.videoHeight * W / v.videoWidth), c = document.createElement("canvas");
+    c.width = W; c.height = H; c.getContext("2d").drawImage(v, 0, 0, W, H);
+    return { src: c.toDataURL("image/jpeg", 0.7), t: v.currentTime };
+  } catch (e) { return { error: String(e) }; }
+}
 function pageSeek(s) { const v = document.querySelector("video"); if (v) { if (s != null) { v.currentTime = s; v.play(); } return v.currentTime; } return 0; }
 
 let titleCache = "";
@@ -158,7 +173,7 @@ async function refreshVideo() {
   tabId = tab?.id ?? null;
   if (id === vid) return;
   vid = id; state = id ? "unknown" : "none"; titleCache = id ? (tab.title || "").replace(/^\(\d+\)\s*/, "").replace(/ - YouTube$/, "") : "";
-  $("p_chat").innerHTML = id ? '<p class="muted">' + t("hint") + "</p>" : ""; $("p_sum").innerHTML = ""; $("p_quiz").innerHTML = "";
+  $("p_chat").innerHTML = id ? '<p class="muted">' + t("hint") + "</p>" : ""; $("p_sum").innerHTML = ""; $("p_quiz").innerHTML = ""; noteVid = null; note = null; $("nList").innerHTML = "";
   paintVideo(); showTab("chat");
   if (id) watchJob().catch(() => {});
 }
@@ -219,7 +234,10 @@ async function ask() {
       h += d.answer ? answerHtml(d.answer, d.refs || []) : "<p>" + esc(d.note) + "</p>";
       h += '<div style="margin-top:8px">' + (d.segments || []).map(s => '<button class="chip" type="button" data-s="' + s.start + '">▸ ' + fmt(s.start) + "–" + fmt(s.end) + "</button>").join(" ") + "</div>";
     }
+    if (d.found && d.answer) h += '<div class="addn"><button class="btn ghost sm" type="button">' + t("toNotes") + "</button></div>";
     body.innerHTML = h;
+    const an = body.querySelector(".addn button");
+    if (an) an.onclick = async () => { if (noteVid !== vid) await loadNotes(); answerToNote(q, d); an.textContent = "✓ " + t("added"); an.disabled = true; };
   } catch (e) { body.innerHTML = '<span class="pill bad">' + esc(e.message) + "</span>"; }
   $("ask").disabled = false; scroll(); $("q").focus();
 }
@@ -249,11 +267,103 @@ async function loadQuiz() {
   } catch (e) { p.innerHTML = '<span class="pill bad">' + esc(e.message) + "</span>"; }
 }
 function showTab(name) {
-  ["chat", "sum", "quiz"].forEach(k => { $("p_" + k).hidden = k !== name; $("t_" + k).setAttribute("aria-selected", k === name); });
+  ["chat", "sum", "quiz", "notes"].forEach(k => { $("p_" + k).hidden = k !== name; $("t_" + k).setAttribute("aria-selected", k === name); });
   $("composer").hidden = !vid || name !== "chat";
   if (name === "sum" && vid && !$("p_sum").innerHTML) loadSummary();
+  if (name === "notes" && vid && noteVid !== vid) loadNotes();
   if (name === "quiz" && vid && !$("p_quiz").innerHTML) $("p_quiz").innerHTML = '<button class="btn" type="button" id="mkQuiz">' + t("makeQuiz") + "</button>";
 }
+
+// ---------------------------------------------------------------- notes
+// Same format as the website's notebook ({v:2, H, items:[{type:"text"|"ts"|"img", x, y, w, ...}], ink}),
+// so a note written here opens on the website too (when logged in) and the other way round.
+let note = null, noteVid = null, saveTimer = null;
+const nid = () => Math.random().toString(36).slice(2, 10);
+const noteKey = v => "notes_" + v;
+async function loadNotes() {
+  if (!vid) return;
+  noteVid = vid; note = null;
+  let c = null;
+  if (cfg.token) { try { c = (await api("/api/notes/" + vid)).content; } catch (_) {} }
+  if (!c) { const v = await chrome.storage.local.get([noteKey(vid)]); c = v[noteKey(vid)] || null; }
+  if (noteVid !== vid) return;
+  note = c && Array.isArray(c.items) ? c : { v: 2, H: 1400, items: [], ink: null, title: titleCache };
+  drawNotes();
+}
+function itemHeight(it) {
+  if (it.type === "img") return Math.round((it.w || 620) * 9 / 16) + 50;
+  if (it.type === "ts") return 44;
+  return 40 + 22 * Math.ceil(String(it.html || "").replace(/<[^>]+>/g, "").length / 70);
+}
+function addNote(it) {
+  const items = note.items, bottom = items.reduce((m, x) => Math.max(m, (x.y || 0) + itemHeight(x)), 20);
+  it = { id: nid(), x: 40, y: bottom + 16, w: it.type === "img" ? 620 : 880, ...it };
+  items.push(it);
+  note.H = Math.max(note.H || 1400, it.y + itemHeight(it) + 200);
+  drawNotes(); saveNotes();
+  const el = $("nList").querySelector('[data-id="' + it.id + '"]');
+  el?.scrollIntoView({ block: "nearest" });
+  return el;
+}
+function noteHtml(it) {
+  const del = '<button class="del" type="button" aria-label="Delete">✕</button>';
+  if (it.type === "ts") return '<div class="note" data-id="' + it.id + '">' + chip({ start: it.t }) + (it.label ? " " + esc(it.label) : "") + del + "</div>";
+  if (it.type === "img") {
+    const m = /data-t="(\d+)"/.exec(it.cap || "");
+    return '<div class="note" data-id="' + it.id + '"><img alt="" src="' + esc(it.src) + '">' + (m ? chip({ start: +m[1] }) : "") + del + "</div>";
+  }
+  return '<div class="note" data-id="' + it.id + '"><div class="txt" contenteditable="true" data-ph="' + esc(t("nPh")) + '">' + (it.html || "") + "</div>" + del + "</div>";
+}
+function drawNotes() {
+  if (!note) { $("nList").innerHTML = ""; return; }
+  const items = [...note.items].sort((a, b) => (a.y || 0) - (b.y || 0) || (a.x || 0) - (b.x || 0));
+  $("nList").innerHTML = items.map(noteHtml).join("");
+  $("nEmpty").hidden = items.length > 0;
+}
+function saveNotes() {
+  clearTimeout(saveTimer);
+  $("nSave").textContent = t("saving");
+  const v = noteVid, content = { ...note, title: note.title || titleCache };
+  saveTimer = setTimeout(async () => {
+    if (cfg.token) {
+      try { await fetch(base() + "/api/notes/" + v, { method: "PUT", headers: headers(), body: JSON.stringify({ content }) }).then(r => { if (!r.ok) throw 0; });
+        $("nSave").textContent = t("savedCloud"); return; } catch (_) {}
+    }
+    await chrome.storage.local.set({ [noteKey(v)]: content });
+    $("nSave").textContent = t("savedLocal");
+  }, 700);
+}
+// answer -> one text note (title, summary, points with their times)
+function answerToNote(q, d) {
+  if (!note) return;
+  const refs = d.refs || [], a = d.answer;
+  let h = "<b>" + esc(q) + "</b>";
+  if (a) {
+    h += "<br>" + esc(a.summary || "");
+    (a.sections || []).forEach(s => (s.points || []).forEach(p => {
+      const times = (p.cites || []).map(n => refs.find(r => r.n === n)).filter(Boolean).map(r => fmt(r.start));
+      h += "<br>• " + esc(p.text) + (times.length ? " [" + times.join(", ") + "]" : "");
+    }));
+  }
+  addNote({ type: "text", html: h });
+}
+$("nText").onclick = () => { const el = addNote({ type: "text", html: "" }); el?.querySelector(".txt")?.focus(); };
+$("nTs").onclick = async () => { const s = await inPage(pageSeek, [null]); addNote({ type: "ts", t: Math.floor(s || 0), label: "" }); };
+$("nShot").onclick = async () => {
+  const r = await inPage(pageShot);
+  if (r.error) { $("nSave").textContent = t("shotFail"); return; }
+  addNote({ type: "img", src: r.src, cap: '<a class="tsn" data-t="' + Math.floor(r.t) + '">' + fmt(r.t) + "</a>" });
+};
+$("nList").addEventListener("input", e => {
+  const box = e.target.closest(".note"), it = note?.items.find(x => x.id === box?.dataset.id);
+  if (it) { it.html = e.target.innerHTML; saveNotes(); }
+});
+$("nList").addEventListener("click", e => {
+  const d = e.target.closest(".del");
+  if (!d) return;
+  const id = d.closest(".note").dataset.id;
+  note.items = note.items.filter(x => x.id !== id); drawNotes(); saveNotes();
+});
 
 // ---------------------------------------------------------------- settings and events
 function openSettings(open) { $("settings").hidden = !open; $("gear").setAttribute("aria-expanded", String(open)); }
