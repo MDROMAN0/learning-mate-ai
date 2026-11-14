@@ -111,17 +111,22 @@ function pageTranscriptPanel() {       // fallback: read YouTube's own "Show tra
   return (async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const sec = s => s.trim().split(":").reduce((a, x) => a * 60 + Number(x), 0);
-    let rows = document.querySelectorAll("ytd-transcript-segment-renderer");
+    // YouTube has used two layouts for this panel; read whichever one is on the page
+    const ROWS = "transcript-segment-view-model, ytd-transcript-segment-renderer";
+    const TIME = '[class*="SegmentViewModelTimestamp"]:not([class*="A11y"]), .segment-timestamp';
+    const TEXT = ".ytAttributedStringHost, .segment-text";
+    let rows = document.querySelectorAll(ROWS);
     if (!rows.length) {
-      const btn = [...document.querySelectorAll("button")].find(b => /transcript/i.test((b.getAttribute("aria-label") || "") + b.textContent));
-      if (btn) { btn.click(); await wait(2500); }
-      rows = document.querySelectorAll("ytd-transcript-segment-renderer");
+      const btn = [...document.querySelectorAll("button")].find(b => /^show transcript$/i.test((b.getAttribute("aria-label") || b.textContent).trim())) ||
+        [...document.querySelectorAll("button")].find(b => /transcript/i.test((b.getAttribute("aria-label") || "") + b.textContent));
+      if (btn) btn.click();
+      for (let i = 0; i < 16 && !rows.length; i++) { await wait(500); rows = document.querySelectorAll(ROWS); }
     }
     if (!rows.length) return { error: "no transcript panel" };
-    const segs = [...rows].map(r => ({ start: sec(r.querySelector(".segment-timestamp")?.textContent || "0:00"),
-      text: (r.querySelector(".segment-text")?.textContent || "").trim() })).filter(s => s.text);
-    segs.forEach((s, i) => { s.end = i + 1 < segs.length ? segs[i + 1].start : s.start + 5; });
-    return { segs, title: document.title.replace(/ - YouTube$/, "") };
+    const segs = [...rows].map(r => ({ start: sec(r.querySelector(TIME)?.textContent || "0:00"),
+      text: (r.querySelector(TEXT)?.textContent || "").trim() })).filter(s => s.text && !/^\[[^\]]*\]$/.test(s.text));
+    segs.forEach((s, i) => { s.end = i + 1 < segs.length ? Math.max(segs[i + 1].start, s.start + 1) : s.start + 5; });
+    return segs.length ? { segs, title: document.title.replace(/^\(\d+\)\s*/, "").replace(/ - YouTube$/, "") } : { error: "empty transcript" };
   })().catch(e => ({ error: String(e) }));
 }
 function pageSeek(s) { const v = document.querySelector("video"); if (v) { if (s != null) { v.currentTime = s; v.play(); } return v.currentTime; } return 0; }
@@ -152,7 +157,7 @@ async function refreshVideo() {
   const id = videoIdOf(tab?.url);
   tabId = tab?.id ?? null;
   if (id === vid) return;
-  vid = id; state = id ? "unknown" : "none"; titleCache = id ? (tab.title || "").replace(/ - YouTube$/, "") : "";
+  vid = id; state = id ? "unknown" : "none"; titleCache = id ? (tab.title || "").replace(/^\(\d+\)\s*/, "").replace(/ - YouTube$/, "") : "";
   $("p_chat").innerHTML = id ? '<p class="muted">' + t("hint") + "</p>" : ""; $("p_sum").innerHTML = ""; $("p_quiz").innerHTML = "";
   paintVideo(); showTab("chat");
   if (id) watchJob().catch(() => {});
