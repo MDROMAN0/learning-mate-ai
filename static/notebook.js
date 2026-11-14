@@ -130,10 +130,13 @@
 
   /* ---------- fast screenshot ---------- */
   async function snap() {
-    if (!cur) return; const sec = now(); let url = null;
+    if (!cur) return; let sec = now(); let url = null;
     try {
       const v = $("vid");
-      if (v) { const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext("2d").drawImage(v, 0, 0); url = c.toDataURL("image/jpeg", .85); }
+      if (window.nbGrab) {                   // Chrome extension: it grabs the frame from the YouTube tab itself
+        const g = await window.nbGrab(); if (!g) throw new Error("no frame"); url = g.src; sec = g.t;
+      }
+      else if (v) { const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext("2d").drawImage(v, 0, 0); url = c.toDataURL("image/jpeg", .85); }
       else if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) {
         // phones/tablets can't capture the screen from a web page: drop the video thumbnail + exact timestamp instead
         url = "https://i.ytimg.com/vi/" + encodeURIComponent(cur.video_id) + "/hqdefault.jpg"; toast(t("ssMobile"));
@@ -295,8 +298,9 @@
   async function exportPdf() {
     if (!cur) return; toast(t("pdfWorking")); select(null);
     try {
-      await loadJs("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
-      await loadJs("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+      const libs = window.nbLibs || {};       // the Chrome extension ships its own copies (it may not load scripts from the web)
+      await loadJs(libs.h2c || "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+      await loadJs(libs.pdf || "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
       let maxY = 0; const u = U();
       PAGE.querySelectorAll(".nb-it").forEach(el => { maxY = Math.max(maxY, el.offsetTop + el.offsetHeight); });
       maxY = Math.max(maxY, inkBottom() / (devicePixelRatio || 1)) + 40;

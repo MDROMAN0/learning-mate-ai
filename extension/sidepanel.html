@@ -50,13 +50,51 @@ footer{border-top:1px solid var(--line);padding:10px 12px;background:var(--panel
 [hidden]{display:none!important}
 .btn.sm{padding:5px 10px;font-size:12.5px;border-radius:8px}
 .tabs button{font-size:13px;padding:9px 2px}
-.note{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 30px 8px 10px;margin-bottom:8px}
-.note .txt{outline:none;min-height:22px;white-space:pre-wrap;word-break:break-word}
-.note .txt:empty::before{content:attr(data-ph);color:var(--muted)}
-.note img{display:block;width:100%;border-radius:6px;margin-top:4px}
-.note .del{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px}
-.note .del:hover{color:var(--bad)}
-.addn{margin-top:6px}
+.hide{display:none!important}
+:root{--bg2:#10131a;--line2:#323a4c;--brandSoft:rgba(124,92,255,.14);--font:"Inter","Hind Siliguri",system-ui,sans-serif}
+:root[data-theme=light]{--bg2:#eef0f5;--line2:#d3d8e3;--brandSoft:rgba(124,92,255,.10)}
+main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.nbpane{display:flex;flex-direction:column;flex:1;min-height:0;position:relative}
+.nb-top{padding:6px 8px;border-bottom:1px solid var(--line);background:var(--panel);flex:none}
+.ntool{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.ntool button{min-width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text);font:600 13px var(--font);display:grid;place-items:center;padding:0 5px}
+.ntool button:hover{background:var(--panel2);border-color:var(--line2)} .ntool button.on{background:var(--brandSoft);border-color:var(--brand)}
+.ntool .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+.ntool .sw{width:17px;height:17px;border-radius:50%;cursor:pointer;border:2px solid transparent;box-shadow:0 0 0 1px var(--line2);margin:0 1px} .ntool .sw.on{border-color:var(--text)}
+.nb-hint{font-size:11.5px;margin-top:2px;min-height:16px}
+.nb-scroll{flex:1;overflow:auto;padding:8px;min-height:0}
+.nb-page{position:relative;width:100%;min-height:500px;border:1px solid var(--line);border-radius:12px;cursor:text;background-color:var(--bg2);background-image:radial-gradient(var(--line2) 1px,transparent 1px);background-size:20px 20px}
+.nb-page.drawmode{cursor:crosshair}
+#nbInk{position:absolute;left:0;top:0;width:100%;z-index:5;pointer-events:none;border-radius:12px;touch-action:none}
+.nb-it{position:absolute;z-index:2}
+.nb-bar{position:absolute;top:-26px;left:0;display:none;gap:4px;align-items:center}
+.nb-bar .nb-grip,.nb-bar .nb-del{height:22px;min-width:22px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;justify-content:center;background:var(--panel);border:1px solid var(--line2);color:var(--text2);cursor:grab;padding:0 6px;font:600 11px var(--font)}
+.nb-bar .nb-grip{background:var(--brand);border-color:var(--brand);color:#fff} .nb-bar .nb-del{cursor:pointer} .nb-bar .nb-del:hover{color:var(--bad)}
+.nb-it:hover .nb-bar,.nb-it.sel .nb-bar{display:flex} .drawmode .nb-bar,.drawmode .nb-rs{display:none!important}
+.nb-txt{outline:none;min-height:24px;padding:3px 6px;border-radius:8px;border:1px dashed transparent;font-size:13.5px;line-height:1.55;color:var(--text)}
+.nb-txt:focus,.nb-it.sel .nb-txt{border-color:var(--line2);background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.nb-txt h3{margin:3px 0;font-size:15px} .nb-txt ul{margin:2px 0;padding-left:18px} .nb-txt p{margin:2px 0} .nb-txt img{max-width:100%}
+.nb-img{cursor:move} .nb-img img{width:100%;border-radius:8px;display:block;border:1px solid var(--line2);user-select:none;-webkit-user-drag:none}
+.nb-it.sel img{outline:2px solid var(--brand);outline-offset:2px}
+.nb-rs{position:absolute;right:-9px;bottom:14px;width:18px;height:18px;border-radius:4px;background:var(--brand);cursor:nwse-resize;display:none;border:2px solid #fff}
+.nb-it:hover .nb-rs,.nb-it.sel .nb-rs{display:block}
+.nb-cap{font-size:11.5px;color:var(--muted);margin-top:4px} .nb-ts{cursor:grab} .nb-lbl{font-size:12.5px;color:var(--text2)}
+.tsn{display:inline-flex;align-items:center;gap:3px;padding:0 6px;border-radius:6px;background:var(--soft);color:var(--chip);font:600 11.5px ui-monospace,Consolas,monospace;cursor:pointer;text-decoration:none}
+.nb-page.printing{background:#fff!important;border-color:#fff} .printing .nb-bar,.printing .nb-rs{display:none!important}
+.printing .nb-txt{color:#111!important;border-color:transparent!important;background:transparent!important}
+.nb-ask{display:flex;gap:6px;align-items:center;padding:8px;border-top:1px solid var(--line);background:var(--panel);flex:none}
+#nbExplain{flex:none;white-space:nowrap} #nbExplain:disabled{opacity:.45} #nbExplain.ready{border-color:var(--brand);box-shadow:0 0 0 3px var(--brandSoft)}
+.nb-card{position:absolute;right:8px;left:8px;bottom:56px;max-height:65%;overflow:auto;z-index:20;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.nb-card h3{margin:0 0 4px;font-size:14.5px} .nb-card .sum{color:var(--text2);margin:0 0 8px;font-size:13.5px}
+.nb-card h4{margin:8px 0 2px;font-size:13px} .nb-card ul{margin:0;padding-left:18px;font-size:13.5px}
+.nb-card .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px} .nb-card .hd .sp{flex:1} .nb-card .q{font-size:12px;color:var(--muted);margin-bottom:6px} .nb-card .acts{display:flex;gap:6px;margin-top:10px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:650;padding:1px 8px;border-radius:99px;background:var(--soft);color:var(--chip)}
+.badge.ok{background:rgba(34,197,94,.14);color:var(--ok)} .badge.bad{background:rgba(244,63,94,.14);color:var(--bad)} .badge.warn{background:rgba(245,158,11,.16);color:var(--warn)}
+.shimmer{height:12px;border-radius:6px;background:var(--panel2);margin:6px 0}
+.btn.pri{background:linear-gradient(135deg,var(--brand),#5b8cff);color:#fff;border:0}
+.ico{flex:none;vertical-align:-2px}
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:90;animation:fsh .35s}@keyframes fsh{0%{opacity:.5}to{opacity:0}}
+#toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);color:var(--text);padding:6px 12px;border-radius:10px;font-size:12.5px;z-index:99;max-width:90%;text-align:center}
 </style></head><body>
 <header>
   <div class="logo" aria-hidden="true">L</div><b>Learning Mate AI</b>
@@ -90,19 +128,37 @@ footer{border-top:1px solid var(--line);padding:10px 12px;background:var(--panel
   <button role="tab" id="t_notes" aria-selected="false" data-tab="notes" data-t="notes"></button>
 </div>
 
-<main>
+<main id="main">
   <div id="p_chat" aria-live="polite"></div>
   <div id="p_sum" hidden></div>
   <div id="p_quiz" hidden></div>
-  <div id="p_notes" hidden>
-    <div class="row" style="flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn ghost sm" type="button" id="nText" data-t="nText"></button>
-      <button class="btn ghost sm" type="button" id="nTs" data-t="nTs"></button>
-      <button class="btn ghost sm" type="button" id="nShot" data-t="nShot"></button>
-      <span class="muted" id="nSave" role="status" style="margin-left:auto"></span>
+  <div id="p_notes" class="hide nbpane">
+    <div class="nb-top">
+      <div class="ntool" id="nbTools">
+        <button type="button" data-tool="type" class="on" data-tt="nbType"><i data-i="type" data-s="15"></i></button>
+        <button type="button" data-tool="pen" data-tt="pen"><i data-i="pen" data-s="15"></i></button>
+        <button type="button" data-tool="marker" data-tt="marker"><i data-i="marker" data-s="15"></i></button>
+        <button type="button" data-tool="eraser" data-tt="eraser"><i data-i="eraser" data-s="15"></i></button>
+        <span class="sep"></span>
+        <span class="sw" data-col="#f2f4f8" style="background:#f2f4f8"></span><span class="sw on" data-col="#7c5cff" style="background:#7c5cff"></span><span class="sw" data-col="#22d3ee" style="background:#22d3ee"></span><span class="sw" data-col="#f43f5e" style="background:#f43f5e"></span><span class="sw" data-col="#22c55e" style="background:#22c55e"></span><span class="sw" data-col="#111827" style="background:#111827"></span>
+        <input type="range" id="nbSize" aria-label="Pen size" min="1" max="20" value="3" style="width:64px">
+        <span class="sep"></span>
+        <button type="button" data-fmt="bold" title="Bold"><b>B</b></button><button type="button" data-fmt="italic" title="Italic"><i style="font-style:italic;font-family:serif">I</i></button><button type="button" data-fmt="h" title="Heading"><b>H</b></button><button type="button" data-fmt="list" title="List"><i data-i="list" data-s="15"></i></button><button type="button" data-fmt="hl" title="Highlight"><span style="background:rgba(250,204,21,.5);padding:0 5px;border-radius:3px;font-weight:700">A</span></button>
+        <span class="sep"></span>
+        <button type="button" id="nbTs" data-tt="tsBtn"><i data-i="clock" data-s="15"></i></button><button type="button" id="nbSnap" data-tt="ssBtn"><i data-i="camera" data-s="15"></i></button>
+        <span class="sep"></span>
+        <button type="button" id="nbUndo" data-tt="undo"><i data-i="undo" data-s="15"></i></button><button type="button" id="nbClear" data-tt="clear"><i data-i="trash" data-s="15"></i></button>
+        <button type="button" id="nbPdf" data-tt="exportPdf"><i data-i="download" data-s="15"></i></button>
+      </div>
+      <div class="nb-hint"><span class="muted" id="nSave"></span></div>
     </div>
-    <div id="nList"></div>
-    <p class="muted" id="nEmpty" data-t="nEmpty"></p>
+    <div class="nb-scroll" id="nbScroll"><div class="nb-page" id="nbPage"><canvas id="nbInk"></canvas></div></div>
+    <div class="nb-card hide" id="nbCard"></div>
+    <div class="nb-ask">
+      <button class="btn ghost sm" type="button" id="nbExplain" disabled data-t="nbExplain"></button>
+      <input class="in" id="nbQ" style="margin:0">
+      <button class="btn sm" type="button" id="nbAskBtn" aria-label="Send">➤</button>
+    </div>
   </div>
 </main>
 
@@ -113,5 +169,10 @@ footer{border-top:1px solid var(--line);padding:10px 12px;background:var(--panel
   </div>
   <label class="tog"><input type="checkbox" id="sp"> <span data-t="spoiler"></span></label>
 </footer>
+<div id="toast" class="hide" role="status"></div>
+<script src="lib/i18n.js"></script>
+<script src="lib/icons.js"></script>
 <script src="sidepanel.js"></script>
+<script src="lib/notebook.js"></script>
+<script src="nb_glue.js"></script>
 </body></html>

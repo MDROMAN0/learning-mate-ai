@@ -19,7 +19,7 @@ const TXT = {
     makeQuiz: "Make a quiz (5 questions)", working: "Working…", needLogin: "Log in first (⚙ settings)", loggedIn: "Logged in",
     noLogin: "This server does not need a login", hint: "Ask anything about the video. Click a time to jump there.",
     general: "From general knowledge (not from the video)", lost: "Connection lost, try again", lang: "বাংলা",
-    notes: "Notes", nText: "+ Text", nTs: "+ Timestamp", nShot: "📷 Screenshot", nEmpty: "Write notes, save the current time or a screenshot of the video. Answers can be added with “Add to notes”.",
+    notes: "Notebook", nText: "+ Text", nTs: "+ Timestamp", nShot: "📷 Screenshot", nEmpty: "Write notes, save the current time or a screenshot of the video. Answers can be added with “Add to notes”.",
     nPh: "Write here…", saving: "saving…", savedCloud: "✓ saved to your account", savedLocal: "✓ saved in this browser (log in to sync with the website)",
     toNotes: "+ Add to notes", added: "Added to notes", shotFail: "Could not capture the video frame" },
   bn: { server: "সার্ভারের ঠিকানা", email: "ইমেইল", password: "পাসওয়ার্ড", login: "লগইন", logout: "লগআউট", prepare: "ভিডিও প্রস্তুত করো",
@@ -31,21 +31,31 @@ const TXT = {
     makeQuiz: "কুইজ বানাও (৫টা প্রশ্ন)", working: "কাজ চলছে…", needLogin: "আগে লগইন করো (⚙ সেটিংস)", loggedIn: "লগইন আছে",
     noLogin: "এই সার্ভারে লগইন লাগে না", hint: "ভিডিও নিয়ে যেকোনো প্রশ্ন করো। সময়ে ক্লিক করলে ভিডিও ওখানে যাবে।",
     general: "সাধারণ জ্ঞান থেকে (ভিডিও থেকে না)", lost: "সংযোগ কেটে গেছে, আবার চেষ্টা করো", lang: "English",
-    notes: "নোট", nText: "+ লেখা", nTs: "+ সময়", nShot: "📷 স্ক্রিনশট", nEmpty: "নোট লেখো, ভিডিওর এখনকার সময় বা স্ক্রিনশট রাখো। উত্তরের নিচে “নোটে রাখো” চাপলে উত্তরও নোটে যাবে।",
+    notes: "নোটবুক", nText: "+ লেখা", nTs: "+ সময়", nShot: "📷 স্ক্রিনশট", nEmpty: "নোট লেখো, ভিডিওর এখনকার সময় বা স্ক্রিনশট রাখো। উত্তরের নিচে “নোটে রাখো” চাপলে উত্তরও নোটে যাবে।",
     nPh: "এখানে লেখো…", saving: "সেভ হচ্ছে…", savedCloud: "✓ তোমার অ্যাকাউন্টে সেভ হয়েছে", savedLocal: "✓ এই ব্রাউজারে সেভ হয়েছে (লগইন করলে ওয়েবসাইটের সাথে মিলবে)",
     toNotes: "+ নোটে রাখো", added: "নোটে রাখা হয়েছে", shotFail: "ভিডিওর ছবি নেওয়া গেল না" },
 };
 const STAGES = ["rewrite", "retrieve", "grade", "generate", "verify"];
 let cfg = { backend: DEFAULT_SERVER, token: "", user: "", lang: "en", theme: "dark" };
-let vid = null, tabId = null, state = "none";        // state: none | unknown | running | done | error
+let vid = null, tabId = null, state = "none";
+// globals used by the website's notebook (lib/notebook.js)
+let cur = null, nbLoadedFor = null, lastTime = 0;
+const me = { user: null };
+const now = () => lastTime;
+const seek = s => { if (tabId != null) inPage(pageSeek, [s]); lastTime = s; };
+function toast(msg) { const el = $("toast"); el.textContent = msg; el.classList.remove("hide"); clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.add("hide"), 2200); }        // state: none | unknown | running | done | error
 const chats = {};                                     // video id -> [{q, standalone}]
-const t = k => TXT[cfg.lang][k];
+// keys this panel does not define come from the website's text file (lib/i18n.js), which the notebook uses
+const t = (k, vars) => { let s = TXT[cfg.lang][k] ?? window.I18N?.[cfg.lang]?.[k] ?? window.I18N?.en?.[k] ?? k;
+  if (vars && typeof s === "string") for (const v in vars) s = s.replace("{" + v + "}", vars[v]); return s; };
 
 function paintText() {
   document.documentElement.lang = cfg.lang;
   document.documentElement.dataset.theme = cfg.theme;
   document.querySelectorAll("[data-t]").forEach(el => { el.textContent = t(el.dataset.t); });
-  $("q").placeholder = t("qPh");
+  document.querySelectorAll("[data-tt]").forEach(el => { el.title = t(el.dataset.tt); el.setAttribute("aria-label", el.title); });
+  $("q").placeholder = t("qPh"); $("nbQ").placeholder = t("nbAskPh"); $("nbQ").setAttribute("aria-label", t("nbAskPh"));
+  window.LANG = cfg.lang; me.user = cfg.token ? { name: cfg.user } : null;
   $("langBtn").textContent = t("lang");
   $("themeBtn").textContent = cfg.theme === "dark" ? "☀" : "☾";
   $("meBox").hidden = !cfg.token; $("loginBox").hidden = !!cfg.token;
@@ -61,8 +71,9 @@ function headers() {
   if (cfg.token) h.Authorization = "Bearer " + cfg.token;
   return h;
 }
-async function api(path, body) {
-  const r = await fetch(base() + path, body === undefined ? { headers: headers() } : { method: "POST", headers: headers(), body: JSON.stringify(body) });
+async function api(path, body, opt) {          // opt = {method, body}: used by the notebook (PUT notes)
+  const r = await fetch(base() + path, opt ? { method: opt.method, headers: headers(), body: JSON.stringify(opt.body) }
+    : body === undefined ? { headers: headers() } : { method: "POST", headers: headers(), body: JSON.stringify(body) });
   const d = await r.json().catch(() => ({ detail: "bad server response" }));
   if (r.status === 401) { openSettings(true); throw new Error(t("needLogin")); }
   if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "HTTP " + r.status);
@@ -161,7 +172,7 @@ async function watchJob() {            // poll until the server finishes buildin
   for (;;) {
     const myVid = vid, d = await api("/api/job/" + vid);
     if (myVid !== vid) return;
-    if (d.status === "done") { state = "done"; titleCache = d.meta?.title || titleCache; paintVideo(); return; }
+    if (d.status === "done") { state = "done"; titleCache = d.meta?.title || titleCache; if (cur) cur.title = titleCache; paintVideo(); return; }
     if (d.status !== "running") { state = d.status === "error" ? "error" : "unknown"; if (d.msg) $("vstate").title = d.msg; paintVideo(); return; }
     state = "running"; paintVideo(); if (d.msg) $("vstate").textContent = d.msg;
     await sleep(2000);
@@ -173,7 +184,8 @@ async function refreshVideo() {
   tabId = tab?.id ?? null;
   if (id === vid) return;
   vid = id; state = id ? "unknown" : "none"; titleCache = id ? (tab.title || "").replace(/^\(\d+\)\s*/, "").replace(/ - YouTube$/, "") : "";
-  $("p_chat").innerHTML = id ? '<p class="muted">' + t("hint") + "</p>" : ""; $("p_sum").innerHTML = ""; $("p_quiz").innerHTML = ""; noteVid = null; note = null; $("nList").innerHTML = "";
+  $("p_chat").innerHTML = id ? '<p class="muted">' + t("hint") + "</p>" : ""; $("p_sum").innerHTML = ""; $("p_quiz").innerHTML = "";
+  cur = id ? { video_id: id, title: titleCache } : null; nbLoadedFor = null;
   paintVideo(); showTab("chat");
   if (id) watchJob().catch(() => {});
 }
@@ -237,7 +249,7 @@ async function ask() {
     if (d.found && d.answer) h += '<div class="addn"><button class="btn ghost sm" type="button">' + t("toNotes") + "</button></div>";
     body.innerHTML = h;
     const an = body.querySelector(".addn button");
-    if (an) an.onclick = async () => { if (noteVid !== vid) await loadNotes(); answerToNote(q, d); an.textContent = "✓ " + t("added"); an.disabled = true; };
+    if (an) an.onclick = async () => { await openNotebook(); window.answerToNotes(q, d); an.textContent = "✓ " + t("added"); an.disabled = true; };
   } catch (e) { body.innerHTML = '<span class="pill bad">' + esc(e.message) + "</span>"; }
   $("ask").disabled = false; scroll(); $("q").focus();
 }
@@ -268,102 +280,12 @@ async function loadQuiz() {
 }
 function showTab(name) {
   ["chat", "sum", "quiz", "notes"].forEach(k => { $("p_" + k).hidden = k !== name; $("t_" + k).setAttribute("aria-selected", k === name); });
+  $("p_notes").classList.toggle("hide", name !== "notes"); $("main").classList.toggle("nbmode", name === "notes");
   $("composer").hidden = !vid || name !== "chat";
   if (name === "sum" && vid && !$("p_sum").innerHTML) loadSummary();
-  if (name === "notes" && vid && noteVid !== vid) loadNotes();
+  if (name === "notes") openNotebook();
   if (name === "quiz" && vid && !$("p_quiz").innerHTML) $("p_quiz").innerHTML = '<button class="btn" type="button" id="mkQuiz">' + t("makeQuiz") + "</button>";
 }
-
-// ---------------------------------------------------------------- notes
-// Same format as the website's notebook ({v:2, H, items:[{type:"text"|"ts"|"img", x, y, w, ...}], ink}),
-// so a note written here opens on the website too (when logged in) and the other way round.
-let note = null, noteVid = null, saveTimer = null;
-const nid = () => Math.random().toString(36).slice(2, 10);
-const noteKey = v => "notes_" + v;
-async function loadNotes() {
-  if (!vid) return;
-  noteVid = vid; note = null;
-  let c = null;
-  if (cfg.token) { try { c = (await api("/api/notes/" + vid)).content; } catch (_) {} }
-  if (!c) { const v = await chrome.storage.local.get([noteKey(vid)]); c = v[noteKey(vid)] || null; }
-  if (noteVid !== vid) return;
-  note = c && Array.isArray(c.items) ? c : { v: 2, H: 1400, items: [], ink: null, title: titleCache };
-  drawNotes();
-}
-function itemHeight(it) {
-  if (it.type === "img") return Math.round((it.w || 620) * 9 / 16) + 50;
-  if (it.type === "ts") return 44;
-  return 40 + 22 * Math.ceil(String(it.html || "").replace(/<[^>]+>/g, "").length / 70);
-}
-function addNote(it) {
-  const items = note.items, bottom = items.reduce((m, x) => Math.max(m, (x.y || 0) + itemHeight(x)), 20);
-  it = { id: nid(), x: 40, y: bottom + 16, w: it.type === "img" ? 620 : 880, ...it };
-  items.push(it);
-  note.H = Math.max(note.H || 1400, it.y + itemHeight(it) + 200);
-  drawNotes(); saveNotes();
-  const el = $("nList").querySelector('[data-id="' + it.id + '"]');
-  el?.scrollIntoView({ block: "nearest" });
-  return el;
-}
-function noteHtml(it) {
-  const del = '<button class="del" type="button" aria-label="Delete">✕</button>';
-  if (it.type === "ts") return '<div class="note" data-id="' + it.id + '">' + chip({ start: it.t }) + (it.label ? " " + esc(it.label) : "") + del + "</div>";
-  if (it.type === "img") {
-    const m = /data-t="(\d+)"/.exec(it.cap || "");
-    return '<div class="note" data-id="' + it.id + '"><img alt="" src="' + esc(it.src) + '">' + (m ? chip({ start: +m[1] }) : "") + del + "</div>";
-  }
-  return '<div class="note" data-id="' + it.id + '"><div class="txt" contenteditable="true" data-ph="' + esc(t("nPh")) + '">' + (it.html || "") + "</div>" + del + "</div>";
-}
-function drawNotes() {
-  if (!note) { $("nList").innerHTML = ""; return; }
-  const items = [...note.items].sort((a, b) => (a.y || 0) - (b.y || 0) || (a.x || 0) - (b.x || 0));
-  $("nList").innerHTML = items.map(noteHtml).join("");
-  $("nEmpty").hidden = items.length > 0;
-}
-function saveNotes() {
-  clearTimeout(saveTimer);
-  $("nSave").textContent = t("saving");
-  const v = noteVid, content = { ...note, title: note.title || titleCache };
-  saveTimer = setTimeout(async () => {
-    if (cfg.token) {
-      try { await fetch(base() + "/api/notes/" + v, { method: "PUT", headers: headers(), body: JSON.stringify({ content }) }).then(r => { if (!r.ok) throw 0; });
-        $("nSave").textContent = t("savedCloud"); return; } catch (_) {}
-    }
-    await chrome.storage.local.set({ [noteKey(v)]: content });
-    $("nSave").textContent = t("savedLocal");
-  }, 700);
-}
-// answer -> one text note (title, summary, points with their times)
-function answerToNote(q, d) {
-  if (!note) return;
-  const refs = d.refs || [], a = d.answer;
-  let h = "<b>" + esc(q) + "</b>";
-  if (a) {
-    h += "<br>" + esc(a.summary || "");
-    (a.sections || []).forEach(s => (s.points || []).forEach(p => {
-      const times = (p.cites || []).map(n => refs.find(r => r.n === n)).filter(Boolean).map(r => fmt(r.start));
-      h += "<br>• " + esc(p.text) + (times.length ? " [" + times.join(", ") + "]" : "");
-    }));
-  }
-  addNote({ type: "text", html: h });
-}
-$("nText").onclick = () => { const el = addNote({ type: "text", html: "" }); el?.querySelector(".txt")?.focus(); };
-$("nTs").onclick = async () => { const s = await inPage(pageSeek, [null]); addNote({ type: "ts", t: Math.floor(s || 0), label: "" }); };
-$("nShot").onclick = async () => {
-  const r = await inPage(pageShot);
-  if (r.error) { $("nSave").textContent = t("shotFail"); return; }
-  addNote({ type: "img", src: r.src, cap: '<a class="tsn" data-t="' + Math.floor(r.t) + '">' + fmt(r.t) + "</a>" });
-};
-$("nList").addEventListener("input", e => {
-  const box = e.target.closest(".note"), it = note?.items.find(x => x.id === box?.dataset.id);
-  if (it) { it.html = e.target.innerHTML; saveNotes(); }
-});
-$("nList").addEventListener("click", e => {
-  const d = e.target.closest(".del");
-  if (!d) return;
-  const id = d.closest(".note").dataset.id;
-  note.items = note.items.filter(x => x.id !== id); drawNotes(); saveNotes();
-});
 
 // ---------------------------------------------------------------- settings and events
 function openSettings(open) { $("settings").hidden = !open; $("gear").setAttribute("aria-expanded", String(open)); }
