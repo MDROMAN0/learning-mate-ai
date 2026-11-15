@@ -49,6 +49,8 @@
     image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
     trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>',
     type: '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+    select: '<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M4 15v4a1 1 0 0 0 1 1h4" stroke-dasharray="2 2.5"/><path d="m13 13 8 3-3.5 1.5L16 21z"/>',
+    broom: '<path d="M19 3 11 11"/><path d="M7.5 10.5 13.5 16.5"/><path d="M7.5 10.5c-2 1-3.5 3.5-4.5 9.5 6-1 8.5-2.5 9.5-4.5"/><path d="M6 16l2-2M9 18.5l1.5-1.5"/>',
     move: '<path d="M12 2v20M2 12h20"/><path d="m9 5 3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     line: '<path d="M5 19 19 5"/>',

@@ -3,6 +3,38 @@
    (RAG, BM25, embedding, chunk, timestamp, PDF, YouTube...). Add every new key to BOTH languages. */
 window.I18N = {
   en: {
+    navEng: "AI engines",
+    engTitle: "AI engines (free)",
+    engSub: "Add free API keys and your own PC. When one engine reaches its free limit, the next one answers by itself — no paid plan needed.",
+    engOff: "off",
+    engOn: "on",
+    engNeedKey: "needs a key",
+    engFail: "not working",
+    engOk: "working",
+    engFree: "free",
+    engFast: "small jobs first",
+    engFastTip: "Short jobs (understanding the question, checking, verifying) go here first, so the main engine’s free quota lasts longer",
+    engUse: "Use this engine",
+    engKeyPh: "Paste the free API key",
+    engKeySaved: "Key saved",
+    engGetKey: "Get a free key",
+    engModels: "Models (advanced)",
+    engMain: "Answer model",
+    engSmall: "Small-jobs model",
+    engTest: "Test",
+    engTesting: "Testing…",
+    engClear: "Remove key",
+    engSave: "Save",
+    engSaved: "AI engines saved",
+    engUnsaved: "Not saved yet",
+    engChain: "Order the site uses right now",
+    engNone: "No engine set up yet",
+    engChainTip: "Left to right: if one is busy or out of free quota, the next one is used. Use ↑ ↓ on a card to change the order.",
+    engReadOnly: "Only the site owner can change engines. You can see which ones are active.",
+    engHowPC: "How to connect my PC (Ollama)",
+    engVia: "answered by",
+    engCached: "instant (cached)",
+    engHowPCBody: "<ol><li>Install <b>Ollama</b> from <a href=\"https://ollama.com/download\" target=\"_blank\" rel=\"noopener\">ollama.com/download</a> (free, open-source).</li><li>Open a terminal and download the models once: <code>ollama pull qwen2.5:7b</code> and <code>ollama pull qwen2.5:3b</code> (and <code>ollama pull bge-m3</code> for search vectors).</li><li><b>Site running on this PC</b> (localhost): keep the URL <code>http://localhost:11434/v1</code>, tick “Use this engine”, Save, then Test.</li><li><b>Online site</b> (Render): put the same <code>DATABASE_URL</code> as Render in this PC’s <code>.env</code>, install the free <a href=\"https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\" target=\"_blank\" rel=\"noopener\">cloudflared</a>, then double-click <code>start_pc_server.bat</code> and keep that window open. The site uses your PC while it is on and goes back to the free APIs by itself when it is off.</li></ol><div class=\"muted\">Needs about 8 GB RAM for the 7B model; a GPU makes it much faster.</div>",
     nbShapes: "Shapes", nbLine: "Line", nbArrow: "Arrow", nbRect: "Box", nbEllipse: "Circle (hold Shift for a perfect circle)", redo: "Redo drawing",
     zoomIn: "Zoom in", zoomOut: "Zoom out", zoomReset: "Reset zoom", nbAIT: "Let AI write notes from this video", nbAIBtn: "AI",
     nbAI_summary: "Study notes from the video", nbAI_mindmap: "Mind map", nbAI_flashcards: "Flashcards", nbAI_quiz: "Quiz me on my notes",
@@ -14,7 +46,7 @@ window.I18N = {
     noDue: "No cards due — make flashcards from a video's notebook (AI → Flashcards).", reviewDone: "Review done for now 🎉", watched: "watched",
     quizAvg: "quiz", questionsAsked: "questions", notesSearchPh: "Search inside all your notes", noProgress: "Nothing yet — open a video and start studying.",
     progLogin: "Log in to track your progress", deleteCard: "Delete card", cardOf: "Card {i} of {n}", nextIn: "next review",
-    pinMenu: "Keep the menu open", nbMove: "Move", nbAskPh: "Ask AI about this video while you take notes…", nbExplain: "Explain this", nbPlace: "Place in notebook", nbClose: "Close", nbExplainHint: "Select some text in your notebook, or click a screenshot / timestamp first", nbAboutSel: "About your selection", nbAboutAt: "Explanation of the part at", nbPlaced: "Placed in your notebook — drag it anywhere", a_q: "Question", a_rw: "Query rewrite", a_dense: "Dense search", a_bm25: "BM25 search", a_rrf: "RRF fusion", a_rr: "Rerank", a_gr: "Relevance check", a_gen: "Grounded answer", a_ver: "Claim check", a_seg: "Segments",
+    pinMenu: "Keep the menu open", nbSelect: "Select (drag a box, then move or delete)", nbSelDel: "Delete selected", nbClearAll: "Clear the whole notebook", nbClearAllQ: "Clear everything in this notebook (notes, screenshots and drawing)?", nbCleared: "Notebook cleared", micLangT: "Voice language (tap to switch Bangla / English)", micBn: "Voice: Bangla", micEn: "Voice: English", splitT: "Drag to resize", nbMove: "Move", nbAskPh: "Ask AI about this video while you take notes…", nbExplain: "Explain this", nbPlace: "Place in notebook", nbClose: "Close", nbExplainHint: "Select some text in your notebook, or click a screenshot / timestamp first", nbAboutSel: "About your selection", nbAboutAt: "Explanation of the part at", nbPlaced: "Placed in your notebook — drag it anywhere", a_q: "Question", a_rw: "Query rewrite", a_dense: "Dense search", a_bm25: "BM25 search", a_rrf: "RRF fusion", a_rr: "Rerank", a_gr: "Relevance check", a_gen: "Grounded answer", a_ver: "Claim check", a_seg: "Segments",
     brand: "Learning Mate AI", brandSub: "YouTube study assistant",
     study: "Study", lab: "RAG Lab", online: "online", offline: "offline", langBtn: "বাংলা",
     home: "Home", browse: "Browse YouTube", library: "My library", historyT: "History",
@@ -118,6 +150,38 @@ window.I18N = {
     evSaved: "Measured results", evSavedD: "Real run on 30 Sep 2026 — 4 Bangla lecture videos, 26 questions with a known answer + 8 whose topic is not in the video.", evBuiltin: "Run the built-in test set", evBuiltinD: "Runs the questions below live against the current library (retrieval only, no answer generation).", evLoaded: "{p} questions with a known answer · {n} not-in-video", evCustom: "Custom test set (JSON)", evWhy: "What this shows", evWhy1: "BM25 alone finds nothing: questions are typed in Banglish/English but captions are in Bangla script, so exact words never match.", evWhy2: "Meaning-based (dense) search fixes that; hybrid + LLM rerank gives the best ranking (MRR 0.93).", evWhy3: "Query rewrite did not help retrieval here and was 6× slower, so it is optional.", evQuick: "Quick run (8 questions)"
   },
   bn: {
+    navEng: "AI engine",
+    engTitle: "AI engine (ফ্রি)",
+    engSub: "ফ্রি API key আর নিজের PC যোগ করো। একটার ফ্রি লিমিট শেষ হলে পরেরটা নিজে থেকে উত্তর দেবে — কোনো পেইড প্ল্যান লাগবে না।",
+    engOff: "বন্ধ",
+    engOn: "চালু",
+    engNeedKey: "key লাগবে",
+    engFail: "কাজ করছে না",
+    engOk: "কাজ করছে",
+    engFree: "ফ্রি",
+    engFast: "ছোট কাজ আগে",
+    engFastTip: "ছোট কাজগুলো (প্রশ্ন বোঝা, যাচাই, মিলিয়ে দেখা) আগে এখানে যায়, তাই মূল engine-এর ফ্রি কোটা বেশি দিন চলে",
+    engUse: "এই engine ব্যবহার করো",
+    engKeyPh: "ফ্রি API key পেস্ট করো",
+    engKeySaved: "Key সেভ আছে",
+    engGetKey: "ফ্রি key নাও",
+    engModels: "মডেল (অ্যাডভান্সড)",
+    engMain: "উত্তরের মডেল",
+    engSmall: "ছোট কাজের মডেল",
+    engTest: "টেস্ট",
+    engTesting: "টেস্ট হচ্ছে…",
+    engClear: "Key মুছে দাও",
+    engSave: "সেভ",
+    engSaved: "AI engine সেভ হয়েছে",
+    engUnsaved: "এখনো সেভ হয়নি",
+    engChain: "সাইট এখন এই ক্রমে ব্যবহার করছে",
+    engNone: "এখনো কোনো engine সেট করা নেই",
+    engChainTip: "বাম থেকে ডানে: একটা ব্যস্ত বা ফ্রি কোটা শেষ হলে পরেরটা চলবে। কার্ডের ↑ ↓ দিয়ে ক্রম বদলাও।",
+    engReadOnly: "শুধু সাইটের মালিক engine বদলাতে পারবে। কোনগুলো চালু আছে তুমি দেখতে পারবে।",
+    engHowPC: "আমার PC (Ollama) কীভাবে যুক্ত করব",
+    engVia: "উত্তর দিয়েছে",
+    engCached: "সাথে সাথে (cache থেকে)",
+    engHowPCBody: "<ol><li><a href=\"https://ollama.com/download\" target=\"_blank\" rel=\"noopener\">ollama.com/download</a> থেকে <b>Ollama</b> ইনস্টল করো (ফ্রি, open-source)।</li><li>Terminal খুলে একবার মডেল নামাও: <code>ollama pull qwen2.5:7b</code> আর <code>ollama pull qwen2.5:3b</code> (খোঁজার জন্য <code>ollama pull bge-m3</code>)।</li><li><b>সাইট এই PC-তে চললে</b> (localhost): URL <code>http://localhost:11434/v1</code> রাখো, “এই engine ব্যবহার করো” টিক দাও, সেভ করে টেস্ট চাপো।</li><li><b>Online সাইটের জন্য</b> (Render): Render-এর একই <code>DATABASE_URL</code> এই PC-র <code>.env</code>-এ দাও, ফ্রি <a href=\"https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\" target=\"_blank\" rel=\"noopener\">cloudflared</a> ইনস্টল করো, তারপর <code>start_pc_server.bat</code>-এ ডাবল-ক্লিক করে উইন্ডোটা খোলা রাখো। PC চালু থাকলে সাইট তোমার PC ব্যবহার করবে, বন্ধ করলে নিজে থেকে ফ্রি API-তে ফিরে যাবে।</li></ol><div class=\"muted\">7B মডেলের জন্য ~8 GB RAM লাগে; GPU থাকলে অনেক দ্রুত।</div>",
     nbShapes: "আকৃতি", nbLine: "লাইন", nbArrow: "তীর", nbRect: "বক্স", nbEllipse: "বৃত্ত (Shift চেপে রাখলে নিখুঁত গোল)", redo: "আঁকা ফেরত আনো",
     zoomIn: "বড় করো", zoomOut: "ছোট করো", zoomReset: "আগের মাপ", nbAIT: "এই ভিডিও থেকে AI নোট বানাক", nbAIBtn: "AI",
     nbAI_summary: "ভিডিও থেকে পড়ার নোট", nbAI_mindmap: "মাইন্ড ম্যাপ", nbAI_flashcards: "ফ্ল্যাশকার্ড", nbAI_quiz: "আমার নোট থেকে কুইজ",
@@ -129,7 +193,7 @@ window.I18N = {
     noDue: "রিভিউ বাকি নেই — ভিডিওর নোটবুকে AI → ফ্ল্যাশকার্ড দিয়ে কার্ড বানাও।", reviewDone: "আপাতত রিভিউ শেষ 🎉", watched: "দেখা হয়েছে",
     quizAvg: "কুইজ", questionsAsked: "প্রশ্ন", notesSearchPh: "সব নোটের ভেতরে খোঁজো", noProgress: "এখনো কিছু নেই — একটা ভিডিও খুলে পড়া শুরু করো।",
     progLogin: "অগ্রগতি রাখতে লগইন করো", deleteCard: "কার্ড মুছে দাও", cardOf: "{n}টার মধ্যে {i} নম্বর কার্ড", nextIn: "পরের রিভিউ",
-    pinMenu: "মেনু খোলা রাখো", nbMove: "সরাও", nbAskPh: "নোট নিতে নিতে এই ভিডিও নিয়ে AI-কে জিজ্ঞেস করো…", nbExplain: "এটা বুঝিয়ে দাও", nbPlace: "নোটবুকে বসাও", nbClose: "বন্ধ", nbExplainHint: "আগে নোটবুকের কোনো লেখা সিলেক্ট করো, অথবা কোনো স্ক্রিনশট / timestamp-এ ক্লিক করো", nbAboutSel: "তোমার সিলেক্ট করা অংশ নিয়ে", nbAboutAt: "এই সময়ের অংশের ব্যাখ্যা:", nbPlaced: "নোটবুকে বসানো হয়েছে — টেনে যেকোনো জায়গায় নাও", a_q: "প্রশ্ন", a_rw: "প্রশ্ন নতুন করে লেখা", a_dense: "অর্থ দিয়ে খোঁজা", a_bm25: "শব্দ দিয়ে খোঁজা", a_rrf: "দুই তালিকা মেলানো", a_rr: "আবার সাজানো", a_gr: "প্রাসঙ্গিকতা যাচাই", a_gen: "প্রমাণভিত্তিক উত্তর", a_ver: "তথ্য যাচাই", a_seg: "ভিডিওর অংশ",
+    pinMenu: "মেনু খোলা রাখো", nbSelect: "সিলেক্ট (বক্স টেনে সিলেক্ট করো, তারপর সরাও বা মুছো)", nbSelDel: "সিলেক্ট করা অংশ মুছো", nbClearAll: "পুরো নোটবুক খালি করো", nbClearAllQ: "এই নোটবুকের সব (নোট, স্ক্রিনশট, আঁকা) মুছে ফেলবে?", nbCleared: "নোটবুক খালি করা হয়েছে", micLangT: "ভয়েসের ভাষা (চাপলে বাংলা / English বদলায়)", micBn: "ভয়েস: বাংলা", micEn: "ভয়েস: English", splitT: "টেনে বড়-ছোট করো", nbMove: "সরাও", nbAskPh: "নোট নিতে নিতে এই ভিডিও নিয়ে AI-কে জিজ্ঞেস করো…", nbExplain: "এটা বুঝিয়ে দাও", nbPlace: "নোটবুকে বসাও", nbClose: "বন্ধ", nbExplainHint: "আগে নোটবুকের কোনো লেখা সিলেক্ট করো, অথবা কোনো স্ক্রিনশট / timestamp-এ ক্লিক করো", nbAboutSel: "তোমার সিলেক্ট করা অংশ নিয়ে", nbAboutAt: "এই সময়ের অংশের ব্যাখ্যা:", nbPlaced: "নোটবুকে বসানো হয়েছে — টেনে যেকোনো জায়গায় নাও", a_q: "প্রশ্ন", a_rw: "প্রশ্ন নতুন করে লেখা", a_dense: "অর্থ দিয়ে খোঁজা", a_bm25: "শব্দ দিয়ে খোঁজা", a_rrf: "দুই তালিকা মেলানো", a_rr: "আবার সাজানো", a_gr: "প্রাসঙ্গিকতা যাচাই", a_gen: "প্রমাণভিত্তিক উত্তর", a_ver: "তথ্য যাচাই", a_seg: "ভিডিওর অংশ",
     brand: "Learning Mate AI", brandSub: "YouTube পড়ার সহকারী",
     study: "পড়া", lab: "RAG Lab", online: "চালু", offline: "বন্ধ", langBtn: "English",
     home: "হোম", browse: "YouTube খুঁজুন", library: "আমার লাইব্রেরি", historyT: "ইতিহাস",
@@ -233,7 +297,8 @@ window.I18N = {
     evSaved: "মাপা ফলাফল", evSavedD: "আসল run, ৩০ সেপ্টেম্বর ২০২৬ — ৪টা বাংলা lecture ভিডিও, উত্তর জানা ২৬টা প্রশ্ন + ভিডিওতে নেই এমন ৮টা প্রশ্ন।", evBuiltin: "Built-in test set চালাও", evBuiltinD: "নিচের প্রশ্নগুলো এখনকার লাইব্রেরিতে live চালায় (শুধু retrieval, উত্তর বানায় না)।", evLoaded: "উত্তর জানা {p}টা প্রশ্ন · ভিডিওতে নেই {n}টা", evCustom: "নিজের test set (JSON)", evWhy: "এখান থেকে যা বোঝা যায়", evWhy1: "শুধু BM25 কিছুই পায় না: প্রশ্ন Banglish/English-এ, কিন্তু caption বাংলা হরফে, তাই হুবহু শব্দ কখনো মেলে না।", evWhy2: "অর্থ দিয়ে খোঁজা (dense) এটা ঠিক করে; hybrid + LLM rerank সবচেয়ে ভালো ক্রম দেয় (MRR 0.93)।", evWhy3: "Query rewrite এখানে retrieval-এ সাহায্য করেনি আর ৬ গুণ ধীর, তাই এটা ঐচ্ছিক।", evQuick: "দ্রুত run (৮টা প্রশ্ন)"
   }
 };
-window.LANG = (() => { try { return localStorage.getItem("lang") || "bn"; } catch (e) { return "bn"; } })();
+// English is the default for everyone; Bangla only after the user presses the language button (choice remembered)
+window.LANG = (() => { try { return localStorage.getItem("lm_lang") || "en"; } catch (e) { return "en"; } })();
 window.t = (k, vars) => { let s = (window.I18N[window.LANG] || {})[k] ?? window.I18N.en[k] ?? k; if (vars && typeof s === "string") for (const v in vars) s = s.replace("{" + v + "}", vars[v]); return s; };
 /* translate server progress / error text into the current UI language */
 window.tMsg = m => {
@@ -252,4 +317,4 @@ window.applyLang = () => {
   document.querySelectorAll("[data-tp]").forEach(el => el.setAttribute("aria-label", el.placeholder));
   document.querySelectorAll("[data-tt]").forEach(el => el.setAttribute("aria-label", el.title));
 };
-window.toggleLang = () => { window.LANG = window.LANG === "bn" ? "en" : "bn"; try { localStorage.setItem("lang", window.LANG); } catch (e) {} window.applyLang(); if (window.onLang) window.onLang(); };
+window.toggleLang = () => { window.LANG = window.LANG === "bn" ? "en" : "bn"; try { localStorage.setItem("lm_lang", window.LANG); } catch (e) {} window.applyLang(); if (window.onLang) window.onLang(); };

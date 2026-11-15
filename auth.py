@@ -30,6 +30,11 @@ def enabled():
     return os.getenv("AUTH", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
+def no_limits():
+    """NO_LIMITS=1 (default): demo / presentation mode - no daily question limit for anyone."""
+    return os.getenv("NO_LIMITS", "1") == "1"
+
+
 def daily_limit():
     return int(os.getenv("DAILY_LIMIT", "60"))
 
@@ -196,7 +201,7 @@ def charge(uid):
     with _LOCK, _conn() as c:
         r = c.execute("SELECT n FROM usage WHERE user_id=? AND day=?", (uid, _today())).fetchone()
         n = r["n"] if r else 0
-        if n >= daily_limit():
+        if n >= daily_limit() and not no_limits():
             return False
         c.execute("INSERT OR REPLACE INTO usage(user_id,day,n) VALUES(?,?,?)", (uid, _today(), n + 1))
     return True
@@ -283,7 +288,7 @@ def guest_charge(gid, ip=""):
     day = _today()
     with _LOCK:
         n, m = _GUEST_USE.get((gid, day), 0), _GUEST_IP.get((ip, day), 0)
-        if n >= guest_limit() or (ip and m >= guest_limit() * 3):
+        if not no_limits() and (n >= guest_limit() or (ip and m >= guest_limit() * 3)):
             return False
         _GUEST_USE[(gid, day)] = n + 1
         if ip:

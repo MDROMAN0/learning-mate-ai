@@ -380,7 +380,7 @@ def _create2(**kw):
     return _resp("<thought>hmm</thought>fine")
 rag._client = _t.SimpleNamespace(chat=_t.SimpleNamespace(completions=_t.SimpleNamespace(create=_create2)))
 t0 = time.time(); assert rag._llm_try(rag._client, ["day-gone", "backup"], [{"role": "user", "content": "x"}], 0.1, 5, True) == "fine" and time.time() - t0 < 1
-assert rag._COOL["day-gone"] > time.time() + 3000                                  # daily-exhausted model skipped for an hour
+assert max(v for k, v in rag._COOL.items() if k[1] == "day-gone") > time.time() + 3000                                  # daily-exhausted model skipped for an hour
 try: rag._llm_try(rag._client, ["day-gone"], [{"role": "user", "content": "x"}], 0.1, 5, True); raise SystemExit("should raise")
 except rag._AllBusy: raise SystemExit("must not wait for a daily quota")
 except _Err: pass
@@ -422,7 +422,7 @@ print("llm pool rotation / answer normalization / lenient verify OK")
 # ---- accounts (AUTH=1): signup/login/session cookie/401 gate/admin key/daily limit/history + YouTube browse
 import auth
 rag.llm = fake_llm
-os.environ.update(AUTH="1", DAILY_LIMIT="2", APP_PASSWORD="adminpw"); os.environ.pop("SECRET_KEY", None)
+os.environ.update(AUTH="1", DAILY_LIMIT="2", NO_LIMITS="0", APP_PASSWORD="adminpw"); os.environ.pop("SECRET_KEY", None)
 ac = TestClient(appmod.app)
 assert ac.get("/api/library").status_code == 401 and ac.get("/api/library").json().get("login")
 assert ac.get("/api/library", headers={"x-app-key": "adminpw"}).status_code == 200          # extension/admin path
@@ -746,3 +746,13 @@ ec.post("/api/ask", headers=ADM, json={"video_id": V1, "question": "git merge?",
 rag.ask, rag.llm = _ra, _orig_llm
 for k in ("AUTH", "APP_PASSWORD"): os.environ.pop(k, None)
 print("AI engines panel / encrypted keys / routing / failover / test button / answer cache OK")
+
+# demo mode: no limits by default; a Bangla question gets a Bangla answer even with the English UI
+os.environ["NO_LIMITS"] = "1"
+assert auth.no_limits() and auth.charge(1) and auth.charge(1)
+import app as _ap
+class _R:
+    headers = {"x-lang": "en"}
+for q, want in (("what is git", "en"), ("গিট কী?", "bn"), ("explain git in bangla", "bn"), ("গিট কী? ইংরেজিতে বলো", "en")):
+    _ap._qlang(_R, q); assert rag._LANG.get() == want, (q, rag._LANG.get())
+print("no-limit demo mode / answer language follows the question OK")

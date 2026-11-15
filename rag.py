@@ -331,7 +331,7 @@ class _AllBusy(Exception):
         self.last, self.wait = last, wait
 
 
-_COOL = {}  # model -> time until which it is rate-limited (skip it instead of wasting a round-trip)
+_COOL = {}  # (key, model) -> time  (quotas are per key/project, so a new key is never skipped because an old one ran out)
 _NO_EFFORT = set()  # models that answered 400 to reasoning_effort: never send it to them again (saves a round-trip)
 
 
@@ -350,7 +350,8 @@ def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
         if any(m.lower().startswith("qwen3") for m in models):
             msgs[0]["content"] += " /no_think"
     t = time.time()
-    ready = [m for m in models if _COOL.get(m, 0) <= t]
+    kid = str(getattr(cl, "api_key", "") or "")[-8:]
+    ready = [m for m in models if _COOL.get((kid, m), 0) <= t]
     models = ready + [m for m in models if m not in ready]   # cooling models last, as a final resort
     for i, m in enumerate(models):
         kw = dict(model=m, messages=msgs, temperature=temperature, max_tokens=max_tokens)
@@ -385,7 +386,7 @@ def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
             if code not in (404, 429, 500, 502, 503, 504):
                 raise
             if "PerDay" in str(e):          # daily free quota gone: skip this model for an hour, never wait for it
-                _COOL[m] = time.time() + 3600
+                _COOL[(kid, m)] = time.time() + 3600
                 if i == len(models) - 1:
                     if wait is None:
                         raise
@@ -395,7 +396,7 @@ def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
             d = float(mw.group(1)) + 1 if mw else 20.0
             wait = d if wait is None else min(wait, d)
             if code == 429:
-                _COOL[m] = time.time() + max(d, 30)
+                _COOL[(kid, m)] = time.time() + max(d, 30)
             _stat("llm_fallbacks")
             if i == len(models) - 1:
                 raise _AllBusy(e, wait)

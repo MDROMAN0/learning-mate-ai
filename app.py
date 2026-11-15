@@ -1,5 +1,6 @@
 import contextvars
 import json
+import re
 import os
 import queue
 import tempfile
@@ -85,7 +86,8 @@ async def revalidate_static(request: Request, call_next):
 
 def _charge(request: Request):
     """Per-user daily quota for LLM-heavy calls (protects the free LLM key). Also applies the UI language."""
-    rag.set_lang(request.headers.get("x-lang", ""))
+    if not rag._LANG.get():
+        rag.set_lang(request.headers.get("x-lang", ""))
     if rag.local_ai_active():          # own open-source model (Ollama): no API quota to protect -> unlimited
         return
     g = getattr(request.state, "guest", None)
@@ -133,11 +135,25 @@ class AskReq(BaseModel):
 _ACACHE = {}
 
 
+_BN = re.compile(r"[\u0980-\u09FF]")
+
+
+def _qlang(request, q):
+    """UI language by default, but the question wins: a Bangla question (or "answer in Bangla") gets a Bangla
+    answer, and "in English" / "ইংরেজিতে" gets English."""
+    rag.set_lang(request.headers.get("x-lang", ""))
+    low = (q or "").lower()
+    if re.search(r"\bin english\b|english[e]? (e )?(bolo|lekho|dao|answer)|ইংরেজি|ইংলিশ", low):
+        rag.set_lang("en")
+    elif _BN.search(q or "") or re.search(r"\b(in |answer in )?(bangla|bengali)\b|banglay|banglai", low):
+        rag.set_lang("bn")
+
+
 def _ckey(req, request):
     if req.debug or req.history or req.current_time is not None or not req.use_rewrite or not req.use_verify:
         return None
     return (rag.extract_video_id(req.video_id), " ".join(req.question.lower().split()), req.level, req.mode,
-            req.general, request.headers.get("x-lang", ""))
+            req.general, request.headers.get("x-lang", ""), rag._LANG.get())
 
 
 def _cache_get(k):
@@ -338,6 +354,7 @@ def job(vid: str):
 def ask(req: AskReq, request: Request):
     if not req.question.strip():
         raise HTTPException(400, "empty question")
+    _qlang(request, req.question)
     ck = _ckey(req, request)
     out = _cache_get(ck)
     if out is None:
@@ -360,6 +377,7 @@ def ask_stream(req: AskReq, request: Request):
     evidence moments, the draft answer before verification, then the final result."""
     if not req.question.strip():
         raise HTTPException(400, "empty question")
+    _qlang(request, req.question)
     ck = _ckey(req, request)
     hit = _cache_get(ck)
     if hit is None:
@@ -477,6 +495,7 @@ def ask_all(req: AskAllReq, request: Request):
     if not req.question.strip():
         raise HTTPException(400, "empty question")
     _charge(request)
+    _qlang(request, req.question)
     out = _safe(rag.ask_all, req.question, req.video_ids, req.level)
     u = request.state.user
     if u:
@@ -594,10 +613,10 @@ def me(request: Request):
     gid = None if u else auth.guest_from_token(request.cookies.get(auth.GUEST_COOKIE))
     if gid:
         return {"auth": auth.enabled(), "user": None, "guest": True, "limit": auth.guest_limit(),
-                "used": auth.guest_used(gid), "app_password": False, "unlimited": rag.local_ai_active(),
+                "used": auth.guest_used(gid), "app_password": False, "unlimited": rag.local_ai_active() or auth.no_limits(),
                 "engine": rag.engine_info()}
     return {"auth": auth.enabled(), "user": u, "guest": False, "limit": auth.daily_limit(),
-            "used": auth.used_today(u["id"]) if u else 0, "unlimited": rag.local_ai_active(),
+            "used": auth.used_today(u["id"]) if u else 0, "unlimited": rag.local_ai_active() or auth.no_limits(),
             "engine": rag.engine_info(),
             "app_password": bool(os.getenv("APP_PASSWORD")) and not auth.enabled()}
 

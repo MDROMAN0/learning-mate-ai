@@ -220,6 +220,14 @@ def test(pid):
             code = getattr(ex, "status_code", None)
             msg = {401: "wrong key", 403: "key not allowed", 404: "model not found - check the model name",
                    429: "free limit reached right now (it will reset)"}.get(code)
+            if code == 429:
+                txt = str(ex).lower()
+                if "limit: 0" in txt or "limit:0" in txt:
+                    msg = "this model has no free quota for your key - pick another model (e.g. gemini-3.5-flash-lite)"
+                elif "per day" in txt or "perday" in txt or "daily" in txt:
+                    msg = "today's free quota for this model is used up (keys from the same Google project share it) - resets tomorrow; answers will use the other models meanwhile"
+                else:
+                    msg = "busy right now (per-minute free limit) - try Test again in a minute; answers use the backup models meanwhile"
             if not msg:
                 msg = ("can't reach it - is Ollama running on this PC?" if c.get("local") else
                        "can't reach the service - check the internet / URL") if "Connection" in type(ex).__name__ + str(ex)[:40] else str(ex)[:160]

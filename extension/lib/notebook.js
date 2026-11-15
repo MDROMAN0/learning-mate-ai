@@ -142,10 +142,83 @@
   function stroke(a, b) { brush(b); IX.beginPath(); IX.moveTo(a.x, a.y); IX.lineTo(b.x, b.y); IX.stroke(); }
   function dot(p) { brush(p); IX.beginPath(); IX.arc(p.x, p.y, IX.lineWidth / 2, 0, 7); IX.fill(); }
 
+  /* ---------- select tool: drag a box, then move or delete everything inside (notes + drawing) ---------- */
+  let box = null;            // {x,y,w,h} in page px, ids: selected notes, patch: ink cut out of the box
+  const BOX = document.createElement("div"); BOX.className = "nb-selbox hide";
+  BOX.innerHTML = '<div class="nb-selbar"><button type="button" data-sa="del">' + ic("trash", 12) + " " + esc(t("nbSelDel")) + '</button></div>';
+  PAGE.appendChild(BOX);
+  const showBox = () => { if (!box) return BOX.classList.add("hide"); BOX.classList.remove("hide");
+    Object.assign(BOX.style, { left: box.x + "px", top: box.y + "px", width: box.w + "px", height: box.h + "px" }); };
+  function clearBox() { box = null; showBox(); PAGE.querySelectorAll(".nb-it.msel").forEach(e => e.classList.remove("msel")); }
+  function pickIn(r) {
+    const pr = PAGE.getBoundingClientRect(), ids = [];
+    PAGE.querySelectorAll(".nb-it").forEach(el => {
+      const b = el.getBoundingClientRect(), x = b.left - pr.left, y = b.top - pr.top;
+      const hit = x < r.x + r.w && x + b.width > r.x && y < r.y + r.h && y + b.height > r.y;
+      el.classList.toggle("msel", hit); if (hit) ids.push(el.dataset.id);
+    });
+    return ids;
+  }
+  PAGE.addEventListener("pointerdown", e => {
+    if (tool !== "select") return;
+    if (e.target.closest(".nb-selbar")) return;
+    const pr = PAGE.getBoundingClientRect(), sx = e.clientX - pr.left, sy = e.clientY - pr.top;
+    e.preventDefault();
+    if (box && sx > box.x && sx < box.x + box.w && sy > box.y && sy < box.y + box.h) return moveBox(e);
+    clearBox(); box = { x: sx, y: sy, w: 0, h: 0, ids: [] }; showBox();
+    const mv = ev => { const x = ev.clientX - pr.left, y = ev.clientY - pr.top;
+      Object.assign(box, { x: Math.min(sx, x), y: Math.min(sy, y), w: Math.abs(x - sx), h: Math.abs(y - sy) }); showBox(); pickIn(box); };
+    const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up);
+      if (box.w < 6 || box.h < 6) return clearBox(); box.ids = pickIn(box); };
+    addEventListener("pointermove", mv); addEventListener("pointerup", up);
+  });
+  function moveBox(e) {
+    const d = INK.width / PAGE.clientWidth, u = U(), sx = e.clientX, sy = e.clientY, start = { x: box.x, y: box.y };
+    inkHist.push(INK.toDataURL()); if (inkHist.length > 40) inkHist.shift(); inkRedo = [];
+    const rx = Math.round(box.x * d), ry = Math.round(box.y * d), rw = Math.max(1, Math.round(box.w * d)), rh = Math.max(1, Math.round(box.h * d));
+    const patch = document.createElement("canvas"); patch.width = rw; patch.height = rh;
+    patch.getContext("2d").drawImage(INK, rx, ry, rw, rh, 0, 0, rw, rh);
+    IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(rx, ry, rw, rh);
+    const base = IX.getImageData(0, 0, INK.width, INK.height);
+    const its = box.ids.map(id => items.find(i => i.id === id)).filter(Boolean), orig = its.map(i => ({ x: i.x, y: i.y }));
+    const mv = ev => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      box.x = Math.max(0, Math.min(PAGE.clientWidth - box.w, start.x + dx)); box.y = Math.max(0, start.y + dy); showBox();
+      const ddx = box.x - start.x, ddy = box.y - start.y;
+      IX.putImageData(base, 0, 0); IX.drawImage(patch, Math.round(box.x * d), Math.round(box.y * d));
+      its.forEach((it, k) => { it.x = Math.max(0, orig[k].x + ddx / u); it.y = Math.max(0, orig[k].y + ddy / u);
+        const el = PAGE.querySelector('.nb-it[data-id="' + it.id + '"]'); if (el) { place(el, it); grow(it, el); } });
+    };
+    const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); inkImg = INK.toDataURL(); saveSoon(); };
+    addEventListener("pointermove", mv); addEventListener("pointerup", up);
+  }
+  function deleteBox() {
+    if (!box) return;
+    const d = INK.width / PAGE.clientWidth;
+    inkHist.push(INK.toDataURL()); inkRedo = [];
+    IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(Math.round(box.x * d), Math.round(box.y * d), Math.ceil(box.w * d), Math.ceil(box.h * d));
+    inkImg = INK.toDataURL();
+    const ids = new Set(box.ids); items = items.filter(i => !ids.has(i.id));
+    ids.forEach(id => PAGE.querySelector('.nb-it[data-id="' + id + '"]')?.remove());
+    clearBox(); saveSoon();
+  }
+  BOX.querySelector('[data-sa="del"]').onclick = e => { e.stopPropagation(); deleteBox(); };
+  document.addEventListener("keydown", e => {
+    if (box && tool === "select" && (e.key === "Delete" || e.key === "Backspace") && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) { e.preventDefault(); deleteBox(); }
+    if (box && e.key === "Escape") clearBox();
+  });
+  function clearAll() {
+    if ((items.length || inkImg || INK.width > 2) && !confirm(t("nbClearAllQ"))) return;
+    inkHist.push(INK.toDataURL()); inkRedo = []; inkImg = null; paintInk(null);
+    items = []; clearBox(); renderAll(); saveSoon(); toast(t("nbCleared"));
+  }
+
   /* ---------- toolbar ---------- */
   function setTool(k) {
+    if (k !== "select") clearBox();
     tool = k; document.querySelectorAll("#nbTools [data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === k));
-    PAGE.classList.toggle("drawmode", k !== "type"); INK.style.pointerEvents = k === "type" ? "none" : "auto";
+    PAGE.classList.toggle("drawmode", k !== "type"); PAGE.classList.toggle("selmode", k === "select");
+    INK.style.pointerEvents = (k === "type" || k === "select") ? "none" : "auto";
     INK.style.cursor = k === "eraser" ? "cell" : "crosshair"; select(null);
     if (SHAPES.includes(k) && $("nbShapeBtn")) { $("nbShapeBtn").innerHTML = $("nbShapes").querySelector('[data-tool="' + k + '"]').innerHTML; }
     if ($("nbShapeBtn")) $("nbShapeBtn").classList.toggle("on", SHAPES.includes(k));
@@ -161,6 +234,7 @@
   }; });
   $("nbUndo").onclick = () => { if (!inkHist.length) return; inkRedo.push(INK.toDataURL()); inkImg = inkHist.pop() || null; paintInk(inkImg); saveSoon(); };
   if ($("nbRedo")) $("nbRedo").onclick = () => { if (!inkRedo.length) return; inkHist.push(INK.toDataURL()); inkImg = inkRedo.pop(); paintInk(inkImg); saveSoon(); };
+  if ($("nbClearAll")) $("nbClearAll").onclick = clearAll;
   $("nbClear").onclick = () => { inkHist.push(INK.toDataURL()); inkRedo = []; inkImg = null; paintInk(null); saveSoon(); };
   // zoom: the page is 1000 units wide, so zooming = making the page wider than the view (scroll sideways)
   const setZoom = z => { zoom = Math.max(.6, Math.min(2.5, Math.round(z * 10) / 10)); PAGE.style.width = zoom * 100 + "%";
@@ -382,9 +456,14 @@
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { btn.classList.add("hide"); return; }
     let rec = null;
+    const micLang = () => { try { return localStorage.getItem("lm_mic") || (window.LANG === "bn" ? "bn-BD" : "en-US"); } catch (_) { return "en-US"; } };
+    const chip = document.createElement("button"); chip.type = "button"; chip.className = "miclang"; chip.title = t("micLangT");
+    const paintChip = () => { chip.textContent = micLang() === "bn-BD" ? "বাং" : "EN"; };
+    chip.onclick = e => { e.preventDefault(); try { localStorage.setItem("lm_mic", micLang() === "bn-BD" ? "en-US" : "bn-BD"); } catch (_) {} paintChip(); toast(t(micLang() === "bn-BD" ? "micBn" : "micEn")); };
+    paintChip(); btn.after(chip);
     btn.onclick = () => {
       if (rec) { rec.stop(); return; }
-      rec = new SR(); rec.lang = (window.LANG === "en") ? "en-US" : "bn-BD"; rec.interimResults = true;
+      rec = new SR(); rec.lang = micLang(); rec.interimResults = true;
       btn.classList.add("rec"); const before = input.value;
       rec.onresult = e => { input.value = (before ? before + " " : "") + [...e.results].map(r => r[0].transcript).join(""); };
       rec.onerror = e => { if (e.error === "not-allowed" && window.onMicDenied) window.onMicDenied(); else toast(t(e.error === "not-allowed" ? "micDenied" : "micFail")); };
