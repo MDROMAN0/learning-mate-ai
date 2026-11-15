@@ -783,6 +783,9 @@ function aiFailed(id){if(cur&&cur.video_id===id){cur.pending="fail";$("vmeta").i
 /* open a video */
 async function openVid(id){try{const d=await api("/api/job/"+id);if(d.status==="done")show(d.meta)}catch(e){toast(tMsg(e.message))}}
 function suggest(){$("sugg").innerHTML=t("sugg").map(s=>"<button>"+esc(s)+"</button>").join("");document.querySelectorAll("#sugg button").forEach(b=>b.onclick=()=>{$("q").value=b.textContent;ask()})}
+/* which AI engine did the work, in plain words (main = the .env engine, e_groq = Groq from the AI engines panel...) */
+const ENG_NAMES={groq:"Groq",gemini:"Gemini",mistral:"Mistral",openrouter:"OpenRouter",nvidia:"NVIDIA",cloudflare:"Cloudflare",ollama:"My PC (Ollama)",pc:"My PC (Ollama)",backup:"Gemini (backup)"};
+function engName(k){if(k==="main")return (me&&me.engine&&me.engine.name)||"Main AI";return ENG_NAMES[k.replace(/^e_/,"")]||k}
 function engBadge(){const e=me&&me.engine;if(!e||!e.name)return "";return '<span class="badge" title="'+esc(t("engTip"))+'">'+ic("brain",12)+" "+esc(e.name)+" · "+t(e.where==="cloud"?"engCloud":"engOwn")+"</span>"}
 function metaBadges(m){
   if(m.pending===true)return '<span class="badge"><span class="spin" style="width:11px;height:11px"></span> '+t("aiPrep")+"</span>"+engBadge();
@@ -865,7 +868,7 @@ const chips=(cites,refs,vid)=>(cites||[]).map(n=>{const rf=(refs||[]).find(x=>x.
 function answerHtml(a,refs,vid){let h="<h3>"+esc(a.title)+'</h3><p class="sum">'+esc(a.summary)+"</p>";
   (a.sections||[]).forEach(s=>{h+=(s.heading?"<h4>"+esc(s.heading)+"</h4>":"")+"<ul>";(s.points||[]).forEach(p=>{h+="<li>"+esc(p.text)+" "+chips(p.cites,refs,vid)+"</li>"});h+="</ul>"});return h}
 function pipeHtml(tr,run){const tm=(tr&&tr.timings_ms)||{},u=(tr&&tr.usage)||{},st=[["rewrite",t("pRewrite")],["retrieve",t("pRetrieve")],["grade",t("pGrade")],["generate",t("pGenerate")],["verify",t("pVerify")]];
-  return '<div class="pipe'+(run?" run":"")+'">'+st.map(([k,l])=>'<div data-k="'+k+'"><b>'+l+"</b><span>"+(run?"…":(tm[k]!=null?(tm[k]/1000).toFixed(1)+"s":"—"))+"</span></div>").join("")+"</div>"+(run?"":'<div class="muted" style="margin-top:6px">'+(u.llm_calls||0)+" "+t("llmCalls")+" · "+(u.embed_calls||0)+" "+t("embCalls")+(u.llm_fallbacks?" · "+u.llm_fallbacks+" "+t("fallback"):"")+(Object.keys(u).some(k=>k.startsWith("via_"))?" · "+t("engVia")+" "+Object.keys(u).filter(k=>k.startsWith("via_")).map(k=>k.slice(4).replace(/^e_/,"")).join(", "):"")+((tr&&tr.cached)?" · ⚡ "+t("engCached"):"")+"</div>")}
+  return '<div class="pipe'+(run?" run":"")+'">'+st.map(([k,l])=>'<div data-k="'+k+'"><b>'+l+"</b><span>"+(run?"…":(tm[k]!=null?(tm[k]/1000).toFixed(1)+"s":"—"))+"</span></div>").join("")+"</div>"+(run?"":'<div class="muted" style="margin-top:6px">'+(u.llm_calls||0)+" "+t("llmCalls")+" · "+(u.embed_calls||0)+" "+t("embCalls")+(u.llm_fallbacks?" · "+u.llm_fallbacks+" "+t("fallback"):"")+(Object.keys(u).some(k=>k.startsWith("via_"))?" · "+t("engVia")+" "+Object.keys(u).filter(k=>k.startsWith("via_")).map(k=>engName(k.slice(4))+" ×"+u[k]).join(", "):"")+((tr&&tr.cached)?" · ⚡ "+t("engCached"):"")+"</div>")}
 function toMd(q,d){let m="# "+(d.answer?d.answer.title:q)+"\n\n> "+q+"\n\n"+(d.answer?d.answer.summary+"\n\n":"");
   if(d.answer)d.answer.sections.forEach(s=>{m+="## "+s.heading+"\n";s.points.forEach(p=>{m+="- "+p.text+" "+(p.cites||[]).map(n=>{const r=d.refs.find(x=>x.n===n);return r?"["+fmt(r.start)+"]("+r.url+")":""}).join(" ")+"\n"});m+="\n"});
   return m+"\nSource: "+(cur.title||"")+"\n"}
