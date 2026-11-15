@@ -20,7 +20,8 @@
     }
     PAGE.querySelectorAll(".nb-it").forEach(el => place(el, items.find(i => i.id === el.dataset.id)));
   }
-  function place(el, it) { if (!it) return; const u = U(); el.style.left = it.x * u + "px"; el.style.top = it.y * u + "px"; if (it.w) el.style.width = it.w * u + "px"; }
+  function place(el, it) { if (!it) return; const u = U(); el.style.left = it.x * u + "px"; el.style.top = it.y * u + "px"; if (it.w) el.style.width = it.w * u + "px";
+    el.classList.toggle("bin", it.y * u < 30); }   // too close to the top: show the move/delete bar inside the item
   function inkNow() { return INK.width > 2 ? INK.toDataURL("image/png") : inkImg; }
   function paintInk(src) {
     IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(0, 0, INK.width, INK.height); if (!src) return;
@@ -29,7 +30,7 @@
   function build(it) {
     const el = document.createElement("div"); el.className = "nb-it nb-" + it.type; el.dataset.id = it.id;
     const bar = '<div class="nb-bar"><span class="nb-grip" title="' + esc(t("nbMove")) + '">' + ic("move", 12) + " " + esc(t("nbMove")) + '</span><button class="nb-del" title="Delete">' + ic("trash", 12) + "</button></div>";
-    if (it.type === "text") el.innerHTML = bar + '<div class="nb-txt" contenteditable="true" spellcheck="false">' + (it.html || "") + "</div>";
+    if (it.type === "text") el.innerHTML = bar + '<div class="nb-txt" contenteditable="true" spellcheck="false">' + (it.html || "") + '</div><span class="nb-rs" title="' + esc(t("nbResize")) + '"></span>';
     if (it.type === "img") el.innerHTML = bar + '<img draggable="false" src="' + it.src + '" alt=""><span class="nb-rs"></span>' + (it.cap ? '<div class="nb-cap">' + it.cap + "</div>" : "");
     if (it.type === "ts") el.innerHTML = bar + '<a class="tsn" data-t="' + it.t + '">' + ic("play", 10) + " " + fmt(it.t) + "</a>" + (it.label ? ' <span class="nb-lbl">' + esc(it.label) + "</span>" : "");
     PAGE.appendChild(el); place(el, it); wire(el, it); return el;
@@ -49,7 +50,7 @@
     el.querySelectorAll(".tsn").forEach(a => a.onclick = e => { e.stopPropagation(); seek(+a.dataset.t); });
     const startDrag = (e, mode) => {
       if (tool !== "type") return; e.preventDefault(); e.stopPropagation(); select(el);
-      const u = U(), sx = e.clientX, sy = e.clientY, ox = it.x, oy = it.y, ow = it.w || 0;
+      const u = U(), sx = e.clientX, sy = e.clientY, ox = it.x, oy = it.y, ow = it.w || el.offsetWidth / u;
       const mv = ev => {
         const dx = (ev.clientX - sx) / u, dy = (ev.clientY - sy) / u;
         if (mode === "move") { it.x = Math.max(0, Math.min(1000 - (it.w || 60), ox + dx)); it.y = Math.max(0, oy + dy); }
@@ -361,7 +362,7 @@
       h += "<h3>" + esc(a.title) + "</h3><p>" + esc(a.summary) + "</p>";
       a.sections.forEach(x => { h += (x.heading ? "<p><b>" + esc(x.heading) + "</b></p>" : "") + "<ul>" + x.points.map(p => "<li>" + esc(p.text) + " " + (p.cites || []).map(n => { const s0 = at(n); return s0 == null ? "" : tsn(s0); }).join(" ") + "</li>").join("") + "</ul>"; });
     } else if (cardData.text) h += "<p>" + tsn(cardData.at) + " " + esc(cardData.text).replace(/\n/g, "<br>") + "</p>";
-    const p0 = spot(); add({ type: "text", x: p0.x, y: p0.y, w: 880, html: h });
+    const p0 = spot(); add({ type: "text", x: p0.x, y: p0.y, w: 760, html: h });
     CARD.classList.add("hide"); toast(t("nbPlaced"));
   }
   $("nbAskBtn").onclick = () => { const q = $("nbQ").value.trim(); if (!q) return; $("nbQ").value = ""; askAI(q); };
@@ -520,14 +521,17 @@
     });
     return out;
   }
-  window.nbRelayout = () => { if (!$("p_notes").classList.contains("hide")) layout(); };
+  window.nbRelayout = () => { if (!$("p_notes").classList.contains("hide") && PAGE.clientWidth > 0) layout(); };
+  // the panel can change width without a window resize (drag the divider, open a tab): keep page + ink canvas in sync,
+  // otherwise the ink canvas stays at the old width and the right side can't be drawn on
+  if (window.ResizeObserver) { let rq = 0; new ResizeObserver(() => { cancelAnimationFrame(rq); rq = requestAnimationFrame(window.nbRelayout); }).observe(PAGE); }
   addEventListener("resize", window.nbRelayout);
 
   /* "Add to notes" from an answer */
   window.answerToNotes = function (q, d) {
     const a = d.answer; let h = "<h3>" + esc(a ? a.title : q) + "</h3><p><i>" + esc(q) + "</i></p>" + (a ? "<p>" + esc(a.summary) + "</p>" : "");
     if (a) a.sections.forEach(s => { h += "<p><b>" + esc(s.heading) + "</b></p><ul>" + s.points.map(p => "<li>" + esc(p.text) + " " + (p.cites || []).map(n => { const r = d.refs.find(x => x.n === n); return r ? "(" + fmt(r.start) + ")" : ""; }).join(" ") + "</li>").join("") + "</ul>"; });
-    window.openNotes(); setTimeout(() => { const p = spot(); add({ type: "text", x: p.x, y: p.y, w: 900, html: h }); toast(t("addedToNotes")); }, 30);
+    window.openNotes(); setTimeout(() => { const p = spot(); add({ type: "text", x: p.x, y: p.y, w: 760, html: h }); toast(t("addedToNotes")); }, 30);
   };
   window.nbTimestamp = addTs; window.nbSnap = snap;
 

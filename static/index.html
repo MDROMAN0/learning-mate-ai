@@ -7,9 +7,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261118">
-<script src="/static/i18n.js?v=20261118"></script>
-<script src="/static/icons.js?v=20261118"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261119">
+<script src="/static/i18n.js?v=20261119"></script>
+<script src="/static/icons.js?v=20261119"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -384,6 +384,8 @@
   .nb-selbar button{display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bad);background:var(--panel);color:var(--bad);font:600 12px var(--font);cursor:pointer;white-space:nowrap}
   .miclang{height:22px;min-width:30px;margin-left:-4px;padding:0 6px;border-radius:7px;border:1px solid var(--line2);background:var(--panel2);color:var(--text2);font:700 11px var(--font);cursor:pointer;align-self:center}
   .miclang:hover{border-color:var(--brand);color:var(--text)}
+  .nb-it.bin .nb-bar{top:4px;left:auto;right:4px;z-index:4} .nb-grip,.nb-rs{touch-action:none}
+  .nb-text .nb-rs{bottom:auto;top:calc(50% - 9px);cursor:ew-resize}
 </style>
 </head>
 <body>
@@ -1139,9 +1141,9 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261118"></script>
-<script src="/static/study.js?v=20261118"></script>
-<script src="/static/engines.js?v=20261118"></script>
+<script src="/static/notebook.js?v=20261119"></script>
+<script src="/static/study.js?v=20261119"></script>
+<script src="/static/engines.js?v=20261119"></script>
 <script>
 /* home cards: stagger in when they scroll into view, then the "how it works" steps light up 1 -> 2 -> 3 */
 (function(){const groups=document.querySelectorAll(".steps,.feat");groups.forEach(g=>[...g.children].forEach((c,i)=>c.style.setProperty("--d",(i*.12)+"s")));
