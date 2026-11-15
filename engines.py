@@ -24,7 +24,7 @@ CATALOG = {
                 "fast": "ministral-8b-latest", "key_url": "https://console.mistral.ai/api-keys",
                 "limits": "Free 'Experiment' plan (allows Mistral to train on your data)"},
     "openrouter": {"name": "OpenRouter (free models)", "base": "https://openrouter.ai/api/v1",
-                   "model": "openai/gpt-oss-120b:free", "fast": "meta-llama/llama-3.3-70b-instruct:free",
+                   "model": "google/gemma-4-31b-it:free", "fast": "google/gemma-4-26b-a4b-it:free",
                    "key_url": "https://openrouter.ai/keys", "limits": "Free ':free' models: ~20/min, 50/day"},
     "nvidia": {"name": "NVIDIA NIM", "base": "https://integrate.api.nvidia.com/v1", "model": "meta/llama-3.3-70b-instruct",
                "fast": "meta/llama-3.1-8b-instruct", "key_url": "https://build.nvidia.com",
