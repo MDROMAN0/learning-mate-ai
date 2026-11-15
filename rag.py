@@ -782,8 +782,10 @@ def load_index(vid):
     d = json.loads(p.read_text(encoding="utf-8"))
     got = d["meta"].get("emb_id")
     if got and got != emb_id():
-        raise RuntimeError(f"index built with {got} but current embedding config is {emb_id()} "
-                           "(re-index, or set EMB_* env to match)")
+        # embedding model changed (e.g. Ollama -> Gemini): rebuild only the vectors once, keep the chunks
+        E = embed([index_text(c) for c in d["chunks"]], "passage")
+        d["meta"]["emb_id"] = emb_id()
+        save_index(vid, d["meta"], d["chunks"], E, d.get("extra"))
     _cache[vid] = VideoIndex(d["meta"], d["chunks"], np.load(DATA / "index" / f"{vid}.npy"), d.get("extra"))
     return _cache[vid]
 

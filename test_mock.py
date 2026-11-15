@@ -173,10 +173,10 @@ ix3 = rag.load_index(V1); dd = {}
 r = ns["retrieve"](ix3, ["git branch merge"], "git branch merge", mode="hybrid", dbg=dd)
 assert r and "dense_error" in dd
 ns["embed"] = _ns_embed; ns["_embc"] = FakeEmb
-bad = dict(rag.load_index(V3).meta); bad["emb_id"] = "api:other-model"
+bad = dict(rag.load_index(V3).meta); bad["emb_id"] = "api:other-model"; bad_chunks = rag.load_index(V3).chunks
 p = rag.DATA / "index" / f"{V3}.json"; d = json.loads(p.read_text(encoding="utf-8")); d["meta"] = bad; p.write_text(json.dumps(d), encoding="utf-8"); rag._cache.pop(V3, None)
-try: rag.load_index(V3); raise SystemExit("mismatch not detected")
-except RuntimeError as e: assert "other-model" in str(e)
+fixed = rag.load_index(V3)                       # vectors from another embedding model are rebuilt once, chunks kept
+assert fixed.meta["emb_id"] == rag.emb_id() and len(fixed.chunks) == len(bad_chunks)
 lib = rag.LIBRARY / "index"; lib.mkdir(parents=True, exist_ok=True)
 for f in (rag.DATA / "index").glob(f"{V1}.*"): shutil.copy(f, lib / f.name)
 for f in (rag.DATA / "index").glob(f"{V1}.*"): f.unlink()
