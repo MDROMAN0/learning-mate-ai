@@ -24,4 +24,4 @@ Write-Host "APP_PASSWORD = $pw   <-- eta save kore rakho" -ForegroundColor Cyan
 $py = Get-Command python -ErrorAction SilentlyContinue
 if ($py -and ($py.Source -notmatch 'WindowsApps')) { Write-Host ("Python: " + (& python --version 2>&1)) } else { Write-Host "Python: NOT INSTALLED" -ForegroundColor Red }
 Write-Host ""
-Read-Host "Shesh. Enter chapo, tarpor Claude-ke 'done' likho"
+Read-Host "Shesh. Enter chapo"

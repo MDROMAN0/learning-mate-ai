@@ -39,7 +39,7 @@ End-to-end: **baseline** (rewrite/grade/verify বন্ধ) বনাম **full
 
 ## 5. ফলাফলের table (আসল run)
 Run date: **30 Sep 2026** (Roman-এর PC, `python eval.py eval_set.json --full`)  Videos: **4** (DBMS normalization, computer network, binary tree, python intro — সব Bangla, YouTube auto-caption)  n(pos)=**26** n(neg)=**8**  Embedding: `gemini-embedding-001` (3072-d)  LLM: `gemini-3.5-flash` (+ fallback pool)  Rerank: LLM
-Gold range: Claude transcript পড়ে দিয়েছে (video দেখে নয়) — Roman ৩–৪টা spot-check করবে।
+Gold range: টিম transcript পড়ে ঠিক করেছে (video দেখে নয়) — Roman ৩–৪টা spot-check করবে।
 
 | Config | Hit@5 | MRR | avg ms |
 |---|---|---|---|

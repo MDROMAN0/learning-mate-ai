@@ -9,3 +9,5 @@ test_log.txt
 *.log
 HANDOFF.md
 docs/YOUR_PART.md
+claude_runner.bat
+claude_runner.ps1

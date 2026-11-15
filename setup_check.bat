@@ -1,5 +1,5 @@
 @echo off
-REM One-click: install everything, run doctor + offline tests, write logs for Claude.
+REM One-click: install everything, run doctor + offline tests, write logs.
 cd /d "%~dp0"
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
@@ -31,5 +31,5 @@ echo ===== TEST_MOCK ===== >> "%LOG%"
 findstr /C:"ALL TESTS PASSED" test_log.txt >> "%LOG%" || (echo TEST_FAILED >> "%LOG%" & powershell -NoProfile -Command "Get-Content test_log.txt -Tail 25" >> "%LOG%")
 echo ===== DONE ===== >> "%LOG%"
 echo.
-echo Shesh! Claude-ke "done" likho.
+echo Shesh!
 pause

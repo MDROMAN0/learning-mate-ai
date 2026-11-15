@@ -31,13 +31,13 @@ Local-এ `EMB_PROVIDER=local` আর host-এ `api` **মেলাবে না
 ### Render-এ deploy — ChatGPT-এর মতো public website (login সহ)
 যা পাবে: `https://learning-mate-ai.onrender.com` — যে কেউ **Sign up / Log in** করে ব্যবহার করবে; প্রতি user-এর দিনে `DAILY_LIMIT`টা প্রশ্ন (তোমার free Gemini quota বাঁচাতে), নিজের history।
 
-**Roman-এর কাজ (login/secret — Claude করবে না):**
+**Roman-এর কাজ (login/secret):**
 1. **GitHub** account-এ নতুন repo বানাও (যেমন `learning-mate-ai`, Private চলবে)।
 2. **Render.com** → GitHub দিয়ে sign up (card লাগে না)।
 3. (ঐচ্ছিক কিন্তু ভালো) **neon.tech** → free Postgres → connection string (`postgresql://...`) copy। না দিলে Render-এর disk restart-এ মুছে যায় → account-গুলোও মুছে যাবে।
 4. Render → **New → Blueprint** → repo বেছে নাও → `render.yaml` পড়বে → চাইলে দেবে: `LLM_API_KEY` (Gemini key), `DATABASE_URL` (Neon), `APP_PASSWORD` (extension-এর admin key)। `SECRET_KEY` Render নিজে বানায়।
 
-**Claude/terminal-এর কাজ:** `git add . && git commit && git push` (`.env`, `data/`, `jobs/` `.gitignore`-এ আছে — key কখনো GitHub-এ যায় না)। `library/index/`-এর আগে-index করা video-গুলো host-এ সাথে যায়।
+**Terminal-এর কাজ:** `git add . && git commit && git push` (`.env`, `data/`, `jobs/` `.gitignore`-এ আছে — key কখনো GitHub-এ যায় না)। `library/index/`-এর আগে-index করা video-গুলো host-এ সাথে যায়।
 
 5. Deploy শেষে `https://<name>.onrender.com/healthz` → `{"ok":true}` → site খুলে Sign up।
 6. Free plan ১৫ মিনিট idle থাকলে ঘুমায় — প্রথম request ~১ মিনিট। sir-এর demo-র আগে একবার খুলে রাখো।
