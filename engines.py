@@ -15,7 +15,7 @@ import auth
 # id -> provider info. All speak the OpenAI chat API. Models can be changed in the panel.
 CATALOG = {
     "groq": {"name": "Groq", "base": "https://api.groq.com/openai/v1", "model": "openai/gpt-oss-120b",
-             "fast": "llama-3.1-8b-instant", "key_url": "https://console.groq.com/keys",
+             "fast": "openai/gpt-oss-20b", "key_url": "https://console.groq.com/keys",
              "limits": "Free: ~30 requests/min, ~1,000/day per model", "fast_first": True},
     "gemini": {"name": "Google Gemini", "base": "https://generativelanguage.googleapis.com/v1beta/openai/",
                "model": "gemini-3.5-flash", "fast": "gemini-3.5-flash-lite", "key_url": "https://aistudio.google.com/apikey",

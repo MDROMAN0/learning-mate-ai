@@ -297,8 +297,9 @@ def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
     if not provs:
         raise RuntimeError("No AI engine is set up - add a free key in the AI engines panel (or LLM_API_KEY in .env)")
     for pi, (tag, base, key, model, fastm) in enumerate(provs):
+        alt = None
         if (fast or _FAST.get()) and fastm:
-            model = fastm
+            model, alt = fastm, model         # if the small model is gone / busy, the same engine's main model answers
         try:
             if tag == "" and _client is not None:
                 cl = _client                      # (tests may inject a fake client)
@@ -313,7 +314,7 @@ def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
                 cl = _clients[ck]
                 if tag == "":
                     _client = cl
-            out = _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, len(provs) > 1)
+            out = _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, len(provs) > 1, alt)
             if tag == "PC_":
                 _stat("llm_pc_calls")
             _stat("via_" + (tag.strip("_").lower() or "main"))      # which engine answered (shown in the trace)
@@ -330,9 +331,9 @@ def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
                 "LLM provider %s failed (%s); using next", base or "default", str(e)[:120])
 
 
-def _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, has_next=False):
+def _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, has_next=False, alt=None):
     gem = "generativelanguage" in (base or "")
-    models = [model]
+    models = [model] + ([alt] if alt and alt != model else [])
     # Free-tier quotas are per model (e.g. 15 requests/min each), so on 429/503 rotate through a pool.
     fbs = os.getenv("LLM_%sFALLBACK_MODELS" % tag, DEFAULT_GEMINI_FALLBACKS if gem else "")
     models += [m.strip() for m in fbs.split(",") if m.strip() and m.strip() not in models]

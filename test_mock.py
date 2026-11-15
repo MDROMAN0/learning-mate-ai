@@ -729,7 +729,7 @@ rag._COOL.clear(); tok = rag._S.set({})
 _r = rag.llm_fast("sys", "ping"); assert _r == "pong", (_r, calls)
 st = rag._S.get(); rag._S.reset(tok)
 assert any("groq" in b for b, m in calls) and any("11434" in b for b, m in calls) and st.get("via_e_ollama") == 1, (calls, st)
-assert calls[0][1] == "llama-3.1-8b-instant"                                              # small job used groq's small model
+assert calls[0][1] == "openai/gpt-oss-20b"                                              # small job used groq's small model
 # test button: real call shape, friendly error text
 res = ec.post("/api/engines/groq/test", headers=ADM).json(); assert res["model"]["ok"] is False and "free limit" in res["model"]["error"]
 res = ec.post("/api/engines/ollama/test", headers=ADM).json(); assert res["model"]["ok"] and res["fast"]["reply"] == "pong"
