@@ -722,12 +722,12 @@ async function refreshMe(){
   if(me.app_password&&!$("appkey").value)$("keyBlk").classList.remove("hide");
   $("aClose").classList.toggle("hide",!me.guest);document.body.classList.toggle("guest",!!me.guest);
   if(me.guest){$("meBox").classList.remove("hide");$("meAv").textContent="D";$("meName").textContent=t("guestBadge");
-    $("meUse").textContent=me.unlimited?t("unlimited"):t("guestUse",{u:me.used,l:me.limit});$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%";
+    $("meUse").textContent=me.unlimited?unlimTxt():t("guestUse",{u:me.used,l:me.limit});$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%";
     $("logoutBtn").textContent=t("guestCta");$("logoutBtn").onclick=()=>{setAuthMode(true);showAuth()};return}
   $("logoutBtn").textContent=t("logout");$("logoutBtn").onclick=logout;
   if(me.auth&&!me.user){showAuth();return}
   if(me.user){$("meBox").classList.remove("hide");$("histNav").classList.remove("hide");$("notesNav").classList.remove("hide");$("progNav").classList.remove("hide");$("meAv").textContent=(me.user.name||me.user.email)[0].toUpperCase();$("meName").textContent=me.user.name||me.user.email;
-    $("meUse").textContent=me.unlimited?t("unlimited"):t("usage")+": "+me.used+" / "+me.limit;$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%"}
+    $("meUse").textContent=me.unlimited?unlimTxt():t("usage")+": "+me.used+" / "+me.limit;$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%"}
 }
 async function logout(){await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()}
 
@@ -1087,6 +1087,7 @@ setInterval(()=>{if(!chaps||!cur||$("v_work").classList.contains("hide"))return;
   document.querySelectorAll(".chap .cr").forEach((el,i)=>el.classList.toggle("now",i===k))},1000);
 
 /* ---------- notebook glue (logic lives in /static/notebook.js) ---------- */
+function unlimTxt(){const e=me&&me.engine;return e&&e.where!=="cloud"?t("unlimited"):t("unlimitedFree")+(e&&e.name?" · "+e.name:"")}
 window.openNotes=()=>document.querySelector('#tabs button[data-tab="notes"]').click();
 $("qNotes").onclick=window.openNotes;
 $("qTs").onclick=()=>{window.openNotes();setTimeout(()=>window.nbTimestamp(),30)};
