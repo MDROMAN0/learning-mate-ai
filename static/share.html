@@ -32,7 +32,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const T = { en: { ro: "Read-only notes", open: "Open the video", lang: "বাংলা", gone: "This link was turned off or does not exist." },
   bn: { ro: "শুধু দেখার নোট", open: "ভিডিও খোলো", lang: "English", gone: "এই লিংক বন্ধ করা হয়েছে বা নেই।" } };
 let L = "en", theme = null, data = null;
-try { L = localStorage.getItem("lang") || "en"; theme = localStorage.getItem("theme"); } catch (_) {}
+try { L = localStorage.getItem("lm_lang") || "en"; theme = localStorage.getItem("theme"); } catch (_) {}
 const fmt = (x, doc) => { x = Math.max(0, Math.floor(x || 0)); if (doc) return "p." + (Math.floor(x / 60) + 1); const m = Math.floor(x / 60), s = x % 60; return m + ":" + String(s).padStart(2, "0"); };
 function paint() {
   document.documentElement.lang = L; if (theme) document.documentElement.dataset.theme = theme;
@@ -61,7 +61,7 @@ function render() {
   const cv = $("ink"), d = devicePixelRatio || 1; cv.width = page.clientWidth * d; cv.height = H * u * d; cv.style.height = H * u + "px";
   if (c.ink) { const im = new Image(); im.onload = () => cv.getContext("2d").drawImage(im, 0, 0, cv.width, im.height * cv.width / im.width); im.src = c.ink; }
 }
-$("lb").onclick = () => { L = L === "en" ? "bn" : "en"; try { localStorage.setItem("lang", L); } catch (_) {} paint(); };
+$("lb").onclick = () => { L = L === "en" ? "bn" : "en"; try { localStorage.setItem("lm_lang", L); } catch (_) {} paint(); };
 $("th").onclick = () => { const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; theme = dark ? "light" : "dark"; try { localStorage.setItem("theme", theme); } catch (_) {} paint(); };
 addEventListener("resize", render);
 paint();

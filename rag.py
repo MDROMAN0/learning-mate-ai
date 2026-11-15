@@ -1433,7 +1433,8 @@ def _ask(video, question, current_time, make_clip, mode, use_rewrite, level, use
         trace["debug"] = dbg
     return {"found": True, "video_id": vid, "title": title, "kind": ix.meta.get("kind", "youtube"),
             "answer": ans if ans["sections"] else None,
-            "note": None if ans["sections"] else "Topic আছে, কিন্তু নির্ভরযোগ্য (verified) answer বানানো যায়নি - clip দেখো।",
+            "note": None if ans["sections"] else ("Topic আছে, কিন্তু নির্ভরযোগ্য (verified) answer বানানো যায়নি - clip দেখো।" if _LANG.get() == "bn"
+                                              else "The topic is in the video, but no verified answer could be made - watch the clip."),
             "refs": refs, "segments": segments, "trace": trace}
 
 
@@ -1517,7 +1518,7 @@ def chapters(video, cached_only=False):
     """Auto chapters + short summary for one video (map over all chunks in ONE LLM call, cached on disk).
     Grounded: every chapter starts at a real chunk, so its timestamp is always a real moment in the video."""
     vid = extract_video_id(video)
-    lang = _LANG.get() or "bn"
+    lang = _LANG.get() or "en"
     for p in (_chap_path(vid, lang), LIBRARY / "chapters" / f"{vid}.{lang}.json"):
         if p.exists():
             try:

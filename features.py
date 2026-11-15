@@ -125,7 +125,7 @@ def alternatives(question, video_id=None, mode="library", n=3, level="simple"):
         cands = cands[:n + 1]
     if len(cands) < 2:
         return {"videos": [], "comparison": None, "skipped": skipped,
-                "message": "তুলনা করার মতো কমপক্ষে ২টা video লাগবে (library-তে আরও video যোগ করো)।"}
+                "message": ("Need at least 2 videos to compare (add more videos to the library)." if rag._LANG.get() != "bn" else "তুলনা করার মতো কমপক্ষে ২টা video লাগবে (library-তে আরও video যোগ করো)।")}
     title0 = rag.load_index(cands[0]).meta.get("title", "")
     queries = rag.rewrite_query(question, title0)
     items = []
@@ -140,7 +140,7 @@ def alternatives(question, video_id=None, mode="library", n=3, level="simple"):
         else:
             skipped.append({"id": vid, "reason": "topic not found"})
     if not items:
-        return {"videos": [], "comparison": None, "skipped": skipped, "message": "কোনো video-তে topic পাওয়া যায়নি।"}
+        return {"videos": [], "comparison": None, "skipped": skipped, "message": "কোনো video-তে topic পাওয়া যায়নি।" if rag._LANG.get() == "bn" else "None of the videos covers this topic."}
     comp = compare_answers(question, items) if len(items) > 1 else None
     return {"videos": items, "comparison": comp, "skipped": skipped, "message": None}
 
@@ -229,7 +229,7 @@ def quiz(video_id, n=5, topic=None, current_time=None):
 
 # ----------------------------------------------- 'বুঝিনি' explain at a timestamp
 STYLES = {"simple": "Explain the passage more simply, in short sentences.",
-          "analogy": "Explain with one everyday analogy. Label the analogy 'উপমা (video-তে নেই):'.",
+          "analogy": "Explain with one everyday analogy. Label the analogy 'Analogy (not in the video):' (in Bangla output: 'উপমা (video-তে নেই):').",
           "steps": "Explain step by step as a short numbered list."}
 
 

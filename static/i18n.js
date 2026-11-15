@@ -297,7 +297,8 @@ window.I18N = {
     evSaved: "মাপা ফলাফল", evSavedD: "আসল run, ৩০ সেপ্টেম্বর ২০২৬ — ৪টা বাংলা lecture ভিডিও, উত্তর জানা ২৬টা প্রশ্ন + ভিডিওতে নেই এমন ৮টা প্রশ্ন।", evBuiltin: "Built-in test set চালাও", evBuiltinD: "নিচের প্রশ্নগুলো এখনকার লাইব্রেরিতে live চালায় (শুধু retrieval, উত্তর বানায় না)।", evLoaded: "উত্তর জানা {p}টা প্রশ্ন · ভিডিওতে নেই {n}টা", evCustom: "নিজের test set (JSON)", evWhy: "এখান থেকে যা বোঝা যায়", evWhy1: "শুধু BM25 কিছুই পায় না: প্রশ্ন Banglish/English-এ, কিন্তু caption বাংলা হরফে, তাই হুবহু শব্দ কখনো মেলে না।", evWhy2: "অর্থ দিয়ে খোঁজা (dense) এটা ঠিক করে; hybrid + LLM rerank সবচেয়ে ভালো ক্রম দেয় (MRR 0.93)।", evWhy3: "Query rewrite এখানে retrieval-এ সাহায্য করেনি আর ৬ গুণ ধীর, তাই এটা ঐচ্ছিক।", evQuick: "দ্রুত run (৮টা প্রশ্ন)"
   }
 };
-window.LANG = (() => { try { return localStorage.getItem("lang") || "bn"; } catch (e) { return "bn"; } })();
+// English is the default for everyone; Bangla only after the user presses the language button (choice remembered)
+window.LANG = (() => { try { return localStorage.getItem("lm_lang") || "en"; } catch (e) { return "en"; } })();
 window.t = (k, vars) => { let s = (window.I18N[window.LANG] || {})[k] ?? window.I18N.en[k] ?? k; if (vars && typeof s === "string") for (const v in vars) s = s.replace("{" + v + "}", vars[v]); return s; };
 /* translate server progress / error text into the current UI language */
 window.tMsg = m => {
@@ -316,4 +317,4 @@ window.applyLang = () => {
   document.querySelectorAll("[data-tp]").forEach(el => el.setAttribute("aria-label", el.placeholder));
   document.querySelectorAll("[data-tt]").forEach(el => el.setAttribute("aria-label", el.title));
 };
-window.toggleLang = () => { window.LANG = window.LANG === "bn" ? "en" : "bn"; try { localStorage.setItem("lang", window.LANG); } catch (e) {} window.applyLang(); if (window.onLang) window.onLang(); };
+window.toggleLang = () => { window.LANG = window.LANG === "bn" ? "en" : "bn"; try { localStorage.setItem("lm_lang", window.LANG); } catch (e) {} window.applyLang(); if (window.onLang) window.onLang(); };
