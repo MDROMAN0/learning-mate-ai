@@ -14,3 +14,10 @@ setInterval(async () => {
   if (tabId == null || $("p_notes").classList.contains("hide")) return;
   try { lastTime = (await inPage(pageSeek, [null])) || lastTime; } catch (_) {}
 }, 1000);
+
+window.nbBase = base;                    // share links point at the server, not at the extension
+// voice questions: the side panel cannot show Chrome's microphone prompt, so ask once in a normal tab
+window.onMicDenied = () => { chrome.tabs.create({ url: chrome.runtime.getURL("mic.html") }); toast(t("micPerm")); };
+wireMic($("qMic"), $("q"), () => $("ask").click());
+$("docFile").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) uploadDoc(f); };
+$("docExit").onclick = exitDoc;

@@ -203,11 +203,11 @@ c = TestClient(appmod.app)
 assert c.get("/").status_code == 200 and c.get("/healthz").json()["ok"]
 assert any(v["video_id"] == V1 for v in c.get("/api/library").json()["videos"])
 def wait(key):
-    for _ in range(100):
+    for _ in range(300):
         j = c.get(f"/api/job/{key}").json()
         if j["status"] in ("done", "error"): return j
         time.sleep(0.1)
-    raise SystemExit("job timeout")
+    raise SystemExit("job timeout " + str(j))
 # upload srt paired with a youtube url -> embedded-player video
 r = c.post("/api/upload", data={"title": "sub", "youtube_url": "https://youtu.be/dQw4w9WgXcQ"}, files={"file": ("a.srt", srt.encode(), "text/plain")}).json()
 j = wait(r["video_id"]); assert j["status"] == "done" and j["meta"]["video_id"] == "dQw4w9WgXcQ" and j["meta"]["kind"] == "youtube", j
@@ -600,6 +600,7 @@ prs.save(str(_p))
 pp = rag.read_document(_p); assert len(pp) == 2 and "speaker note" in pp[1]
 r = sc.post("/api/upload", files={"file": ("deck.pptx", _p.read_bytes(), "application/octet-stream")}, data={"title": "Deck"})
 pm = wait(r.json()["video_id"])["meta"]; assert pm["doc"] == "pptx" and pm["pages"] == 2
+rag.llm = lambda system, user, *a, **k: "" if "read scanned pages" in system else fake_llm(system, user, *a, **k)   # OCR finds nothing either
 (rag.DATA / "blank.pdf").write_bytes(b""); _pdf(rag.DATA / "blank.pdf", ["", ""])
 r = sc.post("/api/upload", files={"file": ("blank.pdf", (rag.DATA / "blank.pdf").read_bytes(), "application/pdf")})
 assert "No text found" in wait(r.json()["video_id"])["msg"]
@@ -609,3 +610,72 @@ assert not list(rag.DATA.glob("tmp*.pdf")), list(rag.DATA.glob("tmp*"))         
 assert sc.post("/api/upload", files={"file": ("x.exe", b"x", "application/octet-stream")}).status_code == 400
 rag.llm = _orig_llm
 print("PDF / PowerPoint upload OK")
+# ---- study tools: flashcards (spaced repetition), progress, quiz scores, dashboard, notes search/share, AI notes
+import study as _st
+c0 = {"ivl": 0, "ease": 2.5, "reps": 0}
+assert _st.schedule(c0, 0)[2] == 0 and _st.schedule(c0, 0)[0] < 0.01                 # again -> 10 minutes
+i1 = _st.schedule(c0, 2); i2 = _st.schedule({"ivl": i1[0], "ease": i1[1], "reps": i1[2]}, 2)
+i3 = _st.schedule({"ivl": i2[0], "ease": i2[1], "reps": i2[2]}, 2)
+assert i1[0] == 1 and i2[0] == 3 and i3[0] > 6, (i1, i2, i3)                       # 1 day, 3 days, then grows
+assert _st.schedule({"ivl": 10, "ease": 2.5, "reps": 3}, 3)[0] > _st.schedule({"ivl": 10, "ease": 2.5, "reps": 3}, 2)[0]
+def _llm_notes(system, user, temperature=0.1, max_tokens=1500):
+    if "into flashcards" in system:
+        return json.dumps({"cards": [{"front": "What does git merge do?", "back": "Joins two branches.", "source": 0},
+                                     {"front": "x", "back": "", "source": 0}, {"front": "Bad source", "back": "ok", "source": 99}]})
+    if "into a mind map" in system:
+        return json.dumps({"center": "Git", "branches": [{"label": "Merge", "source": 0, "children": [{"label": "joins branches", "source": 1}]}, {"label": ""}]})
+    if "into study notes" in system:
+        return json.dumps({"title": "Notes", "sections": [{"heading": "Merge", "points": [{"text": "joins branches", "source": 0}, {"text": ""}]}]})
+    return fake_llm(system, user, temperature, max_tokens)
+rag.llm = _llm_notes
+os.environ.update(AUTH="1"); sc2 = TestClient(appmod.app)
+assert sc2.post("/api/cards", json={"video_id": V1, "cards": []}).status_code == 401          # gate: login needed
+assert sc2.get("/api/share/nope").status_code == 404                                       # share links are public (no 401)
+r = sc2.post("/api/auth/signup", json={"email": "study@test.com", "password": "secret1", "name": "S"}); assert r.status_code == 200
+ai = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "flashcards"}).json()
+assert len(ai["cards"]) == 2 and ai["cards"][0]["start"] is not None and ai["cards"][1]["start"] is None, ai
+mm = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "mindmap"}).json()
+assert mm["center"] == "Git" and len(mm["branches"]) == 1 and mm["branches"][0]["children"][0]["label"] == "joins branches"
+sm = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "summary"}).json(); assert len(sm["sections"][0]["points"]) == 1
+assert sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "poem"}).status_code == 400
+assert sc2.post("/api/cards", json={"video_id": V1, "cards": ai["cards"] + ai["cards"]}).json()["added"] == 2   # duplicates skipped
+due = sc2.get("/api/cards").json(); assert due["due"] == 2 and due["total"] == 2
+cid = due["cards"][0]["id"]
+rv = sc2.post(f"/api/cards/{cid}/review", json={"grade": 2}).json(); assert rv["ivl_days"] == 1
+assert sc2.get("/api/cards").json()["due"] == 1
+assert sc2.post(f"/api/cards/{cid}/review", json={"grade": 7}).status_code == 400
+assert sc2.post("/api/cards/nope/review", json={"grade": 2}).status_code == 404
+assert sc2.get("/api/cards", params={"video_id": V1}).json()["total"] == 2
+assert sc2.delete(f"/api/cards/{cid}").json()["ok"] and sc2.get("/api/cards").json()["total"] == 1
+sc2.post("/api/progress", json={"video_id": V1, "t": 200, "duration": 360}); sc2.post("/api/progress", json={"video_id": V1, "t": 50, "duration": 360})
+sc2.post("/api/quiz_result", json={"video_id": V1, "score": 3, "total": 5})
+sc2.post("/api/ask", json={"video_id": V1, "question": "git merge", "clip": False})
+db = sc2.get("/api/dashboard").json(); row = [v for v in db["videos"] if v["video_id"] == V1][0]
+assert row["watched_pct"] == 56 and row["quiz_pct"] == 60 and row["questions"] == 1 and row["cards"] == 1 and db["streak"] >= 1, (db, row)
+note = {"v": 2, "H": 1400, "items": [{"id": "a", "type": "text", "x": 40, "y": 40, "w": 900, "html": "<b>Merge</b> joins two <i>branches</i> together"}], "ink": None, "title": "Git notes"}
+assert sc2.put(f"/api/notes/{V1}", json={"content": note}).status_code == 200
+assert sc2.get("/api/notes_search", params={"q": "branches"}).json()["results"][0]["snippet"].find("branches") >= 0
+assert sc2.get("/api/notes_search", params={"q": "zebra"}).json()["results"] == []
+url = sc2.post(f"/api/notes/{V1}/share").json()["url"]; tok = url.split("/")[-1]
+assert sc2.post(f"/api/notes/{V1}/share").json()["url"] == url                              # same link every time
+anon = TestClient(appmod.app)
+sh = anon.get("/api/share/" + tok).json(); assert sh["title"] == "Git notes" and sh["content"]["items"][0]["id"] == "a"
+assert anon.get(url).status_code == 200 and "Shared notes" in anon.get(url).text
+assert anon.get(f"/api/notes/{V1}").status_code == 401                                     # the note itself stays private
+sc2.delete(f"/api/notes/{V1}/share"); assert anon.get("/api/share/" + tok).status_code == 404
+os.environ.pop("AUTH", None)
+assert TestClient(appmod.app).post("/api/progress", json={"video_id": V1, "t": 5}).json() == {"ok": False}
+# scanned PDF -> OCR through the vision model (image passed as an image_url part)
+seen_img = []
+def _llm_ocr(system, user, temperature=0.1, max_tokens=1500):
+    if "read scanned pages" in system:
+        seen_img.append(user[1]["image_url"]["url"][:23]); return "git commit branch merge repository push. " * 6
+    return fake_llm(system, user, temperature, max_tokens)
+rag.llm = _llm_ocr
+from PIL import Image as _Im
+_sp = rag.DATA / "scan.pdf"; _Im.new("RGB", (600, 800), "white").save(str(_sp), "PDF")
+r = sc.post("/api/upload", files={"file": ("scan.pdf", _sp.read_bytes(), "application/pdf")}, data={"title": "Scan"})
+om = wait(r.json()["video_id"]); assert om["status"] == "done", om
+assert om["meta"]["doc"] == "pdf" and seen_img == ["data:image/jpeg;base64,"], seen_img
+rag.llm = _orig_llm
+print("study tools / spaced repetition / dashboard / notes search+share / AI notes / OCR OK")

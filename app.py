@@ -18,6 +18,7 @@ import auth
 import eval as rag_eval
 import features
 import rag
+import study
 
 app = FastAPI(title="YouTube Topic RAG")
 app.add_middleware(GZipMiddleware, minimum_size=1024)   # ~100 KB of HTML/JS -> ~25 KB on the wire
@@ -30,7 +31,7 @@ MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
 
 
 # what a guest (demo mode, no account) may call: read the sample library and ask about it; no indexing/uploads/notes
-GUEST_OK = ("/api/library", "/api/job/", "/api/transcript/", "/api/chapters/", "/api/ask", "/api/heat", "/api/quiz",
+GUEST_OK = ("/api/notes_ai", "/api/library", "/api/job/", "/api/transcript/", "/api/chapters/", "/api/ask", "/api/heat", "/api/quiz",
             "/api/explain", "/api/lab/", "/api/search", "/api/alternatives", "/api/plan/")
 
 
@@ -53,7 +54,7 @@ async def gate(request: Request, call_next):
         if auth.enabled():
             tok = request.cookies.get(auth.COOKIE) or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
             request.state.user = auth.user_from_token(tok) if tok else None
-            if not path.startswith("/api/auth/") and not request.state.user and not admin:
+            if not path.startswith(("/api/auth/", "/api/share/")) and not request.state.user and not admin:
                 gid = auth.guest_from_token(request.cookies.get(auth.GUEST_COOKIE))
                 if gid and path.startswith(GUEST_OK):
                     request.state.guest = gid
@@ -61,7 +62,7 @@ async def gate(request: Request, call_next):
                     return JSONResponse({"detail": "log in to use this (demo mode only covers the sample videos)"
                                          if gid else "login required", "login": True, "guest": bool(gid)},
                                         status_code=401)
-        elif pw and not admin and path != "/api/auth/me":
+        elif pw and not admin and path != "/api/auth/me" and not path.startswith("/api/share/"):
             return JSONResponse({"detail": "wrong or missing app key"}, status_code=401)
     return await call_next(request)
 
@@ -605,6 +606,115 @@ def transcript(vid: str):
 
 
 NO_CACHE = {"Cache-Control": "no-cache"}
+
+
+# ---------------------------------------------------------------- study tools (study.py)
+def _uid(request: Request):
+    u = request.state.user
+    if not u:
+        raise HTTPException(400, "log in to use this (it is saved to your account)")
+    return u["id"]
+
+
+class CardsReq(BaseModel):
+    video_id: str
+    cards: List[dict]
+
+
+class ReviewReq(BaseModel):
+    grade: int  # 0 again, 1 hard, 2 good, 3 easy
+
+
+class ProgressReq(BaseModel):
+    video_id: str
+    t: float
+    duration: float = 0
+
+
+class QuizResultReq(BaseModel):
+    video_id: str
+    score: int
+    total: int
+
+
+class NotesAIReq(BaseModel):
+    video_id: str
+    kind: str = "summary"  # summary | mindmap | flashcards
+    current_time: Optional[float] = None
+
+
+@app.post("/api/cards")
+def cards_add(req: CardsReq, request: Request):
+    return {"added": study.add_cards(_uid(request), rag.extract_video_id(req.video_id), req.cards)}
+
+
+@app.get("/api/cards")
+def cards_due(request: Request, video_id: Optional[str] = None):
+    return study.due_cards(_uid(request), rag.extract_video_id(video_id) if video_id else None)
+
+
+@app.post("/api/cards/{card_id}/review")
+def cards_review(card_id: str, req: ReviewReq, request: Request):
+    if req.grade not in (0, 1, 2, 3):
+        raise HTTPException(400, "grade must be 0-3")
+    return _safe(study.review, _uid(request), card_id, req.grade)
+
+
+@app.delete("/api/cards/{card_id}")
+def cards_delete(card_id: str, request: Request):
+    study.delete_card(_uid(request), card_id)
+    return {"ok": True}
+
+
+@app.post("/api/progress")
+def progress(req: ProgressReq, request: Request):
+    if not request.state.user:          # guests / no accounts: nothing to remember, not an error
+        return {"ok": False}
+    return study.save_progress(request.state.user["id"], rag.extract_video_id(req.video_id), req.t, req.duration)
+
+
+@app.post("/api/quiz_result")
+def quiz_result(req: QuizResultReq, request: Request):
+    if not request.state.user:
+        return {"ok": False}
+    return study.save_quiz(request.state.user["id"], rag.extract_video_id(req.video_id), req.score, req.total)
+
+
+@app.get("/api/dashboard")
+def dashboard(request: Request):
+    return study.dashboard(_uid(request))
+
+
+@app.get("/api/notes_search")
+def notes_search(q: str, request: Request):
+    return {"results": study.search_notes(_uid(request), q[:100])}
+
+
+@app.post("/api/notes/{vid}/share")
+def notes_share(vid: str, request: Request):
+    return {"url": "/share/" + study.share_note(_uid(request), rag.extract_video_id(vid))}
+
+
+@app.delete("/api/notes/{vid}/share")
+def notes_unshare(vid: str, request: Request):
+    study.unshare_note(_uid(request), rag.extract_video_id(vid))
+    return {"ok": True}
+
+
+@app.get("/api/share/{token}")
+def share_get(token: str):
+    return _safe(study.shared_note, token)
+
+
+@app.get("/share/{token}")
+def share_page(token: str):
+    return FileResponse("static/share.html", headers=NO_CACHE)
+
+
+@app.post("/api/notes_ai")
+def notes_ai(req: NotesAIReq, request: Request):
+    _charge(request)
+    return _safe(study.ai_notes, req.video_id, req.kind, req.current_time)
 
 
 @app.get("/")

@@ -6,9 +6,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261114">
-<script src="/static/i18n.js?v=20261114"></script>
-<script src="/static/icons.js?v=20261114"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261115">
+<script src="/static/i18n.js?v=20261115"></script>
+<script src="/static/icons.js?v=20261115"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -115,6 +115,14 @@
   .ntool .sep{width:1px;height:20px;background:var(--line);margin:0 3px} .ntool .sp{flex:1}
   .ntool .sw{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent;box-shadow:0 0 0 1px var(--line2);margin:0 1px} .ntool .sw.on{border-color:var(--text)}
   .nb-hint{font-size:11.5px;margin-top:4px}
+.nbdd{position:relative;display:inline-flex}
+.nb-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:30;display:flex;gap:2px;padding:4px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.nb-menu.col{flex-direction:column;min-width:190px;left:auto;right:0}
+.nb-menu.col button{display:flex!important;justify-content:flex-start;gap:8px;width:100%;height:34px;padding:0 10px;font-weight:600;white-space:nowrap}
+#nbAI{display:inline-flex!important;gap:5px;color:var(--brand);border-color:color-mix(in srgb,var(--brand) 40%,transparent)}
+.mic.rec{color:#fff!important;background:var(--bad)!important;border-color:var(--bad)!important;animation:micp 1s infinite}
+@keyframes micp{50%{box-shadow:0 0 0 6px rgba(244,63,94,.25)}}
+
   .nb-scroll{flex:1;overflow:auto;padding:14px;min-height:0}
   .nb-page{position:relative;width:100%;min-height:700px;border:1px solid var(--line);border-radius:14px;cursor:text;background-color:var(--bg2);background-image:radial-gradient(var(--line2) 1px,transparent 1px);background-size:24px 24px}
   .nb-page.drawmode{cursor:crosshair}
@@ -243,6 +251,16 @@
   .chap .cr:hover{background:var(--panel2)} .chap .cr.now{background:var(--brandSoft)}
   .chap .cr .ts{font:600 12px var(--mono);color:var(--brand2);padding-top:2px} .chap .cr b{font-size:14px} .chap .cr div div{font-size:12.5px;color:var(--muted)}
   .tl .chm{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.28);z-index:1}
+  .pstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .pstat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;color:var(--brand)}
+  .pstat b{font-size:24px;color:var(--text);line-height:1.2} .pstat span{font-size:12.5px;color:var(--muted)}
+  .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-top:14px}
+  .prow{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;color:var(--text);font:inherit;width:100%}
+  .prow:hover{border-color:var(--brand)} .prow .pt{font-weight:650;font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pbar{height:6px;border-radius:99px;background:var(--line);overflow:hidden} .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .cfront{font-size:19px;font-weight:650;margin:14px 0 6px;text-align:center} .cback{font-size:15.5px;color:var(--text2);text-align:center;margin-top:8px;padding-top:10px;border-top:1px dashed var(--line2)}
+  #notesGrid .prow{margin-bottom:0} mark{background:rgba(250,204,21,.45);color:inherit;border-radius:3px}
+  @media (max-width:640px){.pstats{grid-template-columns:repeat(2,minmax(0,1fr))}.plist{grid-template-columns:1fr}}
   .libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px}
   .addcard{border:1px dashed var(--line2);border-radius:14px;padding:16px;background:color-mix(in srgb,var(--panel) 60%,transparent)}
   .gdiv{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:14px 0 10px} .gdiv::before,.gdiv::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -354,6 +372,7 @@
       <button data-v="lib"><i data-i="film"></i> <span data-t="navLib"></span></button>
       <button data-v="course"><i data-i="sparkles"></i> <span data-t="navCourse"></span></button>
       <button data-v="notes" id="notesNav" class="hide"><i data-i="book"></i> <span data-t="navNotes"></span></button>
+      <button data-v="prog" id="progNav" class="hide"><i data-i="chart"></i> <span data-t="navProg"></span></button>
       <button data-v="hist" id="histNav" class="hide"><i data-i="history"></i> <span data-t="historyT"></span></button>
       <button class="mlab" onclick="location.href='/lab'"><i data-i="code"></i> <span data-t="lab"></span></button>
     </div>
@@ -457,7 +476,14 @@
     <section id="v_notes" class="view bw hide">
       <h2 style="margin:0" data-t="notesTitle"></h2>
       <div class="muted" data-t="notesSub"></div>
+      <input class="in" id="nSearch" data-tp="notesSearchPh" style="margin-top:12px;max-width:520px" oninput="searchNotes(this.value)">
       <div class="libgrid" id="notesGrid"></div>
+    </section>
+
+    <section id="v_prog" class="view bw hide">
+      <h2 style="margin:0" data-t="progTitle"></h2>
+      <div class="muted" data-t="progSub"></div>
+      <div id="progOut" style="margin-top:14px"></div>
     </section>
 
     <section id="v_hist" class="view bw hide">
@@ -504,6 +530,7 @@
         <div class="comp" id="c_ask">
           <div class="sugg" id="sugg"></div>
           <div class="row" style="align-items:flex-end;flex-wrap:nowrap">
+            <button class="btn ghost mic" id="qMic" type="button" data-tt="micT" style="height:46px"><i data-i="mic"></i></button>
             <textarea class="in" id="q" rows="1" data-tp="qPh"></textarea>
             <button class="btn pri" id="askBtn" aria-label="Send" style="height:46px"><i data-i="send"></i></button>
           </div>
@@ -537,7 +564,7 @@
               <button data-tool="type" class="on" data-tt="nbType"><i data-i="type" data-s="15"></i></button>
               <button data-tool="pen" data-tt="pen"><i data-i="pen" data-s="15"></i></button>
               <button data-tool="marker" data-tt="marker"><i data-i="marker" data-s="15"></i></button>
-              <button data-tool="eraser" data-tt="eraser"><i data-i="eraser" data-s="15"></i></button>
+              <button data-tool="eraser" data-tt="eraser"><i data-i="eraser" data-s="15"></i></button><span class="nbdd"><button type="button" id="nbShapeBtn" data-tt="nbShapes"><i data-i="shapes" data-s="15"></i></button><span class="nb-menu hide" id="nbShapes"><button type="button" data-tool="line" data-tt="nbLine"><i data-i="line" data-s="15"></i></button><button type="button" data-tool="arrow" data-tt="nbArrow"><i data-i="arrowd" data-s="15"></i></button><button type="button" data-tool="rect" data-tt="nbRect"><i data-i="rect" data-s="15"></i></button><button type="button" data-tool="ellipse" data-tt="nbEllipse"><i data-i="ellipse" data-s="15"></i></button></span></span>
               <span class="sep"></span>
               <span class="sw" data-col="#f2f4f8" style="background:#f2f4f8"></span><span class="sw on" data-col="#7c5cff" style="background:#7c5cff"></span><span class="sw" data-col="#22d3ee" style="background:#22d3ee"></span><span class="sw" data-col="#f43f5e" style="background:#f43f5e"></span><span class="sw" data-col="#22c55e" style="background:#22c55e"></span><span class="sw" data-col="#111827" style="background:#111827"></span>
               <input type="range" id="nbSize" aria-label="Pen size" min="1" max="20" value="3" style="width:70px">
@@ -546,7 +573,9 @@
               <span class="sep"></span>
               <button id="nbTs" data-tt="tsBtn"><i data-i="clock" data-s="15"></i></button><button id="nbSnap" data-tt="ssBtn"><i data-i="camera" data-s="15"></i></button>
               <span class="sep"></span>
-              <button id="nbUndo" data-tt="undo"><i data-i="undo" data-s="15"></i></button><button id="nbClear" data-tt="clear"><i data-i="trash" data-s="15"></i></button>
+              <button id="nbUndo" data-tt="undo"><i data-i="undo" data-s="15"></i></button><button id="nbRedo" data-tt="redo"><i data-i="redo" data-s="15"></i></button><button id="nbClear" data-tt="clear"><i data-i="trash" data-s="15"></i></button>
+              <span class="sep"></span><button type="button" id="nbZoomOut" data-tt="zoomOut"><i data-i="zout" data-s="15"></i></button><button type="button" id="nbZoomV" data-tt="zoomReset" style="font:600 11px var(--mono,monospace);min-width:40px">100%</button><button type="button" id="nbZoomIn" data-tt="zoomIn"><i data-i="zin" data-s="15"></i></button>
+              <span class="sep"></span><span class="nbdd"><button type="button" id="nbAI" class="nbai" data-tt="nbAIT"><i data-i="sparkles" data-s="15"></i> <span data-t="nbAIBtn"></span></button><span class="nb-menu col hide" id="nbAIMenu"><button type="button" data-ai="summary"><i data-i="book" data-s="14"></i> <span data-t="nbAI_summary"></span></button><button type="button" data-ai="mindmap"><i data-i="map" data-s="14"></i> <span data-t="nbAI_mindmap"></span></button><button type="button" data-ai="flashcards"><i data-i="cards" data-s="14"></i> <span data-t="nbAI_flashcards"></span></button><button type="button" data-ai="quiz"><i data-i="quiz" data-s="14"></i> <span data-t="nbAI_quiz"></span></button></span></span><button id="nbShare" data-tt="shareT"><i data-i="share" data-s="15"></i></button>
               <span class="sp"></span>
               <button class="btn sm" id="nbPdf"><i data-i="download" data-s="13"></i> <span data-t="exportPdf"></span></button>
             </div>
@@ -556,7 +585,7 @@
           <div class="nb-card hide" id="nbCard"></div>
           <div class="nb-ask">
             <button class="btn sm" id="nbExplain" disabled><i data-i="sparkles" data-s="14"></i> <span data-t="nbExplain"></span></button>
-            <input class="in" id="nbQ" data-tp="nbAskPh">
+            <button class="btn sm ghost mic" id="nbMic" type="button" data-tt="micT"><i data-i="mic" data-s="15"></i></button><input class="in" id="nbQ" data-tp="nbAskPh">
             <button class="btn pri" id="nbAskBtn" aria-label="Send"><i data-i="send" data-s="15"></i></button>
           </div>
         </div>
@@ -638,7 +667,7 @@ async function refreshMe(){
     $("logoutBtn").textContent=t("guestCta");$("logoutBtn").onclick=()=>{setAuthMode(true);showAuth()};return}
   $("logoutBtn").textContent=t("logout");$("logoutBtn").onclick=logout;
   if(me.auth&&!me.user){showAuth();return}
-  if(me.user){$("meBox").classList.remove("hide");$("histNav").classList.remove("hide");$("notesNav").classList.remove("hide");$("meAv").textContent=(me.user.name||me.user.email)[0].toUpperCase();$("meName").textContent=me.user.name||me.user.email;
+  if(me.user){$("meBox").classList.remove("hide");$("histNav").classList.remove("hide");$("notesNav").classList.remove("hide");$("progNav").classList.remove("hide");$("meAv").textContent=(me.user.name||me.user.email)[0].toUpperCase();$("meName").textContent=me.user.name||me.user.email;
     $("meUse").textContent=me.unlimited?t("unlimited"):t("usage")+": "+me.used+" / "+me.limit;$("meBar").style.width=me.unlimited?"100%":Math.min(100,100*me.used/Math.max(1,me.limit))+"%"}
 }
 async function logout(){await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});location.reload()}
@@ -647,7 +676,7 @@ async function logout(){await fetch("/api/auth/logout",{method:"POST",credential
 /* leaving a video that is still being prepared -> stop the server-side transcription/indexing (saves GPU) */
 function cancelPrep(nextId){if(cur&&cur.pending===true&&cur.video_id&&cur.video_id!==nextId){try{fetch("/api/job/"+encodeURIComponent(cur.video_id)+"/cancel",{method:"POST",headers:hdr(),credentials:"same-origin",keepalive:true})}catch(e){}cur.pending="fail"}}
 addEventListener("pagehide",()=>cancelPrep(null));
-function view(v){if(v!=="work")cancelPrep(null);document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes")loadNotesList();if(v==="home"&&lib.length&&!demoStarted)startDemo();
+function view(v){if(v!=="work")cancelPrep(null);document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","prog","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes"){$("nSearch").value="";loadNotesList()}if(v==="prog")loadProgress();if(v==="home"&&lib.length&&!demoStarted)startDemo();
   document.querySelectorAll(".navl button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); if(v==="hist")loadHist(); drawLib()}
 document.querySelectorAll(".navl button").forEach(b=>b.onclick=()=>view(b.dataset.v));
 
@@ -918,6 +947,7 @@ function pickOpt(i,j){
   $("o"+i+"_"+j).classList.add(j===q.answer?"right":"wrong");$("o"+i+"_"+q.answer).classList.add("right");
   $("fb"+i).innerHTML='<div style="margin-top:8px">'+(j===q.answer?'<span class="badge ok">'+ic("check",12)+' '+t("right")+"</span> ":'<span class="badge bad">'+ic("x",12)+' '+t("wrong")+"</span> ")+esc(q.explanation)+' <span class="chip" onclick="seek('+q.start+')">'+ic("play",10)+' '+fmt(q.start)+"</span></div>";
   $("score").innerHTML="<b>"+t("score")+": "+quizScore.ok+" / "+lastQuiz.length+"</b>"+(quizScore.n===lastQuiz.length?' <span class="muted">'+t("quizDone")+"</span>":"");
+  if(quizScore.n===lastQuiz.length&&me.user&&cur)api("/api/quiz_result",{video_id:cur.video_id,score:quizScore.ok,total:lastQuiz.length}).catch(()=>{});
 }
 $("ankiBtn").onclick=()=>{
   if(!lastQuiz.length){toast(t("quizFirst"));return}
@@ -943,6 +973,7 @@ function drawLibGrid(){const g=$("libGrid");g.querySelectorAll(".yt,.empty").for
   g.querySelectorAll(".yt").forEach(el=>el.onclick=()=>openVid(el.dataset.id))}
 
 /* ---------- my notes page ---------- */
+window.loadNotesListOrig=()=>loadNotesList();
 async function loadNotesList(){const g=$("notesGrid");
   if(!me.user){g.innerHTML='<div class="empty">'+t("notesLogin")+"</div>";return}
   g.innerHTML='<div class="shimmer"></div>';
@@ -1045,6 +1076,7 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261114"></script>
+<script src="/static/notebook.js?v=20261115"></script>
+<script src="/static/study.js?v=20261115"></script>
 </body>
 </html>

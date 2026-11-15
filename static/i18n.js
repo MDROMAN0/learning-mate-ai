@@ -3,6 +3,17 @@
    (RAG, BM25, embedding, chunk, timestamp, PDF, YouTube...). Add every new key to BOTH languages. */
 window.I18N = {
   en: {
+    nbShapes: "Shapes", nbLine: "Line", nbArrow: "Arrow", nbRect: "Box", nbEllipse: "Circle (hold Shift for a perfect circle)", redo: "Redo drawing",
+    zoomIn: "Zoom in", zoomOut: "Zoom out", zoomReset: "Reset zoom", nbAIT: "Let AI write notes from this video", nbAIBtn: "AI",
+    nbAI_summary: "Study notes from the video", nbAI_mindmap: "Mind map", nbAI_flashcards: "Flashcards", nbAI_quiz: "Quiz me on my notes",
+    cardsAdded: "{n} flashcards added to your review deck", cardsLogin: "Log in to keep flashcards for spaced review", nbQuizEmpty: "Write some notes first",
+    shareT: "Share a read-only link", shareLogin: "Log in to share your notes", shareCopied: "Link copied — anyone with it can view (not edit) these notes",
+    micT: "Ask by voice", micDenied: "Microphone permission was blocked", micFail: "Could not hear you — try again",
+    navProg: "Progress & review", progTitle: "Your progress", progSub: "What you watched, your quiz scores and the flashcards due today.",
+    streak: "day streak", dueCards: "cards due", reviewNow: "Review now", showAnswer: "Show answer", again: "Again", hard: "Hard", good: "Good", easy: "Easy",
+    noDue: "No cards due — make flashcards from a video's notebook (AI → Flashcards).", reviewDone: "Review done for now 🎉", watched: "watched",
+    quizAvg: "quiz", questionsAsked: "questions", notesSearchPh: "Search inside all your notes", noProgress: "Nothing yet — open a video and start studying.",
+    progLogin: "Log in to track your progress", deleteCard: "Delete card", cardOf: "Card {i} of {n}", nextIn: "next review",
     pinMenu: "Keep the menu open", nbMove: "Move", nbAskPh: "Ask AI about this video while you take notes…", nbExplain: "Explain this", nbPlace: "Place in notebook", nbClose: "Close", nbExplainHint: "Select some text in your notebook, or click a screenshot / timestamp first", nbAboutSel: "About your selection", nbAboutAt: "Explanation of the part at", nbPlaced: "Placed in your notebook — drag it anywhere", a_q: "Question", a_rw: "Query rewrite", a_dense: "Dense search", a_bm25: "BM25 search", a_rrf: "RRF fusion", a_rr: "Rerank", a_gr: "Relevance check", a_gen: "Grounded answer", a_ver: "Claim check", a_seg: "Segments",
     brand: "Learning Mate AI", brandSub: "YouTube study assistant",
     study: "Study", lab: "RAG Lab", online: "online", offline: "offline", langBtn: "বাংলা",
@@ -107,6 +118,17 @@ window.I18N = {
     evSaved: "Measured results", evSavedD: "Real run on 30 Sep 2026 — 4 Bangla lecture videos, 26 questions with a known answer + 8 whose topic is not in the video.", evBuiltin: "Run the built-in test set", evBuiltinD: "Runs the questions below live against the current library (retrieval only, no answer generation).", evLoaded: "{p} questions with a known answer · {n} not-in-video", evCustom: "Custom test set (JSON)", evWhy: "What this shows", evWhy1: "BM25 alone finds nothing: questions are typed in Banglish/English but captions are in Bangla script, so exact words never match.", evWhy2: "Meaning-based (dense) search fixes that; hybrid + LLM rerank gives the best ranking (MRR 0.93).", evWhy3: "Query rewrite did not help retrieval here and was 6× slower, so it is optional.", evQuick: "Quick run (8 questions)"
   },
   bn: {
+    nbShapes: "আকৃতি", nbLine: "লাইন", nbArrow: "তীর", nbRect: "বক্স", nbEllipse: "বৃত্ত (Shift চেপে রাখলে নিখুঁত গোল)", redo: "আঁকা ফেরত আনো",
+    zoomIn: "বড় করো", zoomOut: "ছোট করো", zoomReset: "আগের মাপ", nbAIT: "এই ভিডিও থেকে AI নোট বানাক", nbAIBtn: "AI",
+    nbAI_summary: "ভিডিও থেকে পড়ার নোট", nbAI_mindmap: "মাইন্ড ম্যাপ", nbAI_flashcards: "ফ্ল্যাশকার্ড", nbAI_quiz: "আমার নোট থেকে কুইজ",
+    cardsAdded: "{n}টা ফ্ল্যাশকার্ড রিভিউ-তালিকায় যোগ হয়েছে", cardsLogin: "ফ্ল্যাশকার্ড রেখে পরে রিভিউ করতে লগইন করো", nbQuizEmpty: "আগে কিছু নোট লেখো",
+    shareT: "শুধু-দেখার লিংক শেয়ার করো", shareLogin: "নোট শেয়ার করতে লগইন করো", shareCopied: "লিংক কপি হয়েছে — যার কাছে লিংক থাকবে সে দেখতে পারবে, বদলাতে পারবে না",
+    micT: "মুখে বলে প্রশ্ন করো", micDenied: "মাইক্রোফোনের অনুমতি বন্ধ আছে", micFail: "শুনতে পাইনি — আবার চেষ্টা করো",
+    navProg: "অগ্রগতি ও রিভিউ", progTitle: "তোমার অগ্রগতি", progSub: "কতটুকু দেখেছ, কুইজের স্কোর আর আজকের রিভিউ-কার্ড।",
+    streak: "দিন টানা", dueCards: "কার্ড রিভিউ বাকি", reviewNow: "এখন রিভিউ করো", showAnswer: "উত্তর দেখাও", again: "আবার", hard: "কঠিন", good: "ভালো", easy: "সহজ",
+    noDue: "রিভিউ বাকি নেই — ভিডিওর নোটবুকে AI → ফ্ল্যাশকার্ড দিয়ে কার্ড বানাও।", reviewDone: "আপাতত রিভিউ শেষ 🎉", watched: "দেখা হয়েছে",
+    quizAvg: "কুইজ", questionsAsked: "প্রশ্ন", notesSearchPh: "সব নোটের ভেতরে খোঁজো", noProgress: "এখনো কিছু নেই — একটা ভিডিও খুলে পড়া শুরু করো।",
+    progLogin: "অগ্রগতি রাখতে লগইন করো", deleteCard: "কার্ড মুছে দাও", cardOf: "{n}টার মধ্যে {i} নম্বর কার্ড", nextIn: "পরের রিভিউ",
     pinMenu: "মেনু খোলা রাখো", nbMove: "সরাও", nbAskPh: "নোট নিতে নিতে এই ভিডিও নিয়ে AI-কে জিজ্ঞেস করো…", nbExplain: "এটা বুঝিয়ে দাও", nbPlace: "নোটবুকে বসাও", nbClose: "বন্ধ", nbExplainHint: "আগে নোটবুকের কোনো লেখা সিলেক্ট করো, অথবা কোনো স্ক্রিনশট / timestamp-এ ক্লিক করো", nbAboutSel: "তোমার সিলেক্ট করা অংশ নিয়ে", nbAboutAt: "এই সময়ের অংশের ব্যাখ্যা:", nbPlaced: "নোটবুকে বসানো হয়েছে — টেনে যেকোনো জায়গায় নাও", a_q: "প্রশ্ন", a_rw: "প্রশ্ন নতুন করে লেখা", a_dense: "অর্থ দিয়ে খোঁজা", a_bm25: "শব্দ দিয়ে খোঁজা", a_rrf: "দুই তালিকা মেলানো", a_rr: "আবার সাজানো", a_gr: "প্রাসঙ্গিকতা যাচাই", a_gen: "প্রমাণভিত্তিক উত্তর", a_ver: "তথ্য যাচাই", a_seg: "ভিডিওর অংশ",
     brand: "Learning Mate AI", brandSub: "YouTube পড়ার সহকারী",
     study: "পড়া", lab: "RAG Lab", online: "চালু", offline: "বন্ধ", langBtn: "English",

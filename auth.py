@@ -98,6 +98,12 @@ CREATE TABLE IF NOT EXISTS usage(user_id INTEGER, day TEXT, n INTEGER, PRIMARY K
 CREATE TABLE IF NOT EXISTS notes(user_id INTEGER, video_id TEXT, content TEXT, updated REAL, PRIMARY KEY(user_id, video_id));
 CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY, user_id INTEGER, video_id TEXT, title TEXT,
     question TEXT, found INTEGER, answer TEXT, created REAL);
+CREATE TABLE IF NOT EXISTS cards(id TEXT PRIMARY KEY, user_id INTEGER, video_id TEXT, front TEXT, back TEXT, start REAL,
+    due REAL, ivl REAL, ease REAL, reps INTEGER, created REAL);
+CREATE TABLE IF NOT EXISTS progress(user_id INTEGER, video_id TEXT, watched REAL, duration REAL, updated REAL,
+    PRIMARY KEY(user_id, video_id));
+CREATE TABLE IF NOT EXISTS quizzes(id TEXT PRIMARY KEY, user_id INTEGER, video_id TEXT, score INTEGER, total INTEGER, created REAL);
+CREATE TABLE IF NOT EXISTS shares(token TEXT PRIMARY KEY, user_id INTEGER, video_id TEXT, created REAL);
 """
 
 

@@ -4,7 +4,9 @@
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const fmt = t => { t = Math.floor(t); const m = Math.floor(t / 60), s = t % 60; return m + ":" + String(s).padStart(2, "0"); };
+let docMode = false;                    // true while a PDF / slide deck (not the YouTube tab) is open
+// a document has pages, not minutes: the server stores page N as minute N, so show "p.N"
+const fmt = t => { t = Math.floor(t || 0); if (docMode) return "p." + (Math.floor(t / 60) + 1); const m = Math.floor(t / 60), s = t % 60; return m + ":" + String(s).padStart(2, "0"); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const DEFAULT_SERVER = "https://learning-mate-ai.onrender.com";
 
@@ -21,7 +23,10 @@ const TXT = {
     general: "From general knowledge (not from the video)", lost: "Connection lost, try again", lang: "বাংলা",
     notes: "Notebook", nText: "+ Text", nTs: "+ Timestamp", nShot: "📷 Screenshot", nEmpty: "Write notes, save the current time or a screenshot of the video. Answers can be added with “Add to notes”.",
     nPh: "Write here…", saving: "saving…", savedCloud: "✓ saved to your account", savedLocal: "✓ saved in this browser (log in to sync with the website)",
-    toNotes: "+ Add to notes", added: "Added to notes", shotFail: "Could not capture the video frame" },
+    toNotes: "+ Add to notes", added: "Added to notes", shotFail: "Could not capture the video frame",
+    docBtn: "Upload a PDF or slides (.pptx) and study it here", uploading: "Uploading…", reading: "Reading pages…", backToVideo: "Back to the YouTube video",
+    docLogin: "Log in first (⚙) to upload files", review: "Review flashcards", noCards: "No flashcards for this video yet — make them in the Notebook (AI → Flashcards).",
+    micPerm: "Allow the microphone in the tab that just opened, then try again." },
   bn: { server: "সার্ভারের ঠিকানা", email: "ইমেইল", password: "পাসওয়ার্ড", login: "লগইন", logout: "লগআউট", prepare: "ভিডিও প্রস্তুত করো",
     chat: "চ্যাট", summary: "সারাংশ", quiz: "কুইজ", ask: "পাঠাও", spoiler: "স্পয়লার ছাড়া: শুধু যতটুকু দেখেছি",
     qPh: "এই ভিডিও নিয়ে প্রশ্ন করো…", openYt: "শুরু করতে একটা YouTube ভিডিও খোলো", ready: "প্রস্তুত", notReady: "এখনো প্রস্তুত না",
@@ -33,7 +38,10 @@ const TXT = {
     general: "সাধারণ জ্ঞান থেকে (ভিডিও থেকে না)", lost: "সংযোগ কেটে গেছে, আবার চেষ্টা করো", lang: "English",
     notes: "নোটবুক", nText: "+ লেখা", nTs: "+ সময়", nShot: "📷 স্ক্রিনশট", nEmpty: "নোট লেখো, ভিডিওর এখনকার সময় বা স্ক্রিনশট রাখো। উত্তরের নিচে “নোটে রাখো” চাপলে উত্তরও নোটে যাবে।",
     nPh: "এখানে লেখো…", saving: "সেভ হচ্ছে…", savedCloud: "✓ তোমার অ্যাকাউন্টে সেভ হয়েছে", savedLocal: "✓ এই ব্রাউজারে সেভ হয়েছে (লগইন করলে ওয়েবসাইটের সাথে মিলবে)",
-    toNotes: "+ নোটে রাখো", added: "নোটে রাখা হয়েছে", shotFail: "ভিডিওর ছবি নেওয়া গেল না" },
+    toNotes: "+ নোটে রাখো", added: "নোটে রাখা হয়েছে", shotFail: "ভিডিওর ছবি নেওয়া গেল না",
+    docBtn: "PDF বা স্লাইড (.pptx) আপলোড করে এখানে পড়ো", uploading: "আপলোড হচ্ছে…", reading: "পৃষ্ঠা পড়ছি…", backToVideo: "YouTube ভিডিওতে ফিরে যাও",
+    docLogin: "ফাইল আপলোড করতে আগে লগইন করো (⚙)", review: "ফ্ল্যাশকার্ড রিভিউ", noCards: "এই ভিডিওর ফ্ল্যাশকার্ড নেই — নোটবুকে AI → ফ্ল্যাশকার্ড দিয়ে বানাও।",
+    micPerm: "যে ট্যাব খুলেছে সেখানে মাইক্রোফোন Allow করো, তারপর আবার চেষ্টা করো।" },
 };
 const STAGES = ["rewrite", "retrieve", "grade", "generate", "verify"];
 let cfg = { backend: DEFAULT_SERVER, token: "", user: "", lang: "en", theme: "dark" };
@@ -42,7 +50,7 @@ let vid = null, tabId = null, state = "none";
 let cur = null, nbLoadedFor = null, lastTime = 0;
 const me = { user: null };
 const now = () => lastTime;
-const seek = s => { if (tabId != null) inPage(pageSeek, [s]); lastTime = s; };
+const seek = s => { if (docMode) { toast(fmt(s)); return; } if (tabId != null) inPage(pageSeek, [s]); lastTime = s; };
 function toast(msg) { const el = $("toast"); el.textContent = msg; el.classList.remove("hide"); clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.add("hide"), 2200); }        // state: none | unknown | running | done | error
 const chats = {};                                     // video id -> [{q, standalone}]
 // keys this panel does not define come from the website's text file (lib/i18n.js), which the notebook uses
@@ -161,7 +169,8 @@ let titleCache = "";
 function paintVideo() {
   $("composer").hidden = !vid; $("thumb").hidden = !vid;
   if (!vid) { $("vtitle").textContent = t("openYt"); $("vstate").hidden = true; $("prep").hidden = true; return; }
-  $("thumb").src = "https://i.ytimg.com/vi/" + vid + "/mqdefault.jpg";
+  $("thumb").hidden = docMode; $("docIcon").hidden = !docMode; $("docExit").hidden = !docMode;
+  if (!docMode) $("thumb").src = "https://i.ytimg.com/vi/" + vid + "/mqdefault.jpg";
   $("vtitle").textContent = titleCache || vid;
   const label = { done: t("ready"), running: t("preparing"), unknown: t("notReady"), error: t("failed") }[state] || "";
   $("vstate").hidden = !label; $("vstate").textContent = label;
@@ -179,6 +188,7 @@ async function watchJob() {            // poll until the server finishes buildin
   }
 }
 async function refreshVideo() {
+  if (docMode) return;                  // a PDF is open: switching tabs must not replace it
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const id = videoIdOf(tab?.url);
   tabId = tab?.id ?? null;
@@ -244,7 +254,7 @@ async function ask() {
     } else {
       h += '<span class="pill ' + (tr.verify === "ok" ? "ok" : "warn") + '">' + (tr.claims_supported || 0) + "/" + (tr.claims_total || 0) + " " + t("verified") + "</span>";
       h += d.answer ? answerHtml(d.answer, d.refs || []) : "<p>" + esc(d.note) + "</p>";
-      h += '<div style="margin-top:8px">' + (d.segments || []).map(s => '<button class="chip" type="button" data-s="' + s.start + '">▸ ' + fmt(s.start) + "–" + fmt(s.end) + "</button>").join(" ") + "</div>";
+      h += '<div style="margin-top:8px">' + (d.segments || []).map(s => '<button class="chip" type="button" data-s="' + s.start + '">▸ ' + fmt(s.start) + (docMode ? (Math.ceil(s.end / 60) > Math.floor(s.start / 60) + 1 ? "–p." + Math.ceil(s.end / 60) : "") : "–" + fmt(s.end)) + "</button>").join(" ") + "</div>";
     }
     if (d.found && d.answer) h += '<div class="addn"><button class="btn ghost sm" type="button">' + t("toNotes") + "</button></div>";
     body.innerHTML = h;
@@ -284,7 +294,55 @@ function showTab(name) {
   $("composer").hidden = !vid || name !== "chat";
   if (name === "sum" && vid && !$("p_sum").innerHTML) loadSummary();
   if (name === "notes") openNotebook();
-  if (name === "quiz" && vid && !$("p_quiz").innerHTML) $("p_quiz").innerHTML = '<button class="btn" type="button" id="mkQuiz">' + t("makeQuiz") + "</button>";
+  if (name === "quiz" && vid && !$("p_quiz").innerHTML) $("p_quiz").innerHTML = '<div class="row" style="flex-wrap:wrap;margin-bottom:10px"><button class="btn" type="button" id="mkQuiz">' + t("makeQuiz") +
+    '</button><button class="btn ghost" type="button" id="mkRev">' + t("review") + "</button></div>";
+}
+
+// ---------------------------------------------------------------- PDF / slides
+async function uploadDoc(file) {
+  if (!cfg.token) { openSettings(true); $("setMsg").textContent = t("docLogin"); return; }
+  const fd = new FormData(); fd.append("file", file); fd.append("title", file.name.replace(/\.(pdf|pptx)$/i, ""));
+  docMode = true; vid = "upload"; state = "running"; titleCache = file.name; paintVideo(); $("vstate").textContent = t("uploading");
+  try {
+    const r = await fetch(base() + "/api/upload", { method: "POST", headers: { Authorization: "Bearer " + cfg.token, "x-lang": cfg.lang }, body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "HTTP " + r.status);
+    let j = d;
+    while (j.status === "running") { $("vstate").textContent = j.msg || t("reading"); await sleep(1500); j = await api("/api/job/" + d.video_id); }
+    if (j.status !== "done") throw new Error(j.msg || t("failed"));
+    vid = j.meta.video_id; state = "done"; titleCache = j.meta.title;
+    cur = { video_id: vid, title: titleCache, doc: j.meta.doc, duration: j.meta.duration }; nbLoadedFor = null;
+    $("p_chat").innerHTML = '<p class="muted">' + t("hint") + "</p>"; $("p_sum").innerHTML = ""; $("p_quiz").innerHTML = "";
+    $("sp").checked = false; $("sp").disabled = true; paintVideo(); showTab("chat");
+  } catch (e) { state = "error"; paintVideo(); $("vstate").textContent = e.message; }
+}
+function exitDoc() { docMode = false; vid = null; $("sp").disabled = false; refreshVideo(); }
+
+// flashcards made in the notebook (AI -> Flashcards), reviewed with spaced repetition
+let rdeck = [], rpos = 0;
+async function loadReview() {
+  const p = $("p_quiz"), box = document.createElement("div"); box.id = "revBox"; box.className = "card";
+  p.querySelector("#revBox")?.remove(); p.prepend(box);
+  if (!cfg.token) { box.innerHTML = '<span class="muted">' + t("cardsLogin") + "</span>"; return; }
+  box.innerHTML = '<span class="spin"></span>';
+  try { const d = await api("/api/cards?video_id=" + encodeURIComponent(vid)); rdeck = d.cards || []; rpos = 0; drawReview(); }
+  catch (e) { box.innerHTML = '<span class="pill bad">' + esc(e.message) + "</span>"; }
+}
+function drawReview() {
+  const b = $("revBox"); if (!b) return;
+  if (!rdeck.length) { b.innerHTML = '<span class="muted">' + t("noCards") + "</span>"; return; }
+  if (rpos >= rdeck.length) { b.innerHTML = "<b>" + t("reviewDone") + "</b>"; return; }
+  const c = rdeck[rpos];
+  b.innerHTML = '<span class="pill">' + t("cardOf", { i: rpos + 1, n: rdeck.length }) + '</span><p style="font-weight:650;font-size:15.5px;margin:10px 0 6px">' + esc(c.front) +
+    '</p><p id="rBack" hidden style="margin:0 0 8px;color:var(--text2)">' + esc(c.back) + " " + (c.start != null ? chip({ start: c.start }) : "") + '</p><div class="row" id="rAct"><button class="btn" type="button" id="rShow">' + t("showAnswer") + "</button></div>";
+  $("rShow").onclick = () => {
+    $("rBack").hidden = false;
+    $("rAct").innerHTML = ["again", "hard", "good", "easy"].map((k, g) => '<button class="btn ghost sm" type="button" data-g="' + g + '">' + t(k) + "</button>").join("");
+    $("rAct").querySelectorAll("[data-g]").forEach(x => x.onclick = async () => {
+      const g = +x.dataset.g; try { await api("/api/cards/" + c.id + "/review", { grade: g }); } catch (e) { toast(e.message); return; }
+      if (g === 0) rdeck.push(c); rpos++; drawReview();
+    });
+  };
 }
 
 // ---------------------------------------------------------------- settings and events
@@ -302,15 +360,22 @@ async function login() {
 
 document.addEventListener("click", e => {
   const c = e.target.closest(".chip");
-  if (c && tabId != null) { inPage(pageSeek, [Number(c.dataset.s)]); return; }
+  if (c) { seek(Number(c.dataset.s)); return; }
   const o = e.target.closest(".opt");
   if (o) {
     const card = o.closest(".card"), right = Number(card.dataset.ans);
     card.querySelectorAll(".opt").forEach((b, j) => { b.disabled = true; if (j === right) b.classList.add("right"); });
     if (Number(o.dataset.j) !== right) o.classList.add("wrong");
-    card.querySelector(".why").hidden = false; return;
+    card.querySelector(".why").hidden = false;
+    const all = [...document.querySelectorAll("#p_quiz .card[data-ans]")];
+    if (cfg.token && all.every(x => x.querySelector(".opt:disabled"))) {
+      const score = all.filter(x => !x.querySelector(".opt.wrong")).length;
+      api("/api/quiz_result", { video_id: vid, score, total: all.length }).catch(() => {});
+    }
+    return;
   }
   if (e.target.id === "mkQuiz") loadQuiz();
+  if (e.target.id === "mkRev") loadReview();
   const tb = e.target.closest("[data-tab]");
   if (tb) showTab(tb.dataset.tab);
 });

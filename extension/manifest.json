@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Learning Mate AI",
-  "version": "2.2",
+  "version": "3.0",
   "description": "Study any YouTube lecture from a side panel: ask questions, get timestamped answers checked against the video, summary and quiz.",
   "permissions": [
     "sidePanel",

@@ -13,7 +13,8 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
 header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-weight:800;color:#fff}
-header b{font-size:15px;flex:1}
+header b{font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:380px){header{gap:5px;padding:8px}header .ic{padding:4px 7px}}
 .ic{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:12.5px;min-height:30px}
 .vid{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
 .vid img{width:84px;height:47px;object-fit:cover;border-radius:6px;background:var(--panel2);flex:none}
@@ -62,6 +63,14 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
 .ntool .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
 .ntool .sw{width:17px;height:17px;border-radius:50%;cursor:pointer;border:2px solid transparent;box-shadow:0 0 0 1px var(--line2);margin:0 1px} .ntool .sw.on{border-color:var(--text)}
 .nb-hint{font-size:11.5px;margin-top:2px;min-height:16px}
+.nbdd{position:relative;display:inline-flex}
+.nb-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:30;display:flex;gap:2px;padding:4px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.nb-menu.col{flex-direction:column;min-width:190px;left:0}
+.nb-menu.col button{display:flex!important;justify-content:flex-start;gap:8px;width:100%;height:34px;padding:0 10px;font-weight:600;white-space:nowrap}
+#nbAI{display:inline-flex!important;gap:5px;color:var(--brand);border-color:color-mix(in srgb,var(--brand) 40%,transparent)}
+.mic.rec{color:#fff!important;background:var(--bad)!important;border-color:var(--bad)!important;animation:micp 1s infinite}
+@keyframes micp{50%{box-shadow:0 0 0 6px rgba(244,63,94,.25)}}
+
 .nb-scroll{flex:1;overflow:auto;padding:8px;min-height:0}
 .nb-page{position:relative;width:100%;min-height:500px;border:1px solid var(--line);border-radius:12px;cursor:text;background-color:var(--bg2);background-image:radial-gradient(var(--line2) 1px,transparent 1px);background-size:20px 20px}
 .nb-page.drawmode{cursor:crosshair}
@@ -100,6 +109,7 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
   <div class="logo" aria-hidden="true">L</div><b>Learning Mate AI</b>
   <button class="ic" id="langBtn" type="button"></button>
   <button class="ic" id="themeBtn" type="button" aria-label="Dark / light"></button>
+  <label class="ic" id="docBtn" data-tt="docBtn" style="display:grid;place-items:center;cursor:pointer">📄<input type="file" id="docFile" accept=".pdf,.pptx" hidden></label>
   <button class="ic" id="gear" type="button" aria-label="Settings" aria-expanded="false">⚙</button>
 </header>
 
@@ -116,9 +126,10 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
 </section>
 
 <div class="vid">
-  <img id="thumb" alt="" hidden>
+  <img id="thumb" alt="" hidden><span id="docIcon" hidden style="font-size:30px;line-height:1">📄</span>
   <div style="flex:1;min-width:0"><div class="tt" id="vtitle"></div><span class="pill" id="vstate" role="status"></span></div>
   <button class="btn" id="prep" type="button" hidden data-t="prepare"></button>
+  <button class="ic" id="docExit" type="button" hidden data-tt="backToVideo">✕</button>
 </div>
 
 <div class="tabs" role="tablist">
@@ -138,7 +149,7 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
         <button type="button" data-tool="type" class="on" data-tt="nbType"><i data-i="type" data-s="15"></i></button>
         <button type="button" data-tool="pen" data-tt="pen"><i data-i="pen" data-s="15"></i></button>
         <button type="button" data-tool="marker" data-tt="marker"><i data-i="marker" data-s="15"></i></button>
-        <button type="button" data-tool="eraser" data-tt="eraser"><i data-i="eraser" data-s="15"></i></button>
+        <button type="button" data-tool="eraser" data-tt="eraser"><i data-i="eraser" data-s="15"></i></button><span class="nbdd"><button type="button" id="nbShapeBtn" data-tt="nbShapes"><i data-i="shapes" data-s="15"></i></button><span class="nb-menu hide" id="nbShapes"><button type="button" data-tool="line" data-tt="nbLine"><i data-i="line" data-s="15"></i></button><button type="button" data-tool="arrow" data-tt="nbArrow"><i data-i="arrowd" data-s="15"></i></button><button type="button" data-tool="rect" data-tt="nbRect"><i data-i="rect" data-s="15"></i></button><button type="button" data-tool="ellipse" data-tt="nbEllipse"><i data-i="ellipse" data-s="15"></i></button></span></span>
         <span class="sep"></span>
         <span class="sw" data-col="#f2f4f8" style="background:#f2f4f8"></span><span class="sw on" data-col="#7c5cff" style="background:#7c5cff"></span><span class="sw" data-col="#22d3ee" style="background:#22d3ee"></span><span class="sw" data-col="#f43f5e" style="background:#f43f5e"></span><span class="sw" data-col="#22c55e" style="background:#22c55e"></span><span class="sw" data-col="#111827" style="background:#111827"></span>
         <input type="range" id="nbSize" aria-label="Pen size" min="1" max="20" value="3" style="width:64px">
@@ -147,8 +158,10 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
         <span class="sep"></span>
         <button type="button" id="nbTs" data-tt="tsBtn"><i data-i="clock" data-s="15"></i></button><button type="button" id="nbSnap" data-tt="ssBtn"><i data-i="camera" data-s="15"></i></button>
         <span class="sep"></span>
-        <button type="button" id="nbUndo" data-tt="undo"><i data-i="undo" data-s="15"></i></button><button type="button" id="nbClear" data-tt="clear"><i data-i="trash" data-s="15"></i></button>
-        <button type="button" id="nbPdf" data-tt="exportPdf"><i data-i="download" data-s="15"></i></button>
+        <button type="button" id="nbUndo" data-tt="undo"><i data-i="undo" data-s="15"></i></button><button type="button" id="nbRedo" data-tt="redo"><i data-i="redo" data-s="15"></i></button><button type="button" id="nbClear" data-tt="clear"><i data-i="trash" data-s="15"></i></button>
+        <button type="button" id="nbPdf" data-tt="exportPdf"><i data-i="download" data-s="15"></i></button><button type="button" id="nbShare" data-tt="shareT"><i data-i="share" data-s="15"></i></button>
+        <span class="sep"></span><button type="button" id="nbZoomOut" data-tt="zoomOut"><i data-i="zout" data-s="15"></i></button><button type="button" id="nbZoomV" data-tt="zoomReset" style="font:600 11px var(--mono,monospace);min-width:40px">100%</button><button type="button" id="nbZoomIn" data-tt="zoomIn"><i data-i="zin" data-s="15"></i></button>
+        <span class="sep"></span><span class="nbdd"><button type="button" id="nbAI" class="nbai" data-tt="nbAIT"><i data-i="sparkles" data-s="15"></i> <span data-t="nbAIBtn"></span></button><span class="nb-menu col hide" id="nbAIMenu"><button type="button" data-ai="summary"><i data-i="book" data-s="14"></i> <span data-t="nbAI_summary"></span></button><button type="button" data-ai="mindmap"><i data-i="map" data-s="14"></i> <span data-t="nbAI_mindmap"></span></button><button type="button" data-ai="flashcards"><i data-i="cards" data-s="14"></i> <span data-t="nbAI_flashcards"></span></button><button type="button" data-ai="quiz"><i data-i="quiz" data-s="14"></i> <span data-t="nbAI_quiz"></span></button></span></span>
       </div>
       <div class="nb-hint"><span class="muted" id="nSave"></span></div>
     </div>
@@ -156,6 +169,7 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
     <div class="nb-card hide" id="nbCard"></div>
     <div class="nb-ask">
       <button class="btn ghost sm" type="button" id="nbExplain" disabled data-t="nbExplain"></button>
+      <button class="btn ghost sm mic" type="button" id="nbMic" data-tt="micT"><i data-i="mic" data-s="15"></i></button>
       <input class="in" id="nbQ" style="margin:0">
       <button class="btn sm" type="button" id="nbAskBtn" aria-label="Send">➤</button>
     </div>
@@ -164,6 +178,7 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
 
 <footer id="composer">
   <div class="row">
+    <button class="ic mic" id="qMic" type="button" data-tt="micT" style="height:38px"><i data-i="mic" data-s="15"></i></button>
     <input class="in" id="q" style="margin:0" aria-label="Question">
     <button class="btn" id="ask" type="button" data-t="ask"></button>
   </div>

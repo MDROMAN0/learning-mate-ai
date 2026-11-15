@@ -5,7 +5,9 @@
 (function () {
   const PAGE = $("nbPage"), INK = $("nbInk"), IX = INK.getContext("2d"), SCROLL = $("nbScroll");
   let items = [], H = 1600, inkImg = null, tool = "type", color = "#7c5cff", size = 3, sel = null;
-  let inkHist = [], drawing = false, last = null, saveT = null, cap = null, capV = null, lastClick = null;
+  let inkHist = [], inkRedo = [], drawing = false, last = null, saveT = null, cap = null, capV = null, lastClick = null;
+  let shapeStart = null, shapeBase = null, zoom = 1;
+  const SHAPES = ["line", "arrow", "rect", "ellipse"];
   const U = () => PAGE.clientWidth / 1000;               // px per unit
   const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -73,7 +75,13 @@
   function spot(w) {
     if (lastClick) { const p = lastClick; lastClick = { x: p.x, y: p.y + 40 }; return p; }
     const u = U(), y = (SCROLL.scrollTop + 30) / u;
-    let yy = y; items.forEach(i => { const el = PAGE.querySelector('.nb-it[data-id="' + i.id + '"]'); if (el && i.y <= yy + 5 && i.y + el.offsetHeight / u > yy - 5) yy = i.y + el.offsetHeight / u + 16; });
+    // keep moving down until the spot is below every item it touches (items are not sorted, so repeat)
+    let yy = y, moved = true, guard = 0;
+    while (moved && guard++ < 200) {
+      moved = false;
+      items.forEach(i => { const el = PAGE.querySelector('.nb-it[data-id="' + i.id + '"]'); const h = el ? el.offsetHeight / u : 60;
+        if (i.y <= yy + 5 && i.y + h > yy - 5) { yy = i.y + h + 16; moved = true; } });
+    }
     return { x: 40, y: yy };
   }
 
@@ -93,9 +101,37 @@
 
   /* ---------- ink (pen / highlighter / eraser) on top of everything, incl. screenshots ---------- */
   const pt = e => { const r = INK.getBoundingClientRect(), d = INK.width / r.width; return { x: (e.clientX - r.left) * d, y: (e.clientY - r.top) * d, p: e.pressure || .5 }; };
-  INK.addEventListener("pointerdown", e => { if (tool === "type") return; drawing = true; INK.setPointerCapture(e.pointerId); inkHist.push(INK.toDataURL()); if (inkHist.length > 40) inkHist.shift(); last = pt(e); dot(last); });
-  INK.addEventListener("pointermove", e => { if (!drawing) return; const p = pt(e); stroke(last, p); last = p; });
-  const end = () => { if (!drawing) return; drawing = false; IX.globalAlpha = 1; IX.globalCompositeOperation = "source-over"; inkImg = INK.toDataURL("image/png"); saveSoon(); };
+  INK.addEventListener("pointerdown", e => {
+    if (tool === "type") return; drawing = true; INK.setPointerCapture(e.pointerId);
+    inkHist.push(INK.toDataURL()); if (inkHist.length > 40) inkHist.shift(); inkRedo = [];
+    last = pt(e);
+    if (SHAPES.includes(tool)) { shapeStart = last; shapeBase = IX.getImageData(0, 0, INK.width, INK.height); }
+    else dot(last);
+  });
+  INK.addEventListener("pointermove", e => {
+    if (!drawing) return; const p = pt(e);
+    if (shapeStart) { IX.putImageData(shapeBase, 0, 0); shape(shapeStart, p, e.shiftKey); return; }   // live preview
+    stroke(last, p); last = p;
+  });
+  // line / arrow / box / circle: drawn into the same ink layer, so undo, eraser, save and PDF just work
+  function shape(a, b, square) {
+    brush({ p: .5 }); IX.globalCompositeOperation = "source-over"; IX.globalAlpha = 1; IX.strokeStyle = color;
+    IX.lineWidth = Math.max(2, size) * (devicePixelRatio || 1);
+    let w = b.x - a.x, h = b.y - a.y;
+    if (square && (tool === "rect" || tool === "ellipse")) { const m = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * m; h = Math.sign(h || 1) * m; }
+    IX.beginPath();
+    if (tool === "rect") IX.strokeRect(a.x, a.y, w, h);
+    else if (tool === "ellipse") { IX.ellipse(a.x + w / 2, a.y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, 7); IX.stroke(); }
+    else {
+      IX.moveTo(a.x, a.y); IX.lineTo(b.x, b.y); IX.stroke();
+      if (tool === "arrow") {
+        const ang = Math.atan2(b.y - a.y, b.x - a.x), L = Math.max(12, IX.lineWidth * 4);
+        IX.beginPath(); IX.moveTo(b.x, b.y); IX.lineTo(b.x - L * Math.cos(ang - .45), b.y - L * Math.sin(ang - .45));
+        IX.moveTo(b.x, b.y); IX.lineTo(b.x - L * Math.cos(ang + .45), b.y - L * Math.sin(ang + .45)); IX.stroke();
+      }
+    }
+  }
+  const end = () => { if (!drawing) return; drawing = false; shapeStart = shapeBase = null; IX.globalAlpha = 1; IX.globalCompositeOperation = "source-over"; inkImg = INK.toDataURL("image/png"); saveSoon(); };
   INK.addEventListener("pointerup", end); INK.addEventListener("pointercancel", end);
   function brush(p) {
     const d = devicePixelRatio || 1;
@@ -111,6 +147,9 @@
     tool = k; document.querySelectorAll("#nbTools [data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === k));
     PAGE.classList.toggle("drawmode", k !== "type"); INK.style.pointerEvents = k === "type" ? "none" : "auto";
     INK.style.cursor = k === "eraser" ? "cell" : "crosshair"; select(null);
+    if (SHAPES.includes(k) && $("nbShapeBtn")) { $("nbShapeBtn").innerHTML = $("nbShapes").querySelector('[data-tool="' + k + '"]').innerHTML; }
+    if ($("nbShapeBtn")) $("nbShapeBtn").classList.toggle("on", SHAPES.includes(k));
+    if ($("nbShapes")) $("nbShapes").classList.add("hide");
   }
   document.querySelectorAll("#nbTools [data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool));
   document.querySelectorAll("#nbTools .sw").forEach(s => s.onclick = () => { color = s.dataset.col; document.querySelectorAll("#nbTools .sw").forEach(x => x.classList.toggle("on", x === s)); if (tool === "type" || tool === "eraser") setTool("pen"); });
@@ -120,8 +159,34 @@
     if (f === "h") document.execCommand("formatBlock", false, "h3"); else if (f === "hl") document.execCommand("hiliteColor", false, "rgba(250,204,21,.45)"); else if (f === "list") document.execCommand("insertUnorderedList"); else document.execCommand(f);
     tx.dispatchEvent(new Event("input"));
   }; });
-  $("nbUndo").onclick = () => { const u = inkHist.pop(); inkImg = u || null; paintInk(inkImg); saveSoon(); };
-  $("nbClear").onclick = () => { inkHist.push(INK.toDataURL()); inkImg = null; paintInk(null); saveSoon(); };
+  $("nbUndo").onclick = () => { if (!inkHist.length) return; inkRedo.push(INK.toDataURL()); inkImg = inkHist.pop() || null; paintInk(inkImg); saveSoon(); };
+  if ($("nbRedo")) $("nbRedo").onclick = () => { if (!inkRedo.length) return; inkHist.push(INK.toDataURL()); inkImg = inkRedo.pop(); paintInk(inkImg); saveSoon(); };
+  $("nbClear").onclick = () => { inkHist.push(INK.toDataURL()); inkRedo = []; inkImg = null; paintInk(null); saveSoon(); };
+  // zoom: the page is 1000 units wide, so zooming = making the page wider than the view (scroll sideways)
+  const setZoom = z => { zoom = Math.max(.6, Math.min(2.5, Math.round(z * 10) / 10)); PAGE.style.width = zoom * 100 + "%";
+    if ($("nbZoomV")) $("nbZoomV").textContent = Math.round(zoom * 100) + "%"; layout(); };
+  if ($("nbZoomIn")) { $("nbZoomIn").onclick = () => setZoom(zoom + .2); $("nbZoomOut").onclick = () => setZoom(zoom - .2); $("nbZoomV").onclick = () => setZoom(1); }
+  document.addEventListener("keydown", e => {
+    if (!(e.ctrlKey || e.metaKey) || $("p_notes").classList.contains("hide") || document.activeElement.closest?.(".nb-txt,input,textarea")) return;
+    const k = e.key.toLowerCase();
+    if (k === "z" && !e.shiftKey) { e.preventDefault(); $("nbUndo").click(); }
+    if ((k === "y" || (k === "z" && e.shiftKey)) && $("nbRedo")) { e.preventDefault(); $("nbRedo").click(); }
+  });
+  // menus open as fixed popups next to their button, so a scrolling toolbar (phones) can't clip them
+  function openMenu(btn, menu, other) {
+    other?.classList.add("hide");
+    if (!menu.classList.toggle("hide")) {
+      const r = btn.getBoundingClientRect(), w = menu.offsetWidth, x = Math.max(8, Math.min(r.left, innerWidth - w - 8));
+      Object.assign(menu.style, { position: "fixed", left: x + "px", top: r.bottom + 4 + "px", right: "auto" });
+    }
+  }
+  if ($("nbShapeBtn")) $("nbShapeBtn").onclick = e => { e.stopPropagation(); openMenu($("nbShapeBtn"), $("nbShapes"), $("nbAIMenu")); };
+  if ($("nbAI")) $("nbAI").onclick = e => { e.stopPropagation(); openMenu($("nbAI"), $("nbAIMenu"), $("nbShapes")); };
+  addEventListener("scroll", e => { if (e.target === SCROLL) { $("nbShapes")?.classList.add("hide"); $("nbAIMenu")?.classList.add("hide"); } }, true);
+  document.addEventListener("click", e => { if (!e.target.closest("#nbShapes,#nbAIMenu")) { $("nbShapes")?.classList.add("hide"); $("nbAIMenu")?.classList.add("hide"); } });
+  document.querySelectorAll("#nbAIMenu [data-ai]").forEach(b => b.onclick = () => { $("nbAIMenu").classList.add("hide"); aiNotes(b.dataset.ai); });
+  if ($("nbShare")) $("nbShare").onclick = shareLink;
+  if ($("nbMic")) wireMic($("nbMic"), $("nbQ"), () => $("nbAskBtn").click());
   $("nbTs").onclick = () => addTs();
   $("nbSnap").onclick = () => snap();
   $("nbPdf").onclick = () => exportPdf();
@@ -235,6 +300,100 @@
     if (it && it.type === "img") { const m = /data-t="(\d+)"/.exec(it.cap || ""); if (m) return explainAt(+m[1], t("nbAboutAt") + " " + fmt(+m[1])); }
     toast(t("nbExplainHint"));
   };
+  /* ---------- AI notes: study notes / mind map / flashcards made from the video, quiz from MY notes ---------- */
+  const tsn = s0 => s0 == null ? "" : '<a class="tsn" data-t="' + Math.floor(s0) + '">' + ic("play", 10) + " " + fmt(s0) + "</a>";
+  function notesText() {
+    const d = document.createElement("div");
+    return items.filter(i => i.type === "text").map(i => { d.innerHTML = i.html || ""; return d.textContent; }).join(" ").replace(/\s+/g, " ").trim();
+  }
+  async function aiNotes(kind) {
+    if (!cur) return;
+    if (kind === "quiz") return quizFromNotes();
+    loading(t("nbAI_" + kind));
+    try {
+      const d = await api("/api/notes_ai", { video_id: cur.video_id, kind });
+      const p0 = spot();
+      if (kind === "summary") {
+        let h = "<h3>" + esc(d.title || cur.title || "") + "</h3>";
+        d.sections.forEach(x => { h += (x.heading ? "<p><b>" + esc(x.heading) + "</b></p>" : "") + "<ul>" + x.points.map(p => "<li>" + esc(p.text) + " " + tsn(p.start) + "</li>").join("") + "</ul>"; });
+        add({ type: "text", x: p0.x, y: p0.y, w: 900, html: h });
+      }
+      if (kind === "mindmap") add({ type: "img", x: p0.x, y: p0.y, w: 900, src: mindMapSvg(d), cap: "" });
+      if (kind === "flashcards") {
+        let h = "<h3>" + esc(t("nbAI_flashcards")) + "</h3><ul>" + d.cards.map(c => "<li><b>" + esc(c.front) + "</b><br>" + esc(c.back) + " " + tsn(c.start) + "</li>").join("") + "</ul>";
+        add({ type: "text", x: p0.x, y: p0.y, w: 900, html: h });
+        if (me.user) { try { const r = await api("/api/cards", { video_id: cur.video_id, cards: d.cards }); toast(t("cardsAdded", { n: r.added })); } catch (e) { toast(tMsg(e.message)); } }
+        else toast(t("cardsLogin"));
+      }
+      CARD.classList.add("hide"); if (kind !== "flashcards") toast(t("nbPlaced"));
+    } catch (e) { showCard(head('<span class="badge bad">' + t("error") + "</span>") + esc(tMsg(e.message))); }
+  }
+  // mind map as an SVG picture: center bubble, branches around it, children listed under each branch
+  function mindMapSvg(d) {
+    const W = 1200, br = d.branches, n = br.length, rows = Math.ceil(n / 2), rowH = 90 + 34 * Math.max(...br.map(b => b.children.length), 1);
+    const H = Math.max(520, rows * rowH + 120), cx = W / 2, cy = H / 2, x = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const cols = ["#7c5cff", "#22d3ee", "#f43f5e", "#22c55e", "#f59e0b", "#a855f7", "#0ea5e9"];
+    let g = "";
+    br.forEach((b, i) => {
+      const left = i % 2 === 0, r = Math.floor(i / 2), bx = left ? 40 : W - 360, by = 60 + r * rowH, col = cols[i % cols.length];
+      g += '<path d="M' + cx + " " + cy + " C " + (left ? cx - 160 : cx + 160) + " " + cy + ", " + (left ? bx + 420 : bx - 100) + " " + (by + 20) + ", " + (left ? bx + 320 : bx) + " " + (by + 20) + '" stroke="' + col + '" stroke-width="3" fill="none"/>';
+      g += '<rect x="' + bx + '" y="' + by + '" width="320" height="40" rx="12" fill="' + col + '"/><text x="' + (bx + 160) + '" y="' + (by + 26) + '" fill="#fff" font-size="18" font-weight="700" text-anchor="middle">' + x(b.label.slice(0, 34)) + (b.start != null ? "  ▸" + fmt(b.start) : "") + "</text>";
+      b.children.forEach((c, j) => { g += '<text x="' + (bx + 14) + '" y="' + (by + 66 + j * 30) + '" font-size="16" fill="#334155">• ' + x(c.label.slice(0, 40)) + (c.start != null ? "  (" + fmt(c.start) + ")" : "") + "</text>"; });
+    });
+    g += '<ellipse cx="' + cx + '" cy="' + cy + '" rx="170" ry="54" fill="#111827"/><text x="' + cx + '" y="' + (cy + 8) + '" fill="#fff" font-size="22" font-weight="800" text-anchor="middle">' + x(d.center.slice(0, 30)) + "</text>";
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + " " + H + '" font-family="Hind Siliguri, Noto Sans Bengali, Inter, sans-serif"><rect width="100%" height="100%" rx="18" fill="#f8fafc"/>' + g + "</svg>";
+    return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+  }
+  let nq = [];
+  async function quizFromNotes() {
+    const txt = notesText();
+    if (txt.length < 20) { toast(t("nbQuizEmpty")); return; }
+    loading(t("nbAI_quiz"));
+    try {
+      const d = await api("/api/quiz", { video_id: cur.video_id, n: 5, topic: txt.slice(0, 600) });
+      nq = d.questions || []; if (!nq.length) throw new Error(t("quizFail"));
+      nq.score = 0; nq.done = 0;
+      showCard(head('<span class="badge">' + ic("sparkles", 12) + " " + t("nbAI_quiz") + "</span>") + '<div id="nqScore" class="q"></div>' +
+        nq.map((q, i) => '<div style="margin:10px 0"><b>' + (i + 1) + ". " + esc(q.q) + "</b>" + q.options.map((o, j) => '<button class="btn sm ghost nqo" style="display:block;width:100%;text-align:left;margin-top:4px" data-i="' + i + '" data-j="' + j + '">' + esc(o) + "</button>").join("") + '<div class="q" id="nqf' + i + '"></div></div>').join(""));
+      CARD.querySelectorAll(".nqo").forEach(b => b.onclick = () => {
+        const q = nq[+b.dataset.i]; if (q.picked != null) return; q.picked = +b.dataset.j; nq.done++;
+        const ok = q.picked === q.answer; if (ok) nq.score++;
+        CARD.querySelectorAll('.nqo[data-i="' + b.dataset.i + '"]').forEach((x, j) => { if (j === q.answer) x.style.borderColor = "var(--ok)"; });
+        if (!ok) b.style.borderColor = "var(--bad)";
+        $("nqf" + b.dataset.i).innerHTML = (ok ? "✓ " : "✗ ") + esc(q.explanation) + " " + tsn(q.start);
+        $("nqf" + b.dataset.i).querySelectorAll(".tsn").forEach(a => a.onclick = () => seek(+a.dataset.t));
+        $("nqScore").textContent = t("score") + ": " + nq.score + " / " + nq.length;
+        if (nq.done === nq.length && me.user) api("/api/quiz_result", { video_id: cur.video_id, score: nq.score, total: nq.length }).catch(() => {});
+      });
+    } catch (e) { showCard(head('<span class="badge bad">' + t("error") + "</span>") + esc(tMsg(e.message))); }
+  }
+  async function shareLink() {
+    if (!cur) return;
+    if (!me.user) { toast(t("shareLogin")); return; }
+    if (saveT) { clearTimeout(saveT); saveT = null; await save(nbVid); }
+    try {
+      const d = await api("/api/notes/" + cur.video_id + "/share", {});
+      const url = (window.nbBase ? window.nbBase() : location.origin) + d.url;
+      try { await navigator.clipboard.writeText(url); toast(t("shareCopied")); } catch (_) { prompt(t("shareCopied"), url); }
+    } catch (e) { toast(tMsg(e.message)); }
+  }
+  // voice question: browser speech recognition (Chrome / Edge / Android); Bangla or English by UI language
+  function wireMic(btn, input, send) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { btn.classList.add("hide"); return; }
+    let rec = null;
+    btn.onclick = () => {
+      if (rec) { rec.stop(); return; }
+      rec = new SR(); rec.lang = (window.LANG === "en") ? "en-US" : "bn-BD"; rec.interimResults = true;
+      btn.classList.add("rec"); const before = input.value;
+      rec.onresult = e => { input.value = (before ? before + " " : "") + [...e.results].map(r => r[0].transcript).join(""); };
+      rec.onerror = e => { if (e.error === "not-allowed" && window.onMicDenied) window.onMicDenied(); else toast(t(e.error === "not-allowed" ? "micDenied" : "micFail")); };
+      rec.onend = () => { btn.classList.remove("rec"); rec = null; if (input.value.trim() && input.value !== before) send(); };
+      rec.start();
+    };
+  }
+  window.wireMic = wireMic;
+
   /* ---------- save / load (account when logged in, else this browser) ---------- */
   /* the notebook owns the id of the video it belongs to: a pending save always goes to THAT video,
      and switching videos first flushes it (no more wiping another video's notes) */
@@ -249,7 +408,7 @@
   window.loadNotes = async function () {
     if (saveT) { clearTimeout(saveT); saveT = null; save(nbVid); }          // flush the previous video's last edit
     const vid = cur.video_id, gen = ++loadGen; nbVid = vid; nbTitle = cur.title || "";
-    items = []; H = 1600; inkImg = null; inkHist = []; lastClick = null; $("nSave").textContent = ""; let c = null;
+    items = []; H = 1600; inkImg = null; inkHist = []; inkRedo = []; lastClick = null; $("nSave").textContent = ""; let c = null;
     renderAll(); paintInk(null);
     if (me.user) { try { c = (await api("/api/notes/" + vid)).content; } catch (e) {} }
     else { try { c = JSON.parse(localStorage.getItem("notes_" + vid) || "null"); } catch (e) {} }

@@ -215,7 +215,12 @@ def _providers():
     pc = _remote_provider()
     if pc:
         out.append(pc)
-    out.append(("", env("LLM_BASE_URL"), env("LLM_API_KEY"), env("LLM_MODEL", "gpt-4o-mini"), env("LLM_FAST_MODEL")))
+    main, base = env("LLM_MODEL", "gpt-4o-mini"), env("LLM_BASE_URL")
+    fast = env("LLM_FAST_MODEL")
+    if not fast and "generativelanguage" in base and "lite" not in main:
+        # judge-style calls (rewrite / grade / verify) are short: the lite model does them several times faster
+        fast = "gemini-3.5-flash-lite"
+    out.append(("", base, env("LLM_API_KEY"), main, fast))
     if env("LLM_BACKUP_MODEL") or env("LLM_BACKUP_BASE_URL"):
         out.append(("BACKUP_", env("LLM_BACKUP_BASE_URL"), env("LLM_BACKUP_API_KEY"),
                     env("LLM_BACKUP_MODEL", "gemini-3.5-flash-lite"), ""))
@@ -300,6 +305,7 @@ class _AllBusy(Exception):
 
 
 _COOL = {}  # model -> time until which it is rate-limited (skip it instead of wasting a round-trip)
+_NO_EFFORT = set()  # models that answered 400 to reasoning_effort: never send it to them again (saves a round-trip)
 
 
 def _is_local(base, tag):
@@ -312,7 +318,7 @@ def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
     if local:
         # open-source models: force valid JSON when the prompt asks for JSON (Ollama "format: json"),
         # and turn off Qwen3-style "thinking" so answers stay fast
-        wants_json = "json" in (msgs[0]["content"] + msgs[-1]["content"][-400:]).lower()
+        wants_json = "json" in (str(msgs[0]["content"]) + str(msgs[-1]["content"])[-400:]).lower()
         msgs = [dict(x) for x in msgs]
         if any(m.lower().startswith("qwen3") for m in models):
             msgs[0]["content"] += " /no_think"
@@ -327,18 +333,20 @@ def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
         # Measured (Sep 2026, free tier): flash + reasoning_effort=none -> ~2s and a real answer;
         # flash-lite rejects "none" (400) but doesn't need it. LLM_REASONING=low|medium for harder answers.
         effort = env("LLM_REASONING", "none") if gem else ""
-        if gem and "lite" in m and effort == "none":
+        if (gem and "lite" in m and effort == "none") or m in _NO_EFFORT:
             effort = ""
         if effort:
             kw["reasoning_effort"] = effort
             if effort != "none":
                 kw["max_tokens"] = max_tokens + 2048
+        t_call = time.perf_counter()
         try:
             try:
                 r = cl.chat.completions.create(**kw)
             except Exception as e:
                 if getattr(e, "status_code", None) != 400 or "reasoning_effort" not in kw:
                     raise
+                _NO_EFFORT.add(m)
                 kw.pop("reasoning_effort"); kw["max_tokens"] = max_tokens + 2048
                 r = cl.chat.completions.create(**kw)
             if not (r.choices[0].message.content or "").strip() and r.choices[0].finish_reason == "length":
@@ -367,7 +375,8 @@ def _llm_try(cl, models, msgs, temperature, max_tokens, gem, local=False):
     out = r.choices[0].message.content or ""
     out = re.sub(r"<thought>.*?</thought>", "", out, flags=re.S).strip()   # gemma-style visible reasoning
     _stat("llm_calls")
-    _stat("llm_in_chars", sum(len(x["content"]) for x in msgs))
+    _stat("llm_ms", round((time.perf_counter() - t_call) * 1000))      # time inside the model calls (audit / RAG Lab)
+    _stat("llm_in_chars", sum(len(x["content"]) if isinstance(x["content"], str) else 1000 for x in msgs))
     _stat("llm_out_chars", len(out))
     return out
 
@@ -877,6 +886,14 @@ def build_index_from_upload(path, title, progress=lambda m: None, youtube_url=No
             raise e if isinstance(e, RuntimeError) else RuntimeError(
                 f"could not read this {ext[1:].upper()} file ({type(e).__name__})")
         segs = document_segments(pages)
+        if not segs and ext == ".pdf":                   # scanned PDF (pages are only images): read them with AI
+            progress("No text layer - reading the pages with AI (OCR)...")
+            try:
+                pages = ocr_pdf(path, progress)
+            except Exception as e:
+                path.unlink(missing_ok=True)
+                raise RuntimeError(f"No text found and OCR failed ({str(e)[:120]})")
+            segs = document_segments(pages)
         if not segs:
             path.unlink(missing_ok=True)
             raise RuntimeError("No text found in this file (a scanned PDF has only images - it needs OCR first)")
@@ -910,6 +927,45 @@ def read_document(path):
             parts.append(slide.notes_slide.notes_text_frame.text)
         pages.append("\n".join(p for p in parts if p.strip()))
     return pages
+
+
+def ocr_pdf(path, progress=lambda m: None, max_pages=None):
+    """Scanned PDF -> page texts: render each page to a JPEG and let the vision model read it."""
+    import base64
+    import io
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        raise RuntimeError("OCR needs:  pip install pypdfium2 pillow")
+    pdf = pdfium.PdfDocument(str(path))
+    try:
+        return _ocr_pages(pdf, progress, max_pages)
+    finally:
+        pdf.close()          # Windows: an open handle would block moving the file afterwards
+
+
+def _ocr_pages(pdf, progress, max_pages):
+    import base64
+    import io
+    n = min(len(pdf), int(max_pages or env("OCR_MAX_PAGES", "40")))
+    out = []
+    for i in range(n):
+        if CANCEL.get()():
+            raise JobCancelled()
+        progress(f"OCR page {i + 1}/{n}...")
+        page = pdf[i]
+        img = page.render(scale=1.6).to_pil().convert("RGB")
+        page.close()
+        img.thumbnail((1400, 1800))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=80)
+        url = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+        txt = llm("You read scanned pages. Copy ALL readable text of the page exactly, in reading order, "
+                  "keeping its language (Bangla stays Bangla). No comments. If there is no text, reply with nothing.",
+                  [{"type": "text", "text": f"Page {i + 1}: write out its text."},
+                   {"type": "image_url", "image_url": {"url": url}}], temperature=0, max_tokens=2500)
+        out.append(txt.strip())
+    return out
 
 
 def document_segments(pages):

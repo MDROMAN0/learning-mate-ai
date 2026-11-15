@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared notes · Learning Mate AI</title>
+<link rel="stylesheet" href="/static/ui.css?v=20261115">
+<style>
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 var(--font)}
+.top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;color:#fff;font-weight:800}
+.top b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.page{position:relative;width:100%;border:1px solid var(--line);border-radius:14px;background-color:var(--bg2);background-image:radial-gradient(var(--line2) 1px,transparent 1px);background-size:24px 24px;overflow:hidden}
+.page canvas{position:absolute;left:0;top:0;width:100%;pointer-events:none;z-index:5}
+.it{position:absolute;z-index:2}
+.it .txt{padding:4px 8px;font-size:15px;line-height:1.6;word-break:break-word} .it .txt h3{margin:4px 0;font-size:17px} .it .txt ul{margin:2px 0;padding-left:20px} .it .txt p{margin:2px 0}
+.it img{width:100%;border-radius:10px;display:block;border:1px solid var(--line2)}
+.cap{font-size:12px;color:var(--muted);margin-top:4px}
+.tsn{display:inline-flex;align-items:center;gap:3px;padding:0 6px;border-radius:6px;background:var(--brandSoft);color:var(--brand);font:600 12px var(--mono,monospace);text-decoration:none}
+@media (max-width:640px){.it .txt{font-size:13px}.wrap{padding:10px}}
+</style></head><body>
+<div class="top"><div class="logo">L</div><b id="tt">Learning Mate AI</b>
+  <button class="btn sm ghost" id="lb" type="button"></button><button class="btn sm ghost" id="th" type="button" aria-label="Dark / light theme"></button></div>
+<div class="wrap">
+  <div class="meta"><span class="badge" id="ro"></span><a class="btn sm" id="open" target="_blank" rel="noopener"></a></div>
+  <div class="page" id="page"><canvas id="ink"></canvas></div>
+  <p class="muted" id="msg"></p>
+</div>
+<script>
+// Read-only view of a shared notebook. Coordinates are 1/1000 of the page width, like the editor.
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const T = { en: { ro: "Read-only notes", open: "Open the video", lang: "বাংলা", gone: "This link was turned off or does not exist." },
+  bn: { ro: "শুধু দেখার নোট", open: "ভিডিও খোলো", lang: "English", gone: "এই লিংক বন্ধ করা হয়েছে বা নেই।" } };
+let L = "en", theme = null, data = null;
+try { L = localStorage.getItem("lang") || "en"; theme = localStorage.getItem("theme"); } catch (_) {}
+const fmt = (x, doc) => { x = Math.max(0, Math.floor(x || 0)); if (doc) return "p." + (Math.floor(x / 60) + 1); const m = Math.floor(x / 60), s = x % 60; return m + ":" + String(s).padStart(2, "0"); };
+function paint() {
+  document.documentElement.lang = L; if (theme) document.documentElement.dataset.theme = theme;
+  $("lb").textContent = T[L].lang; $("ro").textContent = T[L].ro; $("open").textContent = T[L].open;
+  const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; $("th").textContent = dark ? "☀" : "☾";
+}
+function link(t) { return data.kind === "youtube" ? "https://www.youtube.com/watch?v=" + encodeURIComponent(data.video_id) + "&t=" + Math.floor(t) + "s" : "#"; }
+function render() {
+  if (!data || !data.content) return;
+  const c = data.content, page = $("page"), u = page.clientWidth / 1000, H = c.H || 1600;
+  page.querySelectorAll(".it").forEach(e => e.remove());
+  let bottom = 0;
+  (c.items || []).forEach(it => {
+    const el = document.createElement("div"); el.className = "it";
+    el.style.left = it.x * u + "px"; el.style.top = it.y * u + "px"; if (it.w) el.style.width = it.w * u + "px";
+    if (it.type === "text") el.innerHTML = '<div class="txt">' + (it.html || "") + "</div>";
+    if (it.type === "img") el.innerHTML = '<img alt="" src="' + esc(it.src) + '">' + (it.cap ? '<div class="cap">' + it.cap + "</div>" : "");
+    if (it.type === "ts") el.innerHTML = '<a class="tsn" data-t="' + it.t + '">▸ ' + fmt(it.t, data.doc) + "</a>" + (it.label ? " " + esc(it.label) : "");
+    el.querySelectorAll("script,iframe,object").forEach(x => x.remove());
+    el.querySelectorAll("[onclick],[onerror],[onload]").forEach(x => { x.removeAttribute("onclick"); x.removeAttribute("onerror"); x.removeAttribute("onload"); });
+    el.querySelectorAll(".tsn").forEach(a => { a.href = link(+a.dataset.t); a.target = "_blank"; a.rel = "noopener"; });
+    page.appendChild(el); bottom = Math.max(bottom, el.offsetTop + el.offsetHeight);
+  });
+  const h = Math.max(H * u * .5, bottom + 40);
+  page.style.height = Math.max(h, 300) + "px";
+  const cv = $("ink"), d = devicePixelRatio || 1; cv.width = page.clientWidth * d; cv.height = H * u * d; cv.style.height = H * u + "px";
+  if (c.ink) { const im = new Image(); im.onload = () => cv.getContext("2d").drawImage(im, 0, 0, cv.width, im.height * cv.width / im.width); im.src = c.ink; }
+}
+$("lb").onclick = () => { L = L === "en" ? "bn" : "en"; try { localStorage.setItem("lang", L); } catch (_) {} paint(); };
+$("th").onclick = () => { const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; theme = dark ? "light" : "dark"; try { localStorage.setItem("theme", theme); } catch (_) {} paint(); };
+addEventListener("resize", render);
+paint();
+fetch("/api/share/" + encodeURIComponent(location.pathname.split("/").pop())).then(r => r.ok ? r.json() : Promise.reject()).then(d => {
+  data = d; $("tt").textContent = d.title || "Learning Mate AI"; document.title = (d.title || "Notes") + " · Learning Mate AI";
+  if (d.kind === "youtube") $("open").href = "https://www.youtube.com/watch?v=" + encodeURIComponent(d.video_id); else $("open").classList.add("hide");
+  render();
+}).catch(() => { $("msg").textContent = T[L].gone; $("page").classList.add("hide"); });
+</script>
+</body></html>
