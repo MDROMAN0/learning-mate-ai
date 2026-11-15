@@ -567,6 +567,17 @@ def guest(request: Request, resp: Response):
     """Demo mode: try the sample library without an account (small daily question limit)."""
     if not auth.enabled():
         return {"guest": False}
+    if os.getenv("GUEST_FULL", "1") == "1":
+        # full guest: a private throw-away account, so every feature works exactly like a signed-up user
+        if request.state.user:
+            return {"guest": False, "user": request.state.user}
+        if not auth.guest_mint_ok(_ip(request)):
+            raise HTTPException(429, "too many guest sessions from this network today - create a free account")
+        import secrets
+        user = auth.signup("guest-" + secrets.token_hex(5) + "@guest.learningmate.app", secrets.token_urlsafe(18), "Guest")
+        resp.set_cookie(auth.COOKIE, auth.make_token(user["id"]), max_age=auth.SESSION_DAYS * 86400, httponly=True,
+                        samesite="lax", secure=os.getenv("COOKIE_SECURE", "0") == "1")
+        return {"guest": False, "user": user}
     tok = request.cookies.get(auth.GUEST_COOKIE)
     if not auth.guest_from_token(tok):
         if not auth.guest_mint_ok(_ip(request)):

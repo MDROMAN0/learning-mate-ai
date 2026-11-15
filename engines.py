@@ -148,7 +148,7 @@ def is_admin(request):
     if pw and request.headers.get("x-app-key") == pw:
         return True
     u = getattr(request.state, "user", None)
-    if not u:
+    if not u or u.get("email", "").endswith("@guest.learningmate.app"):
         return False
     admins = [x.strip().lower() for x in os.getenv("ADMIN_EMAILS", "").split(",") if x.strip()]
     return (u.get("email", "").lower() in admins) if admins else u.get("id") == 1

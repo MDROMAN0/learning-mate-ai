@@ -269,7 +269,7 @@ def guest_mint_ok(ip):
     day = _today()
     with _LOCK:
         n = _GUEST_MINT.get((ip, day), 0)
-        if ip and n >= 5:
+        if ip and n >= 50:
             return False
         _GUEST_MINT[(ip, day)] = n + 1
     return True

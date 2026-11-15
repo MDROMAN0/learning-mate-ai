@@ -467,7 +467,7 @@ SEEN.clear(); lc.post("/api/ask", json={"video_id": V1, "question": "git merge",
 assert "Write ALL output text in English" in SEEN.get("system", "") or True
 rag.set_lang("en"); assert "English" in rag.lang_rule(); rag.set_lang("xx"); assert rag.lang_rule("fb") == "fb"; rag.set_lang("")
 # guest demo mode: sample library + a few questions, no indexing / notes; forged cookie rejected
-os.environ.update(AUTH="1", GUEST_LIMIT="2"); gc = TestClient(appmod.app)
+os.environ.update(AUTH="1", GUEST_LIMIT="2", GUEST_FULL="0"); gc = TestClient(appmod.app)
 assert gc.get("/api/library").status_code == 401
 assert gc.post("/api/auth/guest").json()["guest"] and gc.get("/api/auth/me").json()["guest"]
 assert gc.get("/api/library").status_code == 200 and gc.get("/api/transcript/" + V1).status_code == 200
