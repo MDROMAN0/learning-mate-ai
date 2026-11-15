@@ -64,8 +64,8 @@ def _dec(h):
         return ""
 
 
-def load():
-    if time.time() - _CACHE["t"] < 10 and _CACHE["v"] is not None:
+def load(fresh=False):
+    if not fresh and time.time() - _CACHE["t"] < 10 and _CACHE["v"] is not None:
         return _CACHE["v"]
     cfg = {"order": list(DEFAULT_ORDER), "providers": {}}
     try:
@@ -177,7 +177,7 @@ def public_view(admin):
 
 
 def update(body):
-    cfg = load()
+    cfg = load(fresh=True)        # always edit the newest saved settings, never a cached copy (a key saved a moment ago must survive)
     cfg = {"order": list(cfg["order"]), "providers": {k: dict(v) for k, v in cfg["providers"].items()}}
     order = [p for p in body.get("order") or [] if p in CATALOG]
     if order:
@@ -203,7 +203,7 @@ def update(body):
 
 def test(pid):
     """One tiny real call, so the owner sees at once whether the key / model / URL works."""
-    cfg = load()
+    cfg = load(fresh=True)
     p = cfg["providers"].get(pid) or {}
     if pid not in CATALOG:
         raise ValueError("unknown engine")
@@ -237,6 +237,7 @@ def test(pid):
                 msg = ("can't reach it - is Ollama running on this PC?" if c.get("local") else
                        "can't reach the service - check the internet / URL") if "Connection" in type(ex).__name__ + str(ex)[:40] else str(ex)[:160]
             res[role] = {"ok": False, "ms": round((time.perf_counter() - t0) * 1000), "error": msg}
+    cfg = load(fresh=True)        # the test took a while: write the result into the newest settings, not the old copy
     p = cfg["providers"].setdefault(pid, {})
     p["last"] = {"t": time.time(), "ok": res["model"]["ok"] or res["fast"]["ok"],
                  "ms": res["model"].get("ms"), "error": res["model"].get("error")}
