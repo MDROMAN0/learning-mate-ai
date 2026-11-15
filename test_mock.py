@@ -685,6 +685,14 @@ import engines as _en, openai as _oa, types as _ty2
 os.environ.update(AUTH="1", APP_PASSWORD="adminpw"); ec = TestClient(appmod.app); ADM = {"x-app-key": "adminpw"}
 r = ec.post("/api/auth/signup", json={"email": "user2@test.com", "password": "secret1"})
 assert ec.put("/api/engines", json={"order": []}).status_code == 403                     # a normal user can't change keys
+from starlette.requests import Request as _Rq
+def _req(host, site, xff=None):
+    hd = [(b"host", site.encode())] + ([(b"x-forwarded-for", xff.encode())] if xff else [])
+    r = _Rq({"type": "http", "client": (host, 1), "headers": hd, "path": "/", "query_string": b"", "scheme": "http", "server": (site, 80)})
+    r.state.user = None; return r
+assert _en.is_admin(_req("127.0.0.1", "localhost:8000"))                                 # owner on this PC
+assert not _en.is_admin(_req("127.0.0.1", "learning-mate-ai.onrender.com"))            # host proxy connects from loopback
+assert not _en.is_admin(_req("127.0.0.1", "localhost", "1.2.3.4"))
 g = ec.get("/api/engines").json(); assert g["admin"] is False and all(e["key_hint"] == "" and e["base"] == "" for e in g["engines"])
 r = ec.put("/api/engines", headers=ADM, json={"order": ["groq", "gemini"], "providers": {
     "groq": {"key": "gsk_test_ABCD"}, "openrouter": {"key": "or_key_WXYZ", "enabled": False},

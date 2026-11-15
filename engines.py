@@ -137,8 +137,12 @@ def name_of(tag):
 def is_admin(request):
     """Who may change keys: the PC owner running it locally, the admin key, ADMIN_EMAILS, or (if not set)
     the first account ever made on this site."""
+    # "running on this PC": the browser itself opened localhost AND the connection is from this machine.
+    # (Behind a host like Render the proxy also connects from 127.0.0.1, so the address alone is not enough.)
     host = request.client.host if request.client else ""
-    if host in ("127.0.0.1", "::1", "localhost") and not request.headers.get("x-forwarded-for"):
+    site = (request.url.hostname or "").lower()
+    if (host in ("127.0.0.1", "::1") and site in ("localhost", "127.0.0.1", "::1")
+            and not request.headers.get("x-forwarded-for") and not request.headers.get("x-forwarded-host")):
         return True
     pw = os.getenv("APP_PASSWORD")
     if pw and request.headers.get("x-app-key") == pw:
