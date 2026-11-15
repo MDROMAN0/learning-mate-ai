@@ -6,9 +6,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261115">
-<script src="/static/i18n.js?v=20261115"></script>
-<script src="/static/icons.js?v=20261115"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261116">
+<script src="/static/i18n.js?v=20261116"></script>
+<script src="/static/icons.js?v=20261116"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -251,6 +251,18 @@
   .chap .cr:hover{background:var(--panel2)} .chap .cr.now{background:var(--brandSoft)}
   .chap .cr .ts{font:600 12px var(--mono);color:var(--brand2);padding-top:2px} .chap .cr b{font-size:14px} .chap .cr div div{font-size:12.5px;color:var(--muted)}
   .tl .chm{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.28);z-index:1}
+  .engs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start}
+  .eng{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;opacity:.86}
+  .eng.on{opacity:1;border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+  .eh{display:flex;gap:10px;align-items:flex-start} .eh b{font-size:15px}
+  .enum{flex:none;width:24px;height:24px;border-radius:7px;background:var(--brandSoft);color:var(--brand);display:grid;place-items:center;font:700 12px var(--mono,monospace)}
+  .ebody{display:flex;flex-direction:column;gap:8px} .ebody .in{padding:8px 10px;font-size:14px}
+  .erow{display:flex;gap:8px;align-items:center} .erow .in{flex:1;min-width:0} .erow label{flex:1;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+  .eng details summary{cursor:pointer;font-size:13px;color:var(--text2)} .etest{font-size:12.5px;line-height:1.9}
+  .howto{background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:13.5px} .howto ol{margin:6px 0;padding-left:20px} .howto code{font:12.5px var(--mono,monospace);background:var(--bg2);padding:1px 5px;border-radius:5px}
+  .chain{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .savebar{position:sticky;bottom:0;margin-top:14px;padding:10px 0;background:linear-gradient(transparent,var(--bg) 35%)}
+  @media (max-width:640px){.engs{grid-template-columns:1fr}.erow{flex-wrap:wrap}}
   .pstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
   .pstat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;color:var(--brand)}
   .pstat b{font-size:24px;color:var(--text);line-height:1.2} .pstat span{font-size:12.5px;color:var(--muted)}
@@ -373,6 +385,7 @@
       <button data-v="course"><i data-i="sparkles"></i> <span data-t="navCourse"></span></button>
       <button data-v="notes" id="notesNav" class="hide"><i data-i="book"></i> <span data-t="navNotes"></span></button>
       <button data-v="prog" id="progNav" class="hide"><i data-i="chart"></i> <span data-t="navProg"></span></button>
+      <button data-v="eng" id="engNav"><i data-i="zap"></i> <span data-t="navEng"></span></button>
       <button data-v="hist" id="histNav" class="hide"><i data-i="history"></i> <span data-t="historyT"></span></button>
       <button class="mlab" onclick="location.href='/lab'"><i data-i="code"></i> <span data-t="lab"></span></button>
     </div>
@@ -484,6 +497,12 @@
       <h2 style="margin:0" data-t="progTitle"></h2>
       <div class="muted" data-t="progSub"></div>
       <div id="progOut" style="margin-top:14px"></div>
+    </section>
+
+    <section id="v_eng" class="view bw hide">
+      <h2 style="margin:0" data-t="engTitle"></h2>
+      <div class="muted" data-t="engSub"></div>
+      <div id="engOut" style="margin-top:14px"></div>
     </section>
 
     <section id="v_hist" class="view bw hide">
@@ -676,7 +695,7 @@ async function logout(){await fetch("/api/auth/logout",{method:"POST",credential
 /* leaving a video that is still being prepared -> stop the server-side transcription/indexing (saves GPU) */
 function cancelPrep(nextId){if(cur&&cur.pending===true&&cur.video_id&&cur.video_id!==nextId){try{fetch("/api/job/"+encodeURIComponent(cur.video_id)+"/cancel",{method:"POST",headers:hdr(),credentials:"same-origin",keepalive:true})}catch(e){}cur.pending="fail"}}
 addEventListener("pagehide",()=>cancelPrep(null));
-function view(v){if(v!=="work")cancelPrep(null);document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","prog","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes"){$("nSearch").value="";loadNotesList()}if(v==="prog")loadProgress();if(v==="home"&&lib.length&&!demoStarted)startDemo();
+function view(v){if(v!=="work")cancelPrep(null);document.body.classList.remove("drawer");for(const x of ["home","browse","lib","course","notes","prog","eng","hist","work"])$("v_"+x).classList.toggle("hide",x!==v);if(v==="lib")drawLibGrid();if(v==="course")drawCourse();if(v==="notes"){$("nSearch").value="";loadNotesList()}if(v==="prog")loadProgress();if(v==="eng")loadEngines();if(v==="home"&&lib.length&&!demoStarted)startDemo();
   document.querySelectorAll(".navl button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); if(v==="hist")loadHist(); drawLib()}
 document.querySelectorAll(".navl button").forEach(b=>b.onclick=()=>view(b.dataset.v));
 
@@ -846,7 +865,7 @@ const chips=(cites,refs,vid)=>(cites||[]).map(n=>{const rf=(refs||[]).find(x=>x.
 function answerHtml(a,refs,vid){let h="<h3>"+esc(a.title)+'</h3><p class="sum">'+esc(a.summary)+"</p>";
   (a.sections||[]).forEach(s=>{h+=(s.heading?"<h4>"+esc(s.heading)+"</h4>":"")+"<ul>";(s.points||[]).forEach(p=>{h+="<li>"+esc(p.text)+" "+chips(p.cites,refs,vid)+"</li>"});h+="</ul>"});return h}
 function pipeHtml(tr,run){const tm=(tr&&tr.timings_ms)||{},u=(tr&&tr.usage)||{},st=[["rewrite",t("pRewrite")],["retrieve",t("pRetrieve")],["grade",t("pGrade")],["generate",t("pGenerate")],["verify",t("pVerify")]];
-  return '<div class="pipe'+(run?" run":"")+'">'+st.map(([k,l])=>'<div data-k="'+k+'"><b>'+l+"</b><span>"+(run?"…":(tm[k]!=null?(tm[k]/1000).toFixed(1)+"s":"—"))+"</span></div>").join("")+"</div>"+(run?"":'<div class="muted" style="margin-top:6px">'+(u.llm_calls||0)+" "+t("llmCalls")+" · "+(u.embed_calls||0)+" "+t("embCalls")+(u.llm_fallbacks?" · "+u.llm_fallbacks+" "+t("fallback"):"")+"</div>")}
+  return '<div class="pipe'+(run?" run":"")+'">'+st.map(([k,l])=>'<div data-k="'+k+'"><b>'+l+"</b><span>"+(run?"…":(tm[k]!=null?(tm[k]/1000).toFixed(1)+"s":"—"))+"</span></div>").join("")+"</div>"+(run?"":'<div class="muted" style="margin-top:6px">'+(u.llm_calls||0)+" "+t("llmCalls")+" · "+(u.embed_calls||0)+" "+t("embCalls")+(u.llm_fallbacks?" · "+u.llm_fallbacks+" "+t("fallback"):"")+(Object.keys(u).some(k=>k.startsWith("via_"))?" · "+t("engVia")+" "+Object.keys(u).filter(k=>k.startsWith("via_")).map(k=>k.slice(4).replace(/^e_/,"")).join(", "):"")+((tr&&tr.cached)?" · ⚡ "+t("engCached"):"")+"</div>")}
 function toMd(q,d){let m="# "+(d.answer?d.answer.title:q)+"\n\n> "+q+"\n\n"+(d.answer?d.answer.summary+"\n\n":"");
   if(d.answer)d.answer.sections.forEach(s=>{m+="## "+s.heading+"\n";s.points.forEach(p=>{m+="- "+p.text+" "+(p.cites||[]).map(n=>{const r=d.refs.find(x=>x.n===n);return r?"["+fmt(r.start)+"]("+r.url+")":""}).join(" ")+"\n"});m+="\n"});
   return m+"\nSource: "+(cur.title||"")+"\n"}
@@ -1076,7 +1095,8 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261115"></script>
-<script src="/static/study.js?v=20261115"></script>
+<script src="/static/notebook.js?v=20261116"></script>
+<script src="/static/study.js?v=20261116"></script>
+<script src="/static/engines.js?v=20261116"></script>
 </body>
 </html>

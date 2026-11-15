@@ -209,18 +209,34 @@ def engine_info():
     return {"name": env("LLM_MODEL"), "where": "cloud"}
 
 
-def _providers():
-    """(tag, base_url, key, model, fast_model) in order: owner's PC (if online) -> LLM_* -> LLM_BACKUP_*."""
+def _engines(fast):
+    """Free engines the owner added in the AI engines panel (engines.py). Never breaks the main path."""
+    try:
+        import engines
+        return engines.providers(fast)
+    except Exception:
+        return []
+
+
+def _providers(fast=False):
+    """(tag, base_url, key, model, fast_model) in order: owner's PC (if online) -> LLM_* -> panel engines
+    -> LLM_BACKUP_*. Short judge jobs go to the panel's fast engines first (saves the main free quota)."""
     out = []
     pc = _remote_provider()
     if pc:
         out.append(pc)
+    eng = _engines(fast)
+    if fast:
+        out += [e for e in eng if e[0] in _FAST_FIRST()]
+        eng = [e for e in eng if e[0] not in _FAST_FIRST()]
     main, base = env("LLM_MODEL", "gpt-4o-mini"), env("LLM_BASE_URL")
     fast = env("LLM_FAST_MODEL")
     if not fast and "generativelanguage" in base and "lite" not in main:
         # judge-style calls (rewrite / grade / verify) are short: the lite model does them several times faster
         fast = "gemini-3.5-flash-lite"
-    out.append(("", base, env("LLM_API_KEY"), main, fast))
+    if env("LLM_API_KEY") or base or not eng:    # .env engine (kept first so existing setups behave the same)
+        out.append(("", base, env("LLM_API_KEY"), main, fast))
+    out += eng
     if env("LLM_BACKUP_MODEL") or env("LLM_BACKUP_BASE_URL"):
         out.append(("BACKUP_", env("LLM_BACKUP_BASE_URL"), env("LLM_BACKUP_API_KEY"),
                     env("LLM_BACKUP_MODEL", "gemini-3.5-flash-lite"), ""))
@@ -240,12 +256,22 @@ import contextvars as _cv
 _FAST = _cv.ContextVar("llm_fast", default=False)
 
 
+def _FAST_FIRST():
+    try:
+        import engines
+        return {"E_" + k + "_" for k, v in engines.CATALOG.items() if v.get("fast_first")}
+    except Exception:
+        return set()
+
+
 def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
     """Any OpenAI-compatible API (Ollama, Groq, Gemini, OpenAI...) via env vars.
     Tries providers in order; if one is down, unreachable or out of quota, the next one answers."""
     global _client
     msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-    provs = _providers()
+    provs = _providers(bool(fast or _FAST.get()))
+    if not provs:
+        raise RuntimeError("No AI engine is set up - add a free key in the AI engines panel (or LLM_API_KEY in .env)")
     for pi, (tag, base, key, model, fastm) in enumerate(provs):
         if (fast or _FAST.get()) and fastm:
             model = fastm
@@ -266,6 +292,7 @@ def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
             out = _llm_provider(cl, tag, base, model, msgs, temperature, max_tokens, len(provs) > 1)
             if tag == "PC_":
                 _stat("llm_pc_calls")
+            _stat("via_" + (tag.strip("_").lower() or "main"))      # which engine answered (shown in the trace)
             return out
         except Exception as e:
             if tag == "PC_":                      # PC went offline: stop trying it for a minute

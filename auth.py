@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS progress(user_id INTEGER, video_id TEXT, watched REAL
     PRIMARY KEY(user_id, video_id));
 CREATE TABLE IF NOT EXISTS quizzes(id TEXT PRIMARY KEY, user_id INTEGER, video_id TEXT, score INTEGER, total INTEGER, created REAL);
 CREATE TABLE IF NOT EXISTS shares(token TEXT PRIMARY KEY, user_id INTEGER, video_id TEXT, created REAL);
+CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT);
 """
 
 

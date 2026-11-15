@@ -69,6 +69,7 @@ def fake_llm(system, user, temperature=0.1, max_tokens=1500):
     if "label transcript" in system:
         return "ctx line"
     return "{}"
+_REAL_LLM = rag.llm
 rag.llm = fake_llm
 
 def mkvideo(vid, secs=360):
@@ -471,9 +472,9 @@ assert gc.get("/api/library").status_code == 401
 assert gc.post("/api/auth/guest").json()["guest"] and gc.get("/api/auth/me").json()["guest"]
 assert gc.get("/api/library").status_code == 200 and gc.get("/api/transcript/" + V1).status_code == 200
 assert gc.post("/api/index", json={"url": V1}).status_code == 401 and gc.get("/api/notes/" + V1).status_code == 401
-for _ in range(2):
-    assert gc.post("/api/ask", json={"video_id": V1, "question": "git merge", "clip": False}).status_code == 200
-assert gc.post("/api/ask", json={"video_id": V1, "question": "git", "clip": False}).status_code == 429
+for _q in ("guest q1 git merge", "guest q2 git merge"):        # different questions: a repeat would come from the cache
+    assert gc.post("/api/ask", json={"video_id": V1, "question": _q, "clip": False}).status_code == 200
+assert gc.post("/api/ask", json={"video_id": V1, "question": "guest q3 git", "clip": False}).status_code == 429
 assert gc.get("/api/auth/me").json()["used"] == 2
 assert gc.post("/api/lab/eval", json={"items": [{"video": V1, "question": "q", "gold": [0, 5]}], "full": True}).status_code in (400, 429)
 fc = TestClient(appmod.app); fc.cookies.set("lm_guest", "abcd.ffff"); assert fc.get("/api/library").status_code == 401
@@ -679,3 +680,61 @@ om = wait(r.json()["video_id"]); assert om["status"] == "done", om
 assert om["meta"]["doc"] == "pdf" and seen_img == ["data:image/jpeg;base64,"], seen_img
 rag.llm = _orig_llm
 print("study tools / spaced repetition / dashboard / notes search+share / AI notes / OCR OK")
+# ---- AI engines panel: free keys stored encrypted, order + small-jobs-first routing, failover, answer cache
+import engines as _en, openai as _oa, types as _ty2
+os.environ.update(AUTH="1", APP_PASSWORD="adminpw"); ec = TestClient(appmod.app); ADM = {"x-app-key": "adminpw"}
+r = ec.post("/api/auth/signup", json={"email": "user2@test.com", "password": "secret1"})
+assert ec.put("/api/engines", json={"order": []}).status_code == 403                     # a normal user can't change keys
+g = ec.get("/api/engines").json(); assert g["admin"] is False and all(e["key_hint"] == "" and e["base"] == "" for e in g["engines"])
+r = ec.put("/api/engines", headers=ADM, json={"order": ["groq", "gemini"], "providers": {
+    "groq": {"key": "gsk_test_ABCD"}, "openrouter": {"key": "or_key_WXYZ", "enabled": False},
+    "cloudflare": {"key": "cfkey", "enabled": True}, "ollama": {"enabled": True, "base": "http://localhost:11434/v1"}}})
+assert r.status_code == 200, r.text
+view = {e["id"]: e for e in r.json()["engines"]}
+assert view["groq"]["ready"] and view["groq"]["key_hint"] == "…ABCD" and not view["openrouter"]["ready"]
+assert not view["cloudflare"]["ready"]                                                   # needs an account id too
+raw = _en.load()["providers"]["groq"]["key"]; assert "gsk_test" not in raw and _en._dec(raw) == "gsk_test_ABCD"
+assert [e["id"] for e in r.json()["engines"]][:2] == ["groq", "gemini"]
+tags = [p[0] for p in _en.providers()]; assert tags == ["E_groq_", "E_ollama_"], tags
+fast_tags = [p[0] for p in rag._providers(True)]; assert fast_tags[0] == "E_groq_", fast_tags       # small jobs: groq first
+assert [p[0] for p in rag._providers(False)][0] == "E_groq_"                       # no .env key: panel engines only
+os.environ["LLM_API_KEY"] = "envkey"; assert [p[0] for p in rag._providers(False)][0] == ""         # .env engine stays first
+os.environ.pop("LLM_API_KEY")
+# failover: the first engine is out of free quota (429) -> the next one answers, and the trace says who answered
+calls = []
+class _FakeCl:
+    def __init__(self, api_key=None, base_url=None, **k): self.base = base_url; self.chat = _ty2.SimpleNamespace(completions=_ty2.SimpleNamespace(create=self.create))
+    def create(self, **kw):
+        calls.append((self.base, kw["model"]))
+        if "groq" in self.base:
+            e = Exception("429 rate limit"); e.status_code = 429; raise e
+        return _ty2.SimpleNamespace(choices=[_ty2.SimpleNamespace(message=_ty2.SimpleNamespace(content="pong"), finish_reason="stop")], usage=None)
+_saved = (_oa.OpenAI, rag._client, dict(rag._clients), os.environ.get("LLM_API_KEY"), os.environ.get("LLM_BASE_URL"), rag.llm)
+rag.llm = _REAL_LLM
+_oa.OpenAI = _FakeCl; rag._client = None; rag._clients.clear(); os.environ.pop("LLM_API_KEY", None); os.environ.pop("LLM_BASE_URL", None)
+rag._COOL.clear(); tok = rag._S.set({})
+_r = rag.llm_fast("sys", "ping"); assert _r == "pong", (_r, calls)
+st = rag._S.get(); rag._S.reset(tok)
+assert any("groq" in b for b, m in calls) and any("11434" in b for b, m in calls) and st.get("via_e_ollama") == 1, (calls, st)
+assert calls[0][1] == "llama-3.1-8b-instant"                                              # small job used groq's small model
+# test button: real call shape, friendly error text
+res = ec.post("/api/engines/groq/test", headers=ADM).json(); assert res["model"]["ok"] is False and "free limit" in res["model"]["error"]
+res = ec.post("/api/engines/ollama/test", headers=ADM).json(); assert res["model"]["ok"] and res["fast"]["reply"] == "pong"
+assert ec.post("/api/engines/ollama/test").status_code == 403
+assert ec.put("/api/engines", headers=ADM, json={"providers": {"groq": {"clear_key": True}}}).json()["engines"][0]["has_key"] is False
+_oa.OpenAI, rag._client = _saved[0], _saved[1]; rag._clients.clear(); rag._clients.update(_saved[2]); rag.llm = _saved[5]
+for k, v in (("LLM_API_KEY", _saved[3]), ("LLM_BASE_URL", _saved[4])):
+    if v is not None: os.environ[k] = v
+_en.update({"providers": {"ollama": {"enabled": False}}})
+# answer cache: the same question again is answered instantly with no AI call
+rag.llm = fake_llm; n0 = []
+_ra = rag.ask; rag.ask = lambda *a, **k: (n0.append(1), _ra(*a, **k))[1]
+for _ in range(2):
+    o = ec.post("/api/ask", headers=ADM, json={"video_id": V1, "question": "Git  merge?", "clip": False}).json()
+assert len(n0) == 1 and o["trace"].get("cached") is True and o["found"]
+s2 = ec.post("/api/ask_stream", headers=ADM, json={"video_id": V1, "question": "git merge?", "clip": False}).text
+assert len(n0) == 1 and '"cached": true' in s2
+ec.post("/api/ask", headers=ADM, json={"video_id": V1, "question": "git merge?", "clip": False, "current_time": 100}); assert len(n0) == 2   # spoiler-free: never cached
+rag.ask, rag.llm = _ra, _orig_llm
+for k in ("AUTH", "APP_PASSWORD"): os.environ.pop(k, None)
+print("AI engines panel / encrypted keys / routing / failover / test button / answer cache OK")

@@ -4,6 +4,7 @@ import os
 import queue
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -19,6 +20,7 @@ import eval as rag_eval
 import features
 import rag
 import study
+import engines
 
 app = FastAPI(title="YouTube Topic RAG")
 app.add_middleware(GZipMiddleware, minimum_size=1024)   # ~100 KB of HTML/JS -> ~25 KB on the wire
@@ -31,7 +33,7 @@ MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
 
 
 # what a guest (demo mode, no account) may call: read the sample library and ask about it; no indexing/uploads/notes
-GUEST_OK = ("/api/notes_ai", "/api/library", "/api/job/", "/api/transcript/", "/api/chapters/", "/api/ask", "/api/heat", "/api/quiz",
+GUEST_OK = ("/api/engines", "/api/notes_ai", "/api/library", "/api/job/", "/api/transcript/", "/api/chapters/", "/api/ask", "/api/heat", "/api/quiz",
             "/api/explain", "/api/lab/", "/api/search", "/api/alternatives", "/api/plan/")
 
 
@@ -119,6 +121,35 @@ class AskReq(BaseModel):
     debug: bool = False  # RAG Lab: return every pipeline stage in trace["debug"]
     general: bool = False  # toggle: also answer from general knowledge when the video doesn't cover it
     history: Optional[List[dict]] = None  # earlier questions of this chat [{"q": ...}] -> follow-up questions work
+
+
+# answer cache: the same question on the same video (same level / language, nothing watched-limited) is
+# answered instantly from memory - no AI call, no free quota used. 6 hours, newest 400 answers.
+_ACACHE = {}
+
+
+def _ckey(req, request):
+    if req.debug or req.history or req.current_time is not None or not req.use_rewrite or not req.use_verify:
+        return None
+    return (rag.extract_video_id(req.video_id), " ".join(req.question.lower().split()), req.level, req.mode,
+            req.general, request.headers.get("x-lang", ""))
+
+
+def _cache_get(k):
+    v = _ACACHE.get(k) if k else None
+    if v and time.time() - v[0] < 6 * 3600:
+        out = json.loads(v[1])
+        out.setdefault("trace", {})["cached"] = True
+        return out
+    return None
+
+
+def _cache_put(k, out):
+    if not k or not out.get("found"):
+        return
+    if len(_ACACHE) >= 400:
+        _ACACHE.pop(min(_ACACHE, key=lambda x: _ACACHE[x][0]))
+    _ACACHE[k] = (time.time(), json.dumps(out, ensure_ascii=False))
 
 
 def _hist(req):
@@ -302,9 +333,13 @@ def job(vid: str):
 def ask(req: AskReq, request: Request):
     if not req.question.strip():
         raise HTTPException(400, "empty question")
-    _charge(request)
-    out = _safe(rag.ask, req.video_id, req.question, req.current_time, req.clip, req.mode,
-                req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug, req.general, _hist(req))
+    ck = _ckey(req, request)
+    out = _cache_get(ck)
+    if out is None:
+        _charge(request)
+        out = _safe(rag.ask, req.video_id, req.question, req.current_time, req.clip, req.mode,
+                    req.use_rewrite, req.level, req.use_grade, req.use_verify, req.debug, req.general, _hist(req))
+        _cache_put(ck, out)
     u = request.state.user
     if u:
         try:
@@ -320,13 +355,18 @@ def ask_stream(req: AskReq, request: Request):
     evidence moments, the draft answer before verification, then the final result."""
     if not req.question.strip():
         raise HTTPException(400, "empty question")
-    _charge(request)
+    ck = _ckey(req, request)
+    hit = _cache_get(ck)
+    if hit is None:
+        _charge(request)
     q, u = queue.Queue(), request.state.user
 
     def work():
         try:
-            out = rag.ask(req.video_id, req.question, req.current_time, req.clip, req.mode, req.use_rewrite,
-                          req.level, req.use_grade, req.use_verify, req.debug, req.general, _hist(req), q.put)
+            out = hit or rag.ask(req.video_id, req.question, req.current_time, req.clip, req.mode, req.use_rewrite,
+                                 req.level, req.use_grade, req.use_verify, req.debug, req.general, _hist(req), q.put)
+            if hit is None:
+                _cache_put(ck, out)
             if u:
                 try:
                     auth.add_history(u["id"], out.get("video_id"), out.get("title"), req.question, out)
@@ -715,6 +755,28 @@ def share_page(token: str):
 def notes_ai(req: NotesAIReq, request: Request):
     _charge(request)
     return _safe(study.ai_notes, req.video_id, req.kind, req.current_time)
+
+
+# ---------------------------------------------------------------- AI engines panel (engines.py)
+@app.get("/api/engines")
+def engines_get(request: Request):
+    admin = engines.is_admin(request)
+    return {"admin": admin, "engines": engines.public_view(admin), "env_engine": bool(os.getenv("LLM_API_KEY")),
+            "env_model": os.getenv("LLM_MODEL", "") if admin else ""}
+
+
+@app.put("/api/engines")
+def engines_put(body: dict, request: Request):
+    if not engines.is_admin(request):
+        raise HTTPException(403, "only the site owner can change AI engines")
+    return {"admin": True, "engines": engines.update(body)}
+
+
+@app.post("/api/engines/{pid}/test")
+def engines_test(pid: str, request: Request):
+    if not engines.is_admin(request):
+        raise HTTPException(403, "only the site owner can test AI engines")
+    return _safe(engines.test, pid)
 
 
 @app.get("/")
