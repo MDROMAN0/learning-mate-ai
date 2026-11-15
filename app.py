@@ -28,6 +28,11 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.mount("/clips", StaticFiles(directory=str(rag.DATA / "clips")), name="clips")
 app.mount("/media", StaticFiles(directory=str(rag.DATA / "videos")), name="media")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("static/brand/icon32.png", media_type="image/png")
 JOBS = {}
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
 
