@@ -796,7 +796,7 @@ def notes_ai(req: NotesAIReq, request: Request):
 @app.get("/api/engines")
 def engines_get(request: Request):
     admin = engines.is_admin(request)
-    return {"admin": admin, "engines": engines.public_view(admin), "env_engine": bool(os.getenv("LLM_API_KEY")),
+    return {"admin": admin, "engines": engines.public_view(admin), "env_engine": bool(os.getenv("LLM_API_KEY")), "env_usage": rag.usage_today().get("main"),
             "env_model": os.getenv("LLM_MODEL", "") if admin else ""}
 
 

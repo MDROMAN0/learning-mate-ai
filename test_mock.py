@@ -625,6 +625,9 @@ def _llm_notes(system, user, temperature=0.1, max_tokens=1500):
                                      {"front": "x", "back": "", "source": 0}, {"front": "Bad source", "back": "ok", "source": 99}]})
     if "into a mind map" in system:
         return json.dumps({"center": "Git", "branches": [{"label": "Merge", "source": 0, "children": [{"label": "joins branches", "source": 1}]}, {"label": ""}]})
+    if "learning roadmap" in system:
+        return json.dumps({"title": "Git path", "steps": [{"label": "Merge", "detail": "joins", "emoji": "🔀", "source": 1},
+                                                         {"label": "Init", "detail": "start", "emoji": "🌱", "source": 0}, {"label": ""}]})
     if "into study notes" in system:
         return json.dumps({"title": "Notes", "sections": [{"heading": "Merge", "points": [{"text": "joins branches", "source": 0}, {"text": ""}]}]})
     return fake_llm(system, user, temperature, max_tokens)
@@ -637,6 +640,8 @@ ai = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "flashcards"}).json
 assert len(ai["cards"]) == 2 and ai["cards"][0]["start"] is not None and ai["cards"][1]["start"] is None, ai
 mm = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "mindmap"}).json()
 assert mm["center"] == "Git" and len(mm["branches"]) == 1 and mm["branches"][0]["children"][0]["label"] == "joins branches"
+rm = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "roadmap"}).json()
+assert rm["title"] == "Git path" and [x["label"] for x in rm["steps"]] == ["Init", "Merge"], rm      # sorted by time, blank dropped
 sm = sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "summary"}).json(); assert len(sm["sections"][0]["points"]) == 1
 assert sc2.post("/api/notes_ai", json={"video_id": V1, "kind": "poem"}).status_code == 400
 assert sc2.post("/api/cards", json={"video_id": V1, "cards": ai["cards"] + ai["cards"]}).json()["added"] == 2   # duplicates skipped
@@ -756,3 +761,8 @@ class _R:
 for q, want in (("what is git", "en"), ("গিট কী?", "bn"), ("explain git in bangla", "bn"), ("গিট কী? ইংরেজিতে বলো", "en")):
     _ap._qlang(_R, q); assert rag._LANG.get() == want, (q, rag._LANG.get())
 print("no-limit demo mode / answer language follows the question OK")
+
+# per-engine usage today (shown in the AI engines panel)
+rag.USAGE.clear(); rag._use("E_groq_", True); rag._use("E_groq_", False, "Error code: 429 rate limit retryDelay': '7s'")
+u = rag.usage_today()["e_groq"]; assert u["ok"] == 1 and u["fail"] == 1 and 0 < u["until"] <= 8, u
+print("roadmap / engine usage counters OK")

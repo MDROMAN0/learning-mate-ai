@@ -209,6 +209,10 @@ KINDS = {
     "mindmap": ("a mind map", "Return JSON: {\"center\": main topic (max 5 words), \"branches\": [{\"label\": str (max 5 words), "
                 "\"source\": passage index, \"children\": [{\"label\": str (max 8 words), \"source\": passage index}]}]} "
                 "with 3-6 branches and 2-4 children each."),
+    "roadmap": ("a visual learning roadmap (the journey of the lecture, step by step)",
+                "Return JSON: {\"title\": str (max 6 words), \"steps\": [{\"label\": str (max 5 words), \"detail\": "
+                "one short sentence, \"emoji\": one fitting emoji, \"source\": passage index}]} with 5-8 steps in the order "
+                "the lecture teaches them."),
     "flashcards": ("flashcards", "Return JSON: {\"cards\": [{\"front\": a question, \"back\": short answer (1-2 sentences), "
                    "\"source\": passage index}]} with 8-12 cards about the most important facts and definitions."),
 }
@@ -216,7 +220,7 @@ KINDS = {
 
 def ai_notes(video_id, kind, current_time=None):
     if kind not in KINDS:
-        raise ValueError("kind must be summary, mindmap or flashcards")
+        raise ValueError("kind must be summary, mindmap, roadmap or flashcards")
     ix = rag.load_index(video_id)
     pool = [c for c in (rag.trim_chunk(c, current_time) for c in ix.chunks) if c]
     if not pool:
@@ -238,6 +242,14 @@ def ai_notes(video_id, kind, current_time=None):
         if not cards:
             raise RuntimeError("could not make flashcards - try again")
         return {"kind": kind, "cards": cards}
+    if kind == "roadmap":
+        st = [{"label": str(x.get("label", "")).strip()[:40], "detail": str(x.get("detail", "")).strip()[:120],
+               "emoji": str(x.get("emoji", "") or "").strip()[:4], "start": at(x.get("source"))}
+              for x in out.get("steps") or [] if isinstance(x, dict) and str(x.get("label", "")).strip()]
+        if len(st) < 2:
+            raise RuntimeError("could not make a roadmap - try again")
+        st.sort(key=lambda x: x["start"] if x["start"] is not None else 1e9)
+        return {"kind": kind, "title": str(out.get("title") or ix.meta.get("title", "")).strip()[:60], "steps": st[:8]}
     if kind == "mindmap":
         br = []
         for b in out.get("branches") or []:

@@ -264,6 +264,30 @@ def _FAST_FIRST():
         return set()
 
 
+USAGE = {}   # (engine tag, day) -> {"ok": answered calls, "fail": failed calls, "until": rate-limited until, "err": last error}
+
+
+def _use(tag, ok, err=""):
+    k = (tag.strip("_").lower() or "main", time.strftime("%Y-%m-%d"))
+    u = USAGE.setdefault(k, {"ok": 0, "fail": 0, "until": 0, "err": ""})
+    if ok:
+        u["ok"] += 1
+        u["until"] = 0
+    else:
+        u["fail"] += 1
+        u["err"] = err[:140]
+        m = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+)", err)
+        if "429" in err or "rate" in err.lower() or "quota" in err.lower():
+            u["until"] = time.time() + (3600 if ("PerDay" in err or "per day" in err.lower()) else float(m.group(1)) + 1 if m else 60)
+    if len(USAGE) > 400:
+        USAGE.clear()
+
+
+def usage_today():
+    day = time.strftime("%Y-%m-%d")
+    return {k[0]: dict(v, until=max(0, round(v["until"] - time.time()))) for k, v in USAGE.items() if k[1] == day}
+
+
 def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
     """Any OpenAI-compatible API (Ollama, Groq, Gemini, OpenAI...) via env vars.
     Tries providers in order; if one is down, unreachable or out of quota, the next one answers."""
@@ -293,8 +317,10 @@ def llm(system, user, temperature=0.1, max_tokens=1500, fast=False):
             if tag == "PC_":
                 _stat("llm_pc_calls")
             _stat("via_" + (tag.strip("_").lower() or "main"))      # which engine answered (shown in the trace)
+            _use(tag, True)
             return out
         except Exception as e:
+            _use(tag, False, str(e))
             if tag == "PC_":                      # PC went offline: stop trying it for a minute
                 _REMOTE.update(t=time.time() + 30, v=None)
             if pi == len(provs) - 1:

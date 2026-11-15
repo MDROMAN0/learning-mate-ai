@@ -157,6 +157,11 @@ def is_admin(request):
 def public_view(admin):
     cfg = load()
     out = []
+    try:
+        import rag
+        use = rag.usage_today()
+    except Exception:
+        use = {}
     for pid in cfg["order"]:
         c, p = CATALOG[pid], cfg["providers"].get(pid) or {}
         key = _dec(p["key"]) if p.get("key") else ""
@@ -167,7 +172,7 @@ def public_view(admin):
                     "default_model": c["model"], "default_fast": c["fast"], "default_base": c["base"],
                     "key_url": c["key_url"], "limits": c["limits"], "local": bool(c.get("local")),
                     "needs_account": bool(c.get("needs_account")), "fast_first": bool(c.get("fast_first")),
-                    "last": p.get("last") or None})
+                    "last": p.get("last") or None, "usage": use.get("e_" + pid)})
     return out
 
 

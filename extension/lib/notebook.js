@@ -21,15 +21,16 @@
     PAGE.querySelectorAll(".nb-it").forEach(el => place(el, items.find(i => i.id === el.dataset.id)));
   }
   function place(el, it) { if (!it) return; const u = U(); el.style.left = it.x * u + "px"; el.style.top = it.y * u + "px"; if (it.w) el.style.width = it.w * u + "px";
-    el.classList.toggle("bin", it.y * u < 30); }   // too close to the top: show the move/delete bar inside the item
+    el.classList.toggle("bin", it.y * u < 30); el.style.zIndex = 2 + Math.max(0, items.indexOf(it)); }   // too close to the top: show the move/delete bar inside the item
   function inkNow() { return INK.width > 2 ? INK.toDataURL("image/png") : inkImg; }
   function paintInk(src) {
     IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(0, 0, INK.width, INK.height); if (!src) return;
     const im = new Image(); im.onload = () => { IX.setTransform(1, 0, 0, 1, 0, 0); IX.drawImage(im, 0, 0, INK.width, im.height * INK.width / im.width); }; im.src = src;
   }
   function build(it) {
-    const el = document.createElement("div"); el.className = "nb-it nb-" + it.type; el.dataset.id = it.id;
-    const bar = '<div class="nb-bar"><span class="nb-grip" title="' + esc(t("nbMove")) + '">' + ic("move", 12) + " " + esc(t("nbMove")) + '</span><button class="nb-del" title="Delete">' + ic("trash", 12) + "</button></div>";
+    const el = document.createElement("div"); el.className = "nb-it nb-" + it.type + (it.sticky ? " nb-sticky" : ""); el.dataset.id = it.id;
+    if (it.sticky) el.style.setProperty("--stk", it.sticky);
+    const bar = '<div class="nb-bar"><span class="nb-grip" title="' + esc(t("nbMove")) + '">' + ic("move", 12) + " " + esc(t("nbMove")) + '</span><button class="nb-act" data-b="dup" title="' + esc(t("nbDup")) + '">' + ic("copy", 12) + '</button><button class="nb-act" data-b="front" title="' + esc(t("nbFront")) + '">' + ic("up", 12) + '</button><button class="nb-act" data-b="back" title="' + esc(t("nbBack")) + '">' + ic("down", 12) + '</button><button class="nb-del" title="Delete">' + ic("trash", 12) + "</button></div>";
     if (it.type === "text") el.innerHTML = bar + '<div class="nb-txt" contenteditable="true" spellcheck="false">' + (it.html || "") + '</div><span class="nb-rs" title="' + esc(t("nbResize")) + '"></span>';
     if (it.type === "img") el.innerHTML = bar + '<img draggable="false" src="' + it.src + '" alt=""><span class="nb-rs"></span>' + (it.cap ? '<div class="nb-cap">' + it.cap + "</div>" : "");
     if (it.type === "ts") el.innerHTML = bar + '<a class="tsn" data-t="' + it.t + '">' + ic("play", 10) + " " + fmt(it.t) + "</a>" + (it.label ? ' <span class="nb-lbl">' + esc(it.label) + "</span>" : "");
@@ -47,6 +48,10 @@
       tx.addEventListener("blur", () => { if (!tx.textContent.trim() && !tx.querySelector("img")) remove(it.id); });
     }
     el.querySelector(".nb-del").onclick = e => { e.stopPropagation(); remove(it.id); };
+    el.querySelectorAll(".nb-act").forEach(b => { b.onpointerdown = e => e.stopPropagation(); b.onclick = e => { e.stopPropagation();
+      if (b.dataset.b === "dup") return pasteItems([it]);
+      items = items.filter(i => i !== it); if (b.dataset.b === "front") items.push(it); else items.unshift(it);
+      PAGE.querySelectorAll(".nb-it").forEach(x => place(x, items.find(i => i.id === x.dataset.id))); saveSoon(); }; });
     el.querySelectorAll(".tsn").forEach(a => a.onclick = e => { e.stopPropagation(); seek(+a.dataset.t); });
     const startDrag = (e, mode) => {
       if (tool !== "type") return; e.preventDefault(); e.stopPropagation(); select(el);
@@ -57,7 +62,9 @@
         else { it.w = Math.max(80, Math.min(1000 - it.x, ow + dx)); }
         place(el, it); grow(it, el);
       };
-      const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); removeEventListener("blur", up); saveSoon(); };
+      const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); removeEventListener("blur", up);
+        if (mode === "move") { it.x = Math.round(it.x / 10) * 10; it.y = Math.round(it.y / 10) * 10; place(el, it); }   // snap to the grid
+        saveSoon(); };
       addEventListener("pointermove", mv); addEventListener("pointerup", up); addEventListener("pointercancel", up); addEventListener("blur", up);
       try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
     };
@@ -166,6 +173,14 @@
     const pr = PAGE.getBoundingClientRect(), sx = e.clientX - pr.left, sy = e.clientY - pr.top;
     e.preventDefault();
     if (box && sx > box.x && sx < box.x + box.w && sy > box.y && sy < box.y + box.h) return moveBox(e);
+    // click right on one thing: select just that thing (and drag it straight away)
+    const hit = [...PAGE.querySelectorAll(".nb-it")].reverse().find(el => { const b = el.getBoundingClientRect();
+      return e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom; });
+    if (hit) {
+      clearBox(); const b = hit.getBoundingClientRect();
+      box = { x: b.left - pr.left, y: b.top - pr.top, w: b.width, h: b.height, ids: [hit.dataset.id], one: true };
+      hit.classList.add("msel"); showBox(); return moveBox(e);
+    }
     clearBox(); box = { x: sx, y: sy, w: 0, h: 0, ids: [] }; showBox();
     const mv = ev => { const x = ev.clientX - pr.left, y = ev.clientY - pr.top;
       Object.assign(box, { x: Math.min(sx, x), y: Math.min(sy, y), w: Math.abs(x - sx), h: Math.abs(y - sy) }); showBox(); pickIn(box); };
@@ -178,8 +193,7 @@
     inkHist.push(INK.toDataURL()); if (inkHist.length > 40) inkHist.shift(); inkRedo = [];
     const rx = Math.round(box.x * d), ry = Math.round(box.y * d), rw = Math.max(1, Math.round(box.w * d)), rh = Math.max(1, Math.round(box.h * d));
     const patch = document.createElement("canvas"); patch.width = rw; patch.height = rh;
-    patch.getContext("2d").drawImage(INK, rx, ry, rw, rh, 0, 0, rw, rh);
-    IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(rx, ry, rw, rh);
+    if (!box.one) { patch.getContext("2d").drawImage(INK, rx, ry, rw, rh, 0, 0, rw, rh); IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(rx, ry, rw, rh); }
     const base = IX.getImageData(0, 0, INK.width, INK.height);
     const its = box.ids.map(id => items.find(i => i.id === id)).filter(Boolean), orig = its.map(i => ({ x: i.x, y: i.y }));
     const mv = ev => {
@@ -190,14 +204,15 @@
       its.forEach((it, k) => { it.x = Math.max(0, orig[k].x + ddx / u); it.y = Math.max(0, orig[k].y + ddy / u);
         const el = PAGE.querySelector('.nb-it[data-id="' + it.id + '"]'); if (el) { place(el, it); grow(it, el); } });
     };
-    const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); inkImg = INK.toDataURL(); saveSoon(); };
+    const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); if (box.one) its.forEach(it => { it.x = Math.round(it.x / 10) * 10; it.y = Math.round(it.y / 10) * 10; const el = PAGE.querySelector('.nb-it[data-id="' + it.id + '"]'); if (el) place(el, it); });
+      inkImg = INK.toDataURL(); saveSoon(); };
     addEventListener("pointermove", mv); addEventListener("pointerup", up);
   }
   function deleteBox() {
     if (!box) return;
     const d = INK.width / PAGE.clientWidth;
     inkHist.push(INK.toDataURL()); inkRedo = [];
-    IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(Math.round(box.x * d), Math.round(box.y * d), Math.ceil(box.w * d), Math.ceil(box.h * d));
+    if (!box.one) { IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(Math.round(box.x * d), Math.round(box.y * d), Math.ceil(box.w * d), Math.ceil(box.h * d)); }
     inkImg = INK.toDataURL();
     const ids = new Set(box.ids); items = items.filter(i => !ids.has(i.id));
     ids.forEach(id => PAGE.querySelector('.nb-it[data-id="' + id + '"]')?.remove());
@@ -212,6 +227,60 @@
     if ((items.length || inkImg || INK.width > 2) && !confirm(t("nbClearAllQ"))) return;
     inkHist.push(INK.toDataURL()); inkRedo = []; inkImg = null; paintInk(null);
     items = []; clearBox(); renderAll(); saveSoon(); toast(t("nbCleared"));
+  }
+
+  /* ---------- copy / paste / duplicate (Ctrl+C, Ctrl+V, Ctrl+D) ---------- */
+  let clip = [];
+  const picked = () => box && box.ids.length ? box.ids.map(id => items.find(i => i.id === id)).filter(Boolean)
+    : (sel ? [items.find(i => i.id === sel.dataset.id)].filter(Boolean) : []);
+  function pasteItems(list) {
+    if (!list.length) return; let last = null;
+    list.forEach(src => { const c = JSON.parse(JSON.stringify(src)); c.x = Math.min(980, c.x + 30); c.y += 30; last = add(c); });
+    if (last && list.length === 1) select(last); toast(t("nbPasted", { n: list.length }));
+  }
+  document.addEventListener("keydown", e => {
+    if (!(e.ctrlKey || e.metaKey) || $("p_notes").classList.contains("hide") || document.activeElement.closest?.(".nb-txt,input,textarea")) return;
+    const k = e.key.toLowerCase();
+    if (k === "c" && picked().length) { clip = JSON.parse(JSON.stringify(picked())); toast(t("nbCopied", { n: clip.length })); }
+    if (k === "v" && clip.length) { e.preventDefault(); pasteItems(clip); }
+    if (k === "d" && picked().length) { e.preventDefault(); pasteItems(picked()); }
+  });
+  /* ---------- sticky note ---------- */
+  const STICKY = ["#fde68a", "#bbf7d0", "#bfdbfe", "#fbcfe8", "#ddd6fe"]; let stickyN = 0;
+  function addSticky() { const p = spot(260); const el = add({ type: "text", x: p.x, y: p.y, w: 260, sticky: STICKY[stickyN++ % STICKY.length], html: "" }, true); }
+  /* ---------- listen: read the notebook aloud (browser voice, free, Bangla or English) ---------- */
+  function listen(btn) {
+    const ss = window.speechSynthesis; if (!ss) return toast(t("micFail"));
+    if (ss.speaking) { ss.cancel(); btn.classList.remove("on"); return; }
+    const text = notesText(); if (!text) return toast(t("nbListenEmpty"));
+    const bn = /[\u0980-\u09FF]/.test(text), parts = text.match(/[^.!?।]+[.!?।]?/g) || [text];
+    const voice = speechSynthesis.getVoices().find(v => v.lang.startsWith(bn ? "bn" : "en"));
+    btn.classList.add("on");
+    parts.forEach((p, i) => { const u = new SpeechSynthesisUtterance(p.trim()); u.lang = bn ? "bn-BD" : "en-US"; if (voice) u.voice = voice; u.rate = 1;
+      if (i === parts.length - 1) u.onend = () => btn.classList.remove("on"); ss.speak(u); });
+  }
+  /* ---------- roadmap: the lecture as a winding road with numbered stops (click a stop's time to jump) ---------- */
+  function roadmapSvg(d) {
+    const st = d.steps, W = 1200, rowH = 190, perRow = 3, rows = Math.ceil(st.length / perRow), H = 150 + rows * rowH;
+    const x = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const cols = ["#7c5cff", "#22d3ee", "#f43f5e", "#22c55e", "#f59e0b", "#a855f7", "#0ea5e9", "#ec4899"];
+    const pos = st.map((_, i) => { const r = Math.floor(i / perRow), k = i % perRow, c = r % 2 ? perRow - 1 - k : k; return { x: 200 + c * 400, y: 150 + r * rowH }; });
+    let path = "M " + (pos[0].x - 150) + " " + pos[0].y;
+    pos.forEach((p, i) => { if (!i) { path += " L " + p.x + " " + p.y; return; } const q = pos[i - 1];
+      path += q.y === p.y ? " L " + p.x + " " + p.y : " C " + (q.x + (q.x > 600 ? 170 : -170)) + " " + q.y + ", " + (p.x + (p.x > 600 ? 170 : -170)) + " " + p.y + ", " + p.x + " " + p.y; });
+    const lp = pos[pos.length - 1]; path += " L " + (lp.x + (Math.floor((st.length - 1) / perRow) % 2 ? -130 : 130)) + " " + lp.y;
+    let g = '<path d="' + path + '" stroke="#cbd5e1" stroke-width="34" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="' + path + '" stroke="#fff" stroke-width="3" stroke-dasharray="14 12" fill="none"/>';
+    st.forEach((s, i) => { const p = pos[i], col = cols[i % cols.length];
+      g += '<circle cx="' + p.x + '" cy="' + p.y + '" r="30" fill="' + col + '" stroke="#fff" stroke-width="5"/>' +
+        '<text x="' + p.x + '" y="' + (p.y + 9) + '" font-size="26" text-anchor="middle">' + x(s.emoji || String(i + 1)) + "</text>" +
+        '<text x="' + p.x + '" y="' + (p.y - 46) + '" font-size="19" font-weight="800" fill="' + col + '" text-anchor="middle">' + (i + 1) + ". " + x(s.label.slice(0, 26)) + "</text>" +
+        '<text x="' + p.x + '" y="' + (p.y + 62) + '" font-size="14" fill="#334155" text-anchor="middle">' + x(s.detail.slice(0, 48)) + "</text>" +
+        (s.detail.length > 48 ? '<text x="' + p.x + '" y="' + (p.y + 80) + '" font-size="14" fill="#334155" text-anchor="middle">' + x(s.detail.slice(48, 96)) + "</text>" : "") +
+        (s.start != null ? '<text x="' + p.x + '" y="' + (p.y + (s.detail.length > 48 ? 100 : 82)) + '" font-size="13" font-weight="700" fill="#7c5cff" text-anchor="middle">▸ ' + fmt(s.start) + "</text>" : ""); });
+    g += '<text x="40" y="58" font-size="28" font-weight="800" fill="#111827">🗺 ' + x(d.title) + "</text>";
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + " " + H + '" font-family="Hind Siliguri, Noto Sans Bengali, Inter, sans-serif"><rect width="100%" height="100%" rx="18" fill="#f8fafc"/>' + g + "</svg>";
+    return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
   }
 
   /* ---------- toolbar ---------- */
@@ -236,6 +305,8 @@
   $("nbUndo").onclick = () => { if (!inkHist.length) return; inkRedo.push(INK.toDataURL()); inkImg = inkHist.pop() || null; paintInk(inkImg); saveSoon(); };
   if ($("nbRedo")) $("nbRedo").onclick = () => { if (!inkRedo.length) return; inkHist.push(INK.toDataURL()); inkImg = inkRedo.pop(); paintInk(inkImg); saveSoon(); };
   if ($("nbClearAll")) $("nbClearAll").onclick = clearAll;
+  if ($("nbSticky")) $("nbSticky").onclick = addSticky;
+  if ($("nbListen")) $("nbListen").onclick = () => listen($("nbListen"));
   $("nbClear").onclick = () => { inkHist.push(INK.toDataURL()); inkRedo = []; inkImg = null; paintInk(null); saveSoon(); };
   // zoom: the page is 1000 units wide, so zooming = making the page wider than the view (scroll sideways)
   const setZoom = z => { zoom = Math.max(.6, Math.min(2.5, Math.round(z * 10) / 10)); PAGE.style.width = zoom * 100 + "%";
@@ -394,6 +465,8 @@
         add({ type: "text", x: p0.x, y: p0.y, w: 900, html: h });
       }
       if (kind === "mindmap") add({ type: "img", x: p0.x, y: p0.y, w: 900, src: mindMapSvg(d), cap: "" });
+      if (kind === "roadmap") add({ type: "img", x: p0.x, y: p0.y, w: 900, src: roadmapSvg(d),
+        cap: d.steps.filter(s => s.start != null).map((s, i) => '<a class="tsn" data-t="' + Math.floor(s.start) + '">' + ic("play", 10) + " " + (i + 1) + "</a>").join(" ") });
       if (kind === "flashcards") {
         let h = "<h3>" + esc(t("nbAI_flashcards")) + "</h3><ul>" + d.cards.map(c => "<li><b>" + esc(c.front) + "</b><br>" + esc(c.back) + " " + tsn(c.start) + "</li>").join("") + "</ul>";
         add({ type: "text", x: p0.x, y: p0.y, w: 900, html: h });

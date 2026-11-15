@@ -7,9 +7,9 @@
 <title>Learning Mate AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/ui.css?v=20261119">
-<script src="/static/i18n.js?v=20261119"></script>
-<script src="/static/icons.js?v=20261119"></script>
+<link rel="stylesheet" href="/static/ui.css?v=20261120">
+<script src="/static/i18n.js?v=20261120"></script>
+<script src="/static/icons.js?v=20261120"></script>
 <style>
   .app{display:grid;grid-template-columns:292px 1fr;height:calc(100vh - 55px)}
   .side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-height:0}
@@ -386,6 +386,17 @@
   .miclang:hover{border-color:var(--brand);color:var(--text)}
   .nb-it.bin .nb-bar{top:4px;left:auto;right:4px;z-index:4} .nb-grip,.nb-rs{touch-action:none}
   .nb-text .nb-rs{bottom:auto;top:calc(50% - 9px);cursor:ew-resize}
+  .nb-bar .nb-act{height:22px;min-width:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--line2);color:var(--text2);cursor:pointer;padding:0 4px}
+  .nb-bar .nb-act:hover{color:var(--text);border-color:var(--brand)}
+  .nb-sticky .nb-txt{background:var(--stk)!important;color:#1f2937!important;min-height:130px;padding:14px 14px 18px;border-radius:4px 4px 16px 4px;border:0!important;box-shadow:0 10px 24px rgba(0,0,0,.28),inset 0 -6px 0 rgba(0,0,0,.05);font-family:"Segoe Print","Comic Sans MS",var(--font);transform:rotate(-1.2deg)}
+  .nb-sticky:nth-child(even) .nb-txt{transform:rotate(1deg)}
+  #nbListen.on{background:var(--brandSoft);border-color:var(--brand);animation:micp 1.2s infinite}
+  .euse{font-size:12px;margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--text2)} .euse .badge{font-size:11px}
+  .btn.demo{margin:14px auto 0;display:inline-flex;gap:8px;border-radius:999px;padding:0 18px;height:40px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:0;box-shadow:0 8px 26px rgba(124,92,255,.45);animation:demoGlow 2.4s ease-in-out infinite}
+  @keyframes demoGlow{50%{box-shadow:0 8px 34px rgba(34,211,238,.55)}}
+  .tourbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:12px;max-width:min(92vw,620px);padding:12px 16px;border-radius:16px;background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--brand);box-shadow:0 20px 60px rgba(0,0,0,.5);backdrop-filter:blur(8px);font-size:14.5px}
+  .tourbar .tn{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 13px var(--mono);color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+  .tourbar .tp{position:absolute;left:0;bottom:0;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--brand),var(--brand2));transition:width .4s}
 </style>
 </head>
 <body>
@@ -454,6 +465,7 @@
         <h1 data-t="heroTitle"></h1>
         <p data-t="heroSub"></p>
         <div class="bigin"><span class="bi"><i data-i="search" data-s="18"></i></span><input class="in" id="heroQ" aria-label="Question"><button class="btn pri" id="heroBtn"><span data-t="go"></span> <i data-i="arrow" data-s="15"></i></button></div>
+        <button class="btn demo" id="demoBtn" type="button"><i data-i="play" data-s="13"></i> <span data-t="demoTour"></span></button>
         <div class="try" id="tryChips"></div>
         <div class="stats" id="stats">
           <div><b data-n="0" id="stV">0</b><span data-t="stVideos"></span></div>
@@ -632,11 +644,11 @@
               <span class="sep"></span>
               <button data-fmt="bold" title="Bold"><b>B</b></button><button data-fmt="italic" title="Italic"><i style="font-style:italic;font-family:serif">I</i></button><button data-fmt="h" title="Heading"><b>H</b></button><button data-fmt="list" title="List"><i data-i="list" data-s="15"></i></button><button data-fmt="hl" title="Highlight"><span style="background:rgba(250,204,21,.5);padding:0 5px;border-radius:3px;font-weight:700">A</span></button>
               <span class="sep"></span>
-              <button id="nbTs" data-tt="tsBtn"><i data-i="clock" data-s="15"></i></button><button id="nbSnap" data-tt="ssBtn"><i data-i="camera" data-s="15"></i></button>
+              <button id="nbTs" data-tt="tsBtn"><i data-i="clock" data-s="15"></i></button><button id="nbSnap" data-tt="ssBtn"><i data-i="camera" data-s="15"></i></button><button type="button" id="nbSticky" data-tt="nbSticky"><i data-i="sticky" data-s="15"></i></button><button type="button" id="nbListen" data-tt="nbListen"><i data-i="volume" data-s="15"></i></button>
               <span class="sep"></span>
               <button id="nbUndo" data-tt="undo"><i data-i="undo" data-s="15"></i></button><button id="nbRedo" data-tt="redo"><i data-i="redo" data-s="15"></i></button><button id="nbClear" data-tt="clear"><i data-i="trash" data-s="15"></i></button><button type="button" id="nbClearAll" data-tt="nbClearAll"><i data-i="broom" data-s="15"></i></button>
               <span class="sep"></span><button type="button" id="nbZoomOut" data-tt="zoomOut"><i data-i="zout" data-s="15"></i></button><button type="button" id="nbZoomV" data-tt="zoomReset" style="font:600 11px var(--mono,monospace);min-width:40px">100%</button><button type="button" id="nbZoomIn" data-tt="zoomIn"><i data-i="zin" data-s="15"></i></button>
-              <span class="sep"></span><span class="nbdd"><button type="button" id="nbAI" class="nbai" data-tt="nbAIT"><i data-i="sparkles" data-s="15"></i> <span data-t="nbAIBtn"></span></button><span class="nb-menu col hide" id="nbAIMenu"><button type="button" data-ai="summary"><i data-i="book" data-s="14"></i> <span data-t="nbAI_summary"></span></button><button type="button" data-ai="mindmap"><i data-i="map" data-s="14"></i> <span data-t="nbAI_mindmap"></span></button><button type="button" data-ai="flashcards"><i data-i="cards" data-s="14"></i> <span data-t="nbAI_flashcards"></span></button><button type="button" data-ai="quiz"><i data-i="quiz" data-s="14"></i> <span data-t="nbAI_quiz"></span></button></span></span><button id="nbShare" data-tt="shareT"><i data-i="share" data-s="15"></i></button>
+              <span class="sep"></span><span class="nbdd"><button type="button" id="nbAI" class="nbai" data-tt="nbAIT"><i data-i="sparkles" data-s="15"></i> <span data-t="nbAIBtn"></span></button><span class="nb-menu col hide" id="nbAIMenu"><button type="button" data-ai="summary"><i data-i="book" data-s="14"></i> <span data-t="nbAI_summary"></span></button><button type="button" data-ai="mindmap"><i data-i="map" data-s="14"></i> <span data-t="nbAI_mindmap"></span></button><button type="button" data-ai="roadmap"><i data-i="road" data-s="14"></i> <span data-t="nbAI_roadmap"></span></button><button type="button" data-ai="flashcards"><i data-i="cards" data-s="14"></i> <span data-t="nbAI_flashcards"></span></button><button type="button" data-ai="quiz"><i data-i="quiz" data-s="14"></i> <span data-t="nbAI_quiz"></span></button></span></span><button id="nbShare" data-tt="shareT"><i data-i="share" data-s="15"></i></button>
               <span class="sp"></span>
               <button class="btn sm" id="nbPdf"><i data-i="download" data-s="13"></i> <span data-t="exportPdf"></span></button>
             </div>
@@ -1141,9 +1153,9 @@ window.onLang=()=>{if(!$("v_course").classList.contains("hide"))drawCourse();if(
 setAuthMode(false);
 refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
 </script>
-<script src="/static/notebook.js?v=20261119"></script>
-<script src="/static/study.js?v=20261119"></script>
-<script src="/static/engines.js?v=20261119"></script>
+<script src="/static/notebook.js?v=20261120"></script>
+<script src="/static/study.js?v=20261120"></script>
+<script src="/static/engines.js?v=20261120"></script>
 <script>
 /* home cards: stagger in when they scroll into view, then the "how it works" steps light up 1 -> 2 -> 3 */
 (function(){const groups=document.querySelectorAll(".steps,.feat");groups.forEach(g=>[...g.children].forEach((c,i)=>c.style.setProperty("--d",(i*.12)+"s")));
@@ -1162,6 +1174,28 @@ refreshMe().then(()=>{if(!(me.auth&&!me.user&&!me.guest))loadLib()});
     sp.addEventListener("pointermove",mv);sp.addEventListener("pointerup",up)});
   sp.ondblclick=()=>{w.style.removeProperty("--rw");try{localStorage.removeItem("lm_rw")}catch(_){}dispatchEvent(new Event("resize"))};
   addEventListener("resize",()=>{const v=parseFloat(w.style.getPropertyValue("--rw"));if(v)set(v)})})();
+
+/* "Live demo tour": opens a lecture, types a question, shows the streamed + verified answer, puts it in the
+   notebook and draws a learning roadmap - hands-free, for presenting. Press Stop (or Esc) any time. */
+(function(){let stop=false,bar=null;const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const step=(n,total,txt)=>{if(!bar){bar=document.createElement("div");bar.className="tourbar";document.body.appendChild(bar)}
+    bar.innerHTML='<span class="tn">'+n+'</span><span style="flex:1">'+esc(txt)+'</span><button class="btn sm ghost" type="button">'+esc(t("demoStop"))+'</button><span class="tp" style="width:'+Math.round(100*n/total)+'%"></span>';
+    bar.querySelector("button").onclick=end};
+  function end(){stop=true;bar&&bar.remove();bar=null}
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&bar)end()});
+  async function typeIn(el,txt){el.value="";for(const ch of txt){if(stop)return;el.value+=ch;el.dispatchEvent(new Event("input"));await wait(38)}}
+  async function run(){
+    stop=false;if(!lib.length){toast(t("demoNoLib"));return}
+    const v=lib.find(x=>x.lang==="en")||lib[0],N=6;
+    step(1,N,t("demoS1"));await openVid(v.video_id);await wait(2500);if(stop)return;
+    step(2,N,t("demoS2"));const q=(t("sugg")||[])[0]||"What is this lecture about?";await typeIn($("q"),q);await wait(400);if(stop)return;ask();
+    for(let i=0;i<120&&!stop;i++){await wait(500);if(!$("askBtn").disabled&&i>4)break}if(stop)return;
+    step(3,N,t("demoS3"));await wait(4500);if(stop)return;
+    step(4,N,t("demoS4"));const ab=[...document.querySelectorAll('#chat [data-a="note"]')].pop();if(ab)ab.click();else window.openNotes();await wait(3000);if(stop)return;
+    step(5,N,t("demoS5"));window.openNotes();await wait(800);try{document.querySelector('#nbAIMenu [data-ai="roadmap"]').click()}catch(_){}
+    for(let i=0;i<90&&!stop;i++){await wait(500);if(document.querySelector('.nb-img img[src^="data:image/svg"]'))break}if(stop)return;
+    step(6,N,t("demoS6"));await wait(6000);end()}
+  if($("demoBtn"))$("demoBtn").onclick=run;window.runDemoTour=run})();
 </script>
 </body>
 </html>

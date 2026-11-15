@@ -16,6 +16,12 @@
     if (e.last && e.last.ok) return '<span class="badge ok">' + ic("check", 11) + " " + t("engOk") + (e.last.ms ? " · " + (e.last.ms / 1000).toFixed(1) + "s" : "") + "</span>";
     return '<span class="badge ok">' + t("engOn") + "</span>";
   }
+  // today's use of one engine on this site: answered calls, failures, and "limit reached - back in Xs" from the 429s
+  function useLine(u) {
+    if (!u) return '<div class="euse muted">' + t("engUseNone") + "</div>";
+    const wait = u.until > 0 ? '<span class="badge warn">' + ic("clock", 11) + " " + t("engLimited", { s: u.until > 90 ? Math.round(u.until / 60) + " min" : u.until + "s" }) + "</span>" : '<span class="badge ok">' + ic("check", 11) + " " + t("engReady") + "</span>";
+    return '<div class="euse">' + ic("chart", 12) + " " + t("engToday", { ok: u.ok, fail: u.fail }) + " " + wait + "</div>";
+  }
   function card(e, i) {
     const a = data.admin, d = dirty[e.id] || {};
     const on = d.enabled ?? e.enabled;
@@ -23,7 +29,7 @@
       '<div class="eh"><span class="enum">' + (i + 1) + '</span><div style="flex:1;min-width:0"><b>' + esc(e.name) + "</b>" +
       (e.local ? ' <span class="badge">' + ic("shield", 11) + " open-source</span>" : ' <span class="badge">' + t("engFree") + "</span>") +
       (e.fast_first ? ' <span class="badge" title="' + esc(t("engFastTip")) + '">' + ic("zap", 11) + " " + t("engFast") + "</span>" : "") +
-      '<div class="muted" style="font-size:12.5px">' + esc(e.limits) + "</div></div>" + status(e) + "</div>";
+      '<div class="muted" style="font-size:12.5px">' + esc(e.limits) + "</div>" + (e.enabled ? useLine(e.usage) : "") + "</div>" + status(e) + "</div>";
     if (a) {
       h += '<div class="ebody">' +
         '<label class="tog"><input type="checkbox" data-f="enabled"' + (on ? " checked" : "") + "> " + t("engUse") + "</label>";
@@ -50,6 +56,7 @@
       '<div class="chain">' + (data.env_engine ? '<span class="badge">' + esc(".env" + (data.env_model ? " · " + data.env_model : "")) + "</span>" : "") +
       live.map(e => '<span class="badge ok">' + esc(e.name) + "</span>").join('<span class="muted">→</span>') +
       (!live.length && !data.env_engine ? '<span class="badge warn">' + t("engNone") + "</span>" : "") + "</div>" +
+      (data.env_engine ? '<div style="margin-top:6px">' + useLine(data.env_usage).replace('class="euse', 'class="euse env') + "</div>" : "") +
       '<div class="muted" style="font-size:12.5px;margin-top:6px">' + t("engChainTip") + "</div></div>";
     if (!data.admin) h += '<div class="card" style="margin-bottom:14px"><span class="badge">' + ic("lock", 12) + " " + t("engReadOnly") + "</span></div>";
     h += '<div class="engs">' + order.map((id, i) => card(byId(id), i)).join("") + "</div>";
