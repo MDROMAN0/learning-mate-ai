@@ -153,7 +153,35 @@
   /* ---------- select tool: drag a box, then move or delete everything inside (notes + drawing) ---------- */
   let box = null;            // {x,y,w,h} in page px, ids: selected notes, patch: ink cut out of the box
   const BOX = document.createElement("div"); BOX.className = "nb-selbox hide";
-  BOX.innerHTML = '<div class="nb-selbar"><button type="button" data-sa="del">' + ic("trash", 12) + " " + esc(t("nbSelDel")) + '</button></div>';
+  BOX.innerHTML = '<div class="nb-selbar"><button type="button" data-sa="del">' + ic("trash", 12) + " " + esc(t("nbSelDel")) + '</button></div>' +
+    ["nw", "ne", "e", "se", "sw", "w"].map(h => '<span class="nb-h ' + h + '" data-h="' + h + '" title="' + esc(t("nbResize")) + '"></span>').join("");
+  // resize handles: drag a corner / side to make the selection bigger or smaller (notes, pictures and drawing scale together)
+  BOX.querySelectorAll(".nb-h").forEach(hd => hd.addEventListener("pointerdown", e => {
+    if (!box) return; e.preventDefault(); e.stopPropagation();
+    const h = hd.dataset.h, left = h.includes("w"), u = U(), d = INK.width / PAGE.clientWidth, sx = e.clientX;
+    const b0 = { ...box }, ax = left ? b0.x + b0.w : b0.x, ay = h === "nw" || h === "ne" ? b0.y + b0.h : b0.y;
+    const its = box.ids.map(id => items.find(i => i.id === id)).filter(Boolean);
+    const orig = its.map(i => ({ x: i.x, y: i.y, w: i.w || (PAGE.querySelector('.nb-it[data-id="' + i.id + '"]')?.offsetWidth || 200) / u }));
+    inkHist.push(INK.toDataURL()); if (inkHist.length > 40) inkHist.shift(); inkRedo = [];
+    const rx = Math.round(b0.x * d), ry = Math.round(b0.y * d), rw = Math.max(1, Math.round(b0.w * d)), rh = Math.max(1, Math.round(b0.h * d));
+    const patch = document.createElement("canvas"); patch.width = rw; patch.height = rh;
+    if (!box.one) { patch.getContext("2d").drawImage(INK, rx, ry, rw, rh, 0, 0, rw, rh); IX.setTransform(1, 0, 0, 1, 0, 0); IX.clearRect(rx, ry, rw, rh); }
+    const base = IX.getImageData(0, 0, INK.width, INK.height);
+    const mv = ev => {
+      const dx = (ev.clientX - sx) * (left ? -1 : 1);
+      const f = Math.max(.15, Math.min(4, (b0.w + dx) / b0.w));
+      box.w = b0.w * f; box.h = b0.h * f; box.x = left ? ax - box.w : ax; box.y = ay === b0.y ? b0.y : ay - box.h; showBox();
+      IX.putImageData(base, 0, 0); if (!box.one) IX.drawImage(patch, Math.round(box.x * d), Math.round(box.y * d), Math.round(box.w * d), Math.round(box.h * d));
+      its.forEach((it, k) => { const o = orig[k];
+        it.w = Math.max(60, Math.min(1000, o.w * f)); it.x = Math.max(0, (box.x + (o.x * u - b0.x) * f) / u); it.y = Math.max(0, (box.y + (o.y * u - b0.y) * f) / u);
+        const el = PAGE.querySelector('.nb-it[data-id="' + it.id + '"]'); if (el) { place(el, it); grow(it, el); } });
+    };
+    const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); inkImg = INK.toDataURL();
+      const one = box.one && PAGE.querySelector('.nb-it[data-id="' + box.ids[0] + '"]');   // fit the box to the item's real new height
+      if (one) { const r = one.getBoundingClientRect(), pr = PAGE.getBoundingClientRect(); Object.assign(box, { x: r.left - pr.left, y: r.top - pr.top, w: r.width, h: r.height }); showBox(); }
+      saveSoon(); };
+    addEventListener("pointermove", mv); addEventListener("pointerup", up);
+  }));
   PAGE.appendChild(BOX);
   const showBox = () => { if (!box) return BOX.classList.add("hide"); BOX.classList.remove("hide");
     Object.assign(BOX.style, { left: box.x + "px", top: box.y + "px", width: box.w + "px", height: box.h + "px" }); };
@@ -169,7 +197,7 @@
   }
   PAGE.addEventListener("pointerdown", e => {
     if (tool !== "select") return;
-    if (e.target.closest(".nb-selbar")) return;
+    if (e.target.closest(".nb-selbar,.nb-h")) return;
     const pr = PAGE.getBoundingClientRect(), sx = e.clientX - pr.left, sy = e.clientY - pr.top;
     e.preventDefault();
     if (box && sx > box.x && sx < box.x + box.w && sy > box.y && sy < box.y + box.h) return moveBox(e);

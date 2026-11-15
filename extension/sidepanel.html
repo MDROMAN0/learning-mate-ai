@@ -106,7 +106,7 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
 #toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);color:var(--text);padding:6px 12px;border-radius:10px;font-size:12.5px;z-index:99;max-width:90%;text-align:center}
   .selmode{cursor:crosshair} .selmode .nb-it{pointer-events:none}
   .nb-it.msel{outline:2px dashed var(--brand);outline-offset:3px;border-radius:8px}
-  .nb-selbox{position:absolute;z-index:8;border:1.5px dashed var(--brand);background:rgba(124,92,255,.08);border-radius:6px;cursor:move}
+  .nb-selbox{position:absolute;z-index:900;border:1.5px dashed var(--brand);background:rgba(124,92,255,.08);border-radius:6px;cursor:move}
   .nb-selbar{position:absolute;top:-36px;left:0;display:flex;gap:4px}
   .nb-selbar button{display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bad);background:var(--panel);color:var(--bad);font:600 12px var(--font);cursor:pointer;white-space:nowrap}
   .miclang{height:22px;min-width:30px;margin-left:-4px;padding:0 6px;border-radius:7px;border:1px solid var(--line2);background:var(--panel2);color:var(--text2);font:700 11px var(--font);cursor:pointer;align-self:center}
@@ -118,6 +118,10 @@ main.nbmode{padding:0;overflow:hidden;display:flex;flex-direction:column}
   .nb-sticky .nb-txt{background:var(--stk)!important;color:#1f2937!important;min-height:130px;padding:14px 14px 18px;border-radius:4px 4px 16px 4px;border:0!important;box-shadow:0 10px 24px rgba(0,0,0,.28),inset 0 -6px 0 rgba(0,0,0,.05);font-family:"Segoe Print","Comic Sans MS",var(--font);transform:rotate(-1.2deg)}
   .nb-sticky:nth-child(even) .nb-txt{transform:rotate(1deg)}
   #nbListen.on{background:var(--brandSoft);border-color:var(--brand);animation:micp 1.2s infinite}
+  .nb-h{position:absolute;width:12px;height:12px;border-radius:3px;background:#fff;border:2px solid var(--brand);box-shadow:0 1px 4px rgba(0,0,0,.4);touch-action:none;z-index:2}
+  .nb-h.nw{left:-7px;top:-7px;cursor:nwse-resize} .nb-h.ne{right:-7px;top:-7px;cursor:nesw-resize} .nb-h.se{right:-7px;bottom:-7px;cursor:nwse-resize}
+  .nb-h.sw{left:-7px;bottom:-7px;cursor:nesw-resize} .nb-h.e{right:-7px;top:calc(50% - 6px);cursor:ew-resize} .nb-h.w{left:-7px;top:calc(50% - 6px);cursor:ew-resize}
+  @media (pointer:coarse){.nb-h{width:18px;height:18px}}
 </style></head><body>
 <header>
   <img class="logo" src="lib/logo.svg" alt="" aria-hidden="true"><b>Learning Mate AI</b>
